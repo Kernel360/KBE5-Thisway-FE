@@ -53,14 +53,6 @@ const Sidebar = () => {
   );
 };
 
-// Sample user data (will be replaced with fetched data)
-// const users = [
-//   { id: 1, number: 1, name: "김관리", email: "kim@abc-rent.com", phone: "010-1234-5678", memo: "김관리입니...", role: "관리자" },
-//   { id: 2, number: 2, name: "이부장", email: "lee@abc-rent.com", phone: "010-2345-6789", memo: "이부장입니...", role: "관리자" },
-//   { id: 3, number: 3, name: "박대리", email: "park@abc-rent.com", phone: "010-3456-7890", memo: "박대리입니...", role: "일반 사용자" },
-//   { id: 4, number: 4, name: "최사원", email: "choi@abc-rent.com", phone: "010-4567-8901", memo: "", role: "일반 사용자" },
-// ];
-
 const CompanyUserManagementPage = () => {
   const [openAddModal, setOpenAddModal] = useState(false); // State for add modal
   const [openEditModal, setOpenEditModal] = useState(false); // State for edit modal
@@ -81,31 +73,32 @@ const CompanyUserManagementPage = () => {
 
   const [editingUser, setEditingUser] = useState(null); // State to store user being edited
 
+  // Fetch user data
+  const fetchUsers = async () => {
+    try {
+      const response = await authApi.get("/members");
+      // Assuming the response data structure matches the provided sample
+      if (response.data && response.data.members) {
+        const fetchedUsers = response.data.members.content;
+        setUsers(fetchedUsers);
+        setTotalUsers(response.data.members.totalElements);
+
+        // Calculate role counts
+        const chefCount = fetchedUsers.filter(user => user.role === 'COMPANY_CHEF').length;
+        const memberCnt = fetchedUsers.filter(user => user.role === 'MEMBER').length;
+        
+        setCompanyChefCount(chefCount);
+        setMemberCount(memberCnt);
+
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      // Handle error (e.g., show an error message)
+    }
+  };
+
   // Fetch user data on component mount
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await authApi.get("/members");
-        // Assuming the response data structure matches the provided sample
-        if (response.data && response.data.members) {
-          const fetchedUsers = response.data.members.content;
-          setUsers(fetchedUsers);
-          setTotalUsers(response.data.members.totalElements);
-
-          // Calculate role counts
-          const chefCount = fetchedUsers.filter(user => user.role === 'COMPANY_CHEF').length;
-          const memberCnt = fetchedUsers.filter(user => user.role === 'MEMBER').length;
-          
-          setCompanyChefCount(chefCount);
-          setMemberCount(memberCnt);
-
-        }
-      } catch (error) {
-        console.error("Error fetching users:", error);
-        // Handle error (e.g., show an error message)
-      }
-    };
-
     fetchUsers();
   }, []); // Empty dependency array means this effect runs once on mount
 
@@ -152,6 +145,22 @@ const CompanyUserManagementPage = () => {
     // TODO: Implement user update logic using authApi.put('/members/' + editingUser.id, editingUser)
     console.log("Editing User Data:", editingUser);
     handleCloseEditModal();
+  };
+
+  // Handle user deletion
+  const handleDeleteUser = async (userId) => {
+    if (window.confirm("이 사용자를 삭제하시겠습니까?")) { // Confirmation prompt
+      try {
+        // Adjust the URL based on your API endpoint structure if needed
+        await authApi.delete(`/members/${userId}`);
+        console.log(`User with ID ${userId} deleted successfully.`);
+        fetchUsers(); // Re-fetch users after deletion
+      } catch (error) {
+        console.error(`Error deleting user with ID ${userId}:`, error);
+        // Handle error (e.g., show an error message to the user)
+        alert("사용자 삭제에 실패했습니다.");
+      }
+    }
   };
 
   return (
@@ -247,7 +256,7 @@ const CompanyUserManagementPage = () => {
                     <TableCell>
                       <Box sx={{ display: "flex", gap: 1 }}>
                         <Button variant="contained" size="small" sx={{ minWidth: "unset", width: "32px", height: "32px", bgcolor: "#F1F5F9", color: "text.secondary", boxShadow: "none", "&:hover": { bgcolor: "#E2E8F0" } }} onClick={() => handleOpenEditModal(user)}>✏️</Button>
-                        <Button variant="contained" size="small" sx={{ minWidth: "unset", width: "32px", height: "32px", bgcolor: "#FEE2E2", color: "#EF4444", boxShadow: "none", "&:hover": { bgcolor: "#FECACA" } }}>🗑️</Button>
+                        <Button variant="contained" size="small" sx={{ minWidth: "unset", width: "32px", height: "32px", bgcolor: "#FEE2E2", color: "#EF4444", boxShadow: "none", "&:hover": { bgcolor: "#FECACA" } }} onClick={() => handleDeleteUser(user.id)}>🗑️</Button>
                       </Box>
                     </TableCell>
                   </TableRow>
@@ -350,7 +359,8 @@ const CompanyUserManagementPage = () => {
                   />
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                  <Typography variant="body2" fontWeight={500} mb={0.5}>비밀번호 확인 *</Typography>
+                  <Typography variant="body2" fontWeight={500} mb={0.5}>비밀번호 확인 *
+                  </Typography>
                   <TextField
                     name="confirmPassword"
                     value={newUser.confirmPassword}
@@ -510,6 +520,12 @@ const CompanyUserManagementPage = () => {
                 />
               </Box>
 
+              {/* Last Login field */}
+              <Box>
+                <Typography variant="body2" fontWeight={500} color="text.secondary">
+                  마지막 로그인: {editingUser?.lastLogin || "정보 없음"}
+                </Typography>
+              </Box>
 
             </Box>
 
