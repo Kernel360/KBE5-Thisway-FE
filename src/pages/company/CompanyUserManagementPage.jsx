@@ -363,7 +363,7 @@ const CompanyUserManagementPage = () => {
                     onChange={handleInputChange}
                     fullWidth
                     size="small"
-                    placeholder="010-0000-0000"
+                    placeholder="01012345678"
                     sx={{ bgcolor: "#F8FAFC" }}
                   />
                 </Grid>
@@ -505,7 +505,7 @@ const CompanyUserManagementPage = () => {
                     onChange={handleInputChange}
                     fullWidth
                     size="small"
-                    placeholder="010-0000-0000"
+                    placeholder="01012345678"
                     sx={{ bgcolor: "#F8FAFC" }}
                   />
                 </Grid>
