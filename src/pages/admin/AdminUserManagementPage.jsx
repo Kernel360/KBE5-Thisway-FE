@@ -101,6 +101,29 @@ const AdminUserManagementPage = () => {
     fetchCompanies();
   }, []); // Empty dependency array means this runs once on mount
 
+  // Fetch user data
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await authApi.get("/members");
+      // Assuming the response data structure matches the provided sample
+      if (response.data && response.data.members && response.data.members.content) {
+        setUsers(response.data.members.content);
+        console.log("Fetched Users content:", response.data.members.content);
+      } else {
+        console.warn("Users data structure not as expected:", response.data);
+        setUsers([]); // Set to empty if data structure is unexpected
+      }
+    } catch (err) {
+      setError("사용자 정보를 불러오는데 실패했습니다.");
+      console.error("Failed to fetch users:", err);
+      setUsers([]); // Clear users on error
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
 
@@ -110,25 +133,11 @@ const AdminUserManagementPage = () => {
   };
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await authApi.get("/members");
-        setUsers(response.data.members.content);
-      } catch (err) {
-        setError("사용자 정보를 불러오는데 실패했습니다.");
-        console.error("Failed to fetch users:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (managementType === "user") {
       fetchUsers();
     } else {
-        setUsers([]);
-        setLoading(false);
+      setUsers([]);
+      setLoading(false);
     }
   }, [managementType]);
 
@@ -181,6 +190,34 @@ const AdminUserManagementPage = () => {
       console.error("Failed to register user:", err);
       // Handle error (e.g., show an error message)
     }
+  };
+
+  // Handle user deletion
+  const handleDeleteUser = async (userId) => {
+    if (window.confirm("이 사용자를 삭제하시겠습니까?")) { // Confirmation prompt
+      try {
+        // Adjust the URL based on your API endpoint structure if needed
+        const response = await authApi.delete(`/members/${userId}`); // response를 받도록 수정
+
+        // Check if the status is 204 (NO_CONTENT) for success
+        if (response.status === 204) {
+          console.log(`User with ID ${userId} deleted successfully.`);
+          // Refresh the user list after successful deletion
+          // Optionally show a success message
+          alert("사용자 삭제가 완료되었습니다.");
+        } else {
+          // If status is not 204, treat as an error or unexpected response
+          console.warn(`User deletion for ID ${userId} returned unexpected status: ${response.status}`, response);
+          alert(`사용자 삭제에 실패했습니다. (상태 코드: ${response.status})`);
+        }
+
+      } catch (error) {
+        console.error(`Error deleting user with ID ${userId}:`, error);
+        // Handle network errors or other issues
+        alert(`사용자 삭제 중 오류가 발생했습니다: ${error.message || '알 수 없는 오류'}`);
+      }
+    }
+    fetchUsers();
   };
 
   return (
@@ -274,7 +311,7 @@ const AdminUserManagementPage = () => {
                       <IconButton size="small">
                         <EditIcon />
                       </IconButton>
-                      <IconButton size="small" color="error">
+                      <IconButton size="small" color="error" onClick={() => handleDeleteUser(item.id)}>
                         <DeleteIcon />
                       </IconButton>
                     </TableCell>
