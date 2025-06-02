@@ -135,10 +135,48 @@ const CompanyUserManagementPage = () => {
     }
   };
 
-  const handleSubmitAdd = () => {
+  const handleSubmitAdd = async () => {
     // TODO: Implement user registration logic using authApi.post('/members', newUser)
     console.log("New User Data:", newUser);
-    handleCloseAddModal();
+
+    // 필수 필드 유효성 검사 (간단하게 비어있지 않은지 확인)
+    if (!newUser.name || !newUser.email || !newUser.password || !newUser.phone || !newUser.role) {
+      alert("필수 입력 항목(*)을 모두 채워주세요.");
+      return;
+    }
+
+    // 비밀번호 확인 일치 여부 확인
+    if (newUser.password !== newUser.confirmPassword) {
+        alert("비밀번호와 비밀번호 확인이 일치하지 않습니다.");
+        return;
+    }
+
+    try {
+      const registrationPayload = {
+        companyId: 1, // 하드코딩: 회사 ID
+        role: newUser.role,
+        name: newUser.name,
+        email: newUser.email,
+        password: newUser.password,
+        phone: newUser.phone,
+        memo: newUser.memo,
+      };
+
+      console.log("Registration Payload:", registrationPayload); // 실제 전송될 데이터 확인
+
+      // API 호출
+      const response = await authApi.post("/members", registrationPayload);
+      console.log("User registration successful:", response.data);
+
+      alert("사용자 등록이 완료되었습니다."); // 성공 메시지 표시
+      handleCloseAddModal(); // 모달 닫기
+      fetchUsers(); // 사용자 목록 새로고침
+
+    } catch (error) {
+      console.error("Error registering user:", error);
+      // 오류 처리 (예: 오류 메시지 표시)
+      alert(`사용자 등록에 실패했습니다: ${error.message || '알 수 없는 오류'}`);
+    }
   };
 
   const handleSubmitEdit = () => {
