@@ -1,97 +1,163 @@
 import React from "react";
-import {
-  Drawer,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  Toolbar,
-  Divider,
-  Box,
-  Typography,
-  Avatar,
-} from "@mui/material";
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import BusinessIcon from "@mui/icons-material/Business";
-import PeopleIcon from "@mui/icons-material/People";
-import DirectionsCarIcon from "@mui/icons-material/DirectionsCar";
-import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
+import styled from "styled-components";
 import { Link, useLocation } from "react-router-dom";
+import logo from "../assets/logo.png";
+import defaultProfile from "../assets/default-profile.png";
 
-const menuItems = [
-  { text: "대시보드", icon: <DashboardIcon />, path: "/admin/dashboard" },
-  { text: "기업 관리", icon: <BusinessIcon />, path: "/admin/company" },
-  { text: "사용자 관리", icon: <PeopleIcon />, path: "/admin/user" },
-  {
-    text: "차량 승인",
-    icon: <DirectionsCarIcon />,
-    path: "/admin/vehicle-approval",
-  },
-];
-
-const drawerWidth = 220;
-
-const Sidebar = () => {
+function Sidebar() {
   const location = useLocation();
-  return (
-    <Drawer
-      variant="permanent"
-      sx={{
-        width: drawerWidth,
-        flexShrink: 0,
-        [`& .MuiDrawer-paper`]: {
-          width: drawerWidth,
-          boxSizing: "border-box",
-          backgroundColor: "background.paper",
-          borderRight: "1px solid #E5E7EB",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-        },
-      }}
-    >
-      <Box>
-        <Toolbar>
-          <Typography variant="h6" color="primary" fontWeight={700}>
-            Thisway
-          </Typography>
-        </Toolbar>
-        <Divider />
-        <List>
-          {menuItems.map((item) => (
-            <ListItem
-              button
-              key={item.text}
-              component={Link}
-              to={item.path}
-              selected={location.pathname === item.path}
-              sx={{
-                "&.Mui-selected": {
-                  backgroundColor: "primary.100",
-                  color: "primary.main",
-                  fontWeight: 700,
-                },
-              }}
-            >
-              <ListItemIcon sx={{ color: "inherit" }}>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItem>
-          ))}
-        </List>
-      </Box>
-      <Box sx={{ p: 2 }}>
-        <Divider sx={{ mb: 1 }} />
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <Avatar sx={{ bgcolor: "primary.main", width: 28, height: 28 }}>
-            <AdminPanelSettingsIcon fontSize="small" />
-          </Avatar>
-          <Typography variant="body2" color="text.secondary" fontWeight={700}>
-            관리자
-          </Typography>
-        </Box>
-      </Box>
-    </Drawer>
+  const userRole = 'ADMIN'; // 예시일 뿐 추후 API 연결하고 수정.
+
+  const menuItems = [
+    { label: '대시보드', path: '/admin/dashboard', roles: ['ADMIN'] },
+    { label: '기업 관리', path: '/admin/company', roles: ['ADMIN'] },
+    { label: '사용자 관리', path: '/admin/user', roles: ['ADMIN', 'COMPANY_ADMIN'] },
+    { label: '차량 승인', path: '/admin/vehicle-approval', roles: ['ADMIN'] },
+    { label: '차량 관리', path: '/company/car-management', roles: ['COMPANY_CHEF', 'COMPANY_ADMIN'] },
+    { label: '차량 상세', path: '/company/car-detail', roles: ['COMPANY_CHEF', 'COMPANY_ADMIN'] },
+  ]
+
+  const filteredMenuItems = menuItems.filter(item =>
+    item.roles.includes(userRole)
   );
-};
+
+  return (
+    <SidebarContainer>
+      <LogoSection>
+        <LogoImage src={logo} alt="Thisway Logo" />
+        <LogoTitle> THIS WAY </LogoTitle>
+      </LogoSection>
+      <Nav>
+        <NavList>
+          {filteredMenuItems.map(item => (
+            <NavItem key = {item.path}>
+              <NavLink
+                as={Link}
+                to={item.path}
+                $active={location.pathname === item.path}
+              >
+                {item.label}
+              </NavLink>
+            </NavItem>
+          ))}
+        </NavList>
+      </Nav>
+      <MemberInfo>
+        <MemberProfile>
+          <ProfileImage>
+            <img src={defaultProfile} alt="Member Profile" />
+          </ProfileImage>
+          <ProfileText>
+            <MemberLabel>관리자</MemberLabel>
+            <MemberEmail>admin@thisway.com</MemberEmail>
+          </ProfileText>
+        </MemberProfile>
+      </MemberInfo>
+    </SidebarContainer>
+  )
+}
 
 export default Sidebar;
+
+const SidebarContainer = styled.aside`
+  width: 250px;
+  background-color: ${({ theme }) => theme.palette.background.paper};
+  padding: 10px 20px 20px;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+`;
+
+const LogoSection = styled.div`
+  display: flex;
+  align-items: center;
+`;
+
+const LogoImage = styled.img`
+  height: 40px;
+  margin-right: 16px;
+`;
+
+const LogoTitle = styled.h1`
+  color: #1E3A8A;
+  font-size: 23px;
+  font-weight: 700;
+`;
+
+const Nav = styled.nav`
+  flex: 1;
+`;
+
+const NavList = styled.ul`
+  list-style: none;
+  margin-bottom: auto;
+  padding: 0;
+`;
+
+const NavItem = styled.li`
+  margin-bottom: 10px;
+`;
+
+const NavLink = styled(Link)`
+  color: ${({ theme }) => theme.palette.text.disabled};
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  font-size: 15px;
+  font-weight: 500;
+  background-color: ${({ $active, theme }) => ($active ? theme.palette.secondary.main : "transparent")};
+  color: ${({ $active, theme }) => ($active ? theme.palette.secondary.contrastText : theme.palette.text.disabled)};
+  font-weight: ${({ $active }) => ($active ? 700 : 500)};
+
+  &:hover {
+    background-color: ${({ theme }) => theme.palette.secondary.main};
+    color: ${({ theme }) => theme.palette.secondary.contrastText};
+  }
+`;
+
+const MemberInfo = styled.div`
+  border-top: 1px solid #eee;
+  padding-top: 20px;
+  margin-top: 20px;
+`;
+
+const MemberProfile = styled.div`
+  display: flex;
+  align-items: center;
+`;
+
+const ProfileImage = styled.div`
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-right: 12px;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+`;
+
+const ProfileText = styled.div`
+  flex: 1;
+`;
+
+const MemberLabel = styled.span`
+  display: block;
+  font-weight: 700;
+  color: ${({ theme }) => theme.palette.text.primary};
+  font-size: 14px;
+  margin-bottom: 2px;
+`;
+
+const MemberEmail = styled.span`
+  display: block;
+  color: ${({ theme }) => theme.palette.grey[400]};
+  font-size: 13px;
+  font-weight: 400;
+`;

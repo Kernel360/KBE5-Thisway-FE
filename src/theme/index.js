@@ -4,7 +4,8 @@ import palette from "./palette";
 const theme = createTheme({
   palette,
   typography: {
-    fontFamily: ["Inter", "Gmarket Sans", "sans-serif"].join(","),
+    fontFamily: ["Noto Sans KR", "Inter", "Gmarket Sans", "sans-serif"].join(","),
+    lineHeight: 1.5,
     h1: {
       fontWeight: 700,
       fontSize: "2.5rem",
