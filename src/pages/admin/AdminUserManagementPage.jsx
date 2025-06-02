@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Grid,
@@ -24,9 +24,12 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  CircularProgress,
+  Alert,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import { authApi } from "../../utils/api";
 
 // mock 데이터 (API 연동 후 삭제 예정)
 const mockUsers = [
@@ -49,6 +52,9 @@ const AdminUserManagementPage = () => {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [managementType, setManagementType] = useState("user");
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newUser, setNewUser] = useState({
     name: '',
@@ -68,8 +74,31 @@ const AdminUserManagementPage = () => {
     setNewUser({ ...newUser, [name]: value });
   };
 
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await authApi.get("/members");
+        setUsers(response.data.members.content);
+      } catch (err) {
+        setError("사용자 정보를 불러오는데 실패했습니다.");
+        console.error("Failed to fetch users:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (managementType === "user") {
+      fetchUsers();
+    } else {
+        setUsers([]);
+        setLoading(false);
+    }
+  }, [managementType]);
+
   const usersPerPage = 4;
-  const currentData = managementType === "user" ? mockUsers : mockCompanies;
+  const currentData = managementType === "user" ? users : mockCompanies;
 
   const filteredData = currentData.filter(
     (item) =>
@@ -131,58 +160,63 @@ const AdminUserManagementPage = () => {
             </Grid>
           </Grid>
 
-        <TableContainer component={Paper} sx={{ borderRadius: 3, boxShadow: 2, mb: 3 }}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                {tableHeaders.map((header, index) => (
-                    <TableCell key={index} sx={{ fontWeight: 700, color: "primary.main", backgroundColor: "grey.100" }}>
-                        {header}
-                    </TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {pagedData.map((item, idx) => (
-                <TableRow key={item.id}>
-                  <TableCell>{(page - 1) * usersPerPage + idx + 1}</TableCell>
-                  <TableCell>{item.name}</TableCell>
-                  <TableCell>{item.email}</TableCell>
-                  <TableCell>{item.phone}</TableCell>
-                  {managementType === "user" && item.company && <TableCell>{item.company}</TableCell>}
-                  {managementType === "user" && item.role && (
-                    <TableCell>
-                      <Chip
-                        label={item.role}
-                        color={item.role === "관리자" ? "primary" : "default"}
-                        size="small"
-                      />
-                    </TableCell>
-                  )}
-                  {managementType === "user" && item.status && (
-                    <TableCell>
-                      <Chip
-                        label={item.status}
-                        color={item.status === "활성" ? "primary" : "default"}
-                        size="small"
-                      />
-                    </TableCell>
-                  )}
-                  <TableCell>
-                    <IconButton size="small">
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton size="small" color="error">
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        {loading && <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>}
+        {error && <Box sx={{ mt: 4 }}><Alert severity="error">{error}</Alert></Box>}
 
-        {(filteredData.length > usersPerPage || page > 1) && (
+        {!loading && !error && (
+          <TableContainer component={Paper} sx={{ borderRadius: 3, boxShadow: 2, mb: 3 }}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  {tableHeaders.map((header, index) => (
+                      <TableCell key={index} sx={{ fontWeight: 700, color: "primary.main", backgroundColor: "grey.100" }}>
+                          {header}
+                      </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {pagedData.map((item, idx) => (
+                  <TableRow key={item.id}>
+                    <TableCell>{(page - 1) * usersPerPage + idx + 1}</TableCell>
+                    <TableCell>{item.name}</TableCell>
+                    <TableCell>{item.email}</TableCell>
+                    <TableCell>{item.phone}</TableCell>
+                    {managementType === "user" && item.company && <TableCell>{item.company}</TableCell>}
+                    {managementType === "user" && item.role && (
+                      <TableCell>
+                        <Chip
+                          label={item.role}
+                          color={item.role === "관리자" ? "primary" : "default"}
+                          size="small"
+                        />
+                      </TableCell>
+                    )}
+                    {managementType === "user" && item.status && (
+                      <TableCell>
+                        <Chip
+                          label={item.status}
+                          color={item.status === "활성" ? "primary" : "default"}
+                          size="small"
+                        />
+                      </TableCell>
+                    )}
+                    <TableCell>
+                      <IconButton size="small">
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton size="small" color="error">
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+
+        {!loading && !error && (filteredData.length > usersPerPage || page > 1) && (
           <Box sx={{ display: "flex", justifyContent: "center" }}>
             <Pagination
               count={Math.ceil(filteredData.length / usersPerPage)}
@@ -193,7 +227,7 @@ const AdminUserManagementPage = () => {
           </Box>
         )}
 
-        {filteredData.length === 0 && (
+        {!loading && !error && filteredData.length === 0 && (
             <Box sx={{ textAlign: 'center', mt: 4 }}>
                 <Typography color="text.secondary">데이터가 없습니다.</Typography>
             </Box>
