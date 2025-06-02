@@ -26,9 +26,14 @@ import {
   MenuItem,
   CircularProgress,
   Alert,
+  Modal,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import CloseIcon from "@mui/icons-material/Close";
 import { authApi } from "../../utils/api";
 
 // mock 데이터 (API 연동 후 삭제 예정)
@@ -235,41 +240,149 @@ const AdminUserManagementPage = () => {
 
       </Box>
 
-      <Dialog open={isModalOpen} onClose={handleCloseModal} aria-labelledby="form-dialog-title">
-        <DialogTitle id="form-dialog-title">사용자 등록</DialogTitle>
-        <DialogContent>
-          <TextField autoFocus margin="dense" name="name" label="이름" type="text" fullWidth value={newUser.name} onChange={handleInputChange} />
-          <TextField margin="dense" name="phone" label="연락처" type="text" fullWidth value={newUser.phone} onChange={handleInputChange} />
-          <TextField margin="dense" name="email" label="이메일" type="email" fullWidth value={newUser.email} onChange={handleInputChange} />
-          <TextField margin="dense" name="password" label="비밀번호" type="password" fullWidth value={newUser.password} onChange={handleInputChange} />
-          <TextField margin="dense" name="confirmPassword" label="비밀번호 확인" type="password" fullWidth value={newUser.confirmPassword} onChange={handleInputChange} />
-          <TextField margin="dense" name="company" label="소속 업체" type="text" fullWidth value={newUser.company} onChange={handleInputChange} />
-          <FormControl fullWidth margin="dense">
-            <InputLabel id="role-label">권한</InputLabel>
-            <Select
-              labelId="role-label"
-              id="role"
-              name="role"
-              value={newUser.role}
-              label="권한"
-              onChange={handleInputChange}
-            >
-              <MenuItem value="관리자">관리자</MenuItem>
-              <MenuItem value="업체 최고 관리자">업체 최고 관리자</MenuItem>
-              <MenuItem value="업체관리자">업체관리자</MenuItem>
-              <MenuItem value="일반 유저">일반 유저</MenuItem>
-            </Select>
-          </FormControl>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseModal} color="primary">
-            취소
-          </Button>
-          <Button onClick={handleCloseModal} color="primary">
-            등록
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <Modal
+        open={isModalOpen}
+        onClose={handleCloseModal}
+        aria-labelledby="user-registration-modal-title"
+        aria-describedby="user-registration-modal-description"
+      >
+        <Box sx={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: 600,
+          bgcolor: "background.paper",
+          borderRadius: "12px",
+          boxShadow: 24,
+          p: 3,
+          display: "flex",
+          flexDirection: "column",
+          gap: 2.5,
+        }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
+            <Typography id="user-registration-modal-title" variant="h6" component="h2" fontWeight={700}>
+              사용자 등록
+            </Typography>
+            <IconButton onClick={handleCloseModal} size="small" sx={{ bgcolor: "#F1F5F9", borderRadius: "16px", width: 32, height: 32 }}>
+              <CloseIcon fontSize="small" sx={{ color: "#64748B" }} />
+            </IconButton>
+          </Box>
+
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" fontWeight={500} mb={0.5}>이름 *</Typography>
+                <TextField
+                  name="name"
+                  placeholder="이름 입력"
+                  sx={{ bgcolor: "#F8FAFC", border: "1px solid #CBD5E1", borderRadius: "6px", "& fieldset": { border: "none" } }}
+                  value={newUser.name}
+                  onChange={handleInputChange}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" fontWeight={500} mb={0.5}>연락처 *</Typography>
+                <TextField
+                  name="phone"
+                  placeholder="010-0000-0000"
+                  sx={{ bgcolor: "#F8FAFC", border: "1px solid #CBD5E1", borderRadius: "6px", "& fieldset": { border: "none" } }}
+                  value={newUser.phone}
+                  onChange={handleInputChange}
+                  fullWidth
+                />
+              </Grid>
+            </Grid>
+
+            <Box>
+              <Typography variant="body2" fontWeight={500} mb={0.5}>이메일 *</Typography>
+              <TextField
+                name="email"
+                placeholder="이메일 입력"
+                sx={{ bgcolor: "#F8FAFC", border: "1px solid #CBD5E1", borderRadius: "6px", "& fieldset": { border: "none" } }}
+                value={newUser.email}
+                onChange={handleInputChange}
+                fullWidth
+              />
+            </Box>
+
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" fontWeight={500} mb={0.5}>비밀번호 *</Typography>
+                <TextField
+                  name="password"
+                  placeholder="비밀번호 입력"
+                  sx={{ bgcolor: "#F8FAFC", border: "1px solid #CBD5E1", borderRadius: "6px", "& fieldset": { border: "none" } }}
+                  value={newUser.password}
+                  onChange={handleInputChange}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" fontWeight={500} mb={0.5}>비밀번호 확인 *</Typography>
+                <TextField
+                  name="confirmPassword"
+                  placeholder="비밀번호 확인"
+                  sx={{ bgcolor: "#F8FAFC", border: "1px solid #CBD5E1", borderRadius: "6px", "& fieldset": { border: "none" } }}
+                  value={newUser.confirmPassword}
+                  onChange={handleInputChange}
+                  fullWidth
+                />
+              </Grid>
+            </Grid>
+
+            <Box>
+              <Typography variant="body2" fontWeight={500} mb={0.5}>소속 업체 *</Typography>
+              <TextField
+                name="company"
+                placeholder="업체 선택"
+                sx={{ bgcolor: "#F8FAFC", border: "1px solid #CBD5E1", borderRadius: "6px", "& fieldset": { border: "none" } }}
+                value={newUser.company}
+                onChange={handleInputChange}
+                fullWidth
+              />
+            </Box>
+
+            <Box>
+              <Typography variant="body2" fontWeight={500} mb={0.5}>권한 *</Typography>
+              <FormControl component="fieldset" fullWidth>
+                <RadioGroup
+                  row
+                  name="role"
+                  value={newUser.role}
+                  onChange={handleInputChange}
+                >
+                  <FormControlLabel value="관리자" control={<Radio size="small" />} label="관리자" />
+                  <FormControlLabel value="업체 최고 관리자" control={<Radio size="small" />} label="업체 최고 관리자" />
+                  <FormControlLabel value="업체관리자" control={<Radio size="small" />} label="업체관리자" />
+                  <FormControlLabel value="일반 유저" control={<Radio size="small" />} label="일반 유저" />
+                </RadioGroup>
+              </FormControl>
+            </Box>
+
+            <Box>
+              <Typography variant="body2" fontWeight={500} mb={0.5}>메모</Typography>
+              <TextField
+                name="memo"
+                placeholder="추가 정보 입력"
+                sx={{ bgcolor: "#F8FAFC", border: "1px solid #CBD5E1", borderRadius: "6px", "& fieldset": { border: "none" } }}
+                value={newUser.memo}
+                onChange={handleInputChange}
+                multiline
+                rows={3}
+                fullWidth
+              />
+            </Box>
+
+          </Box>
+
+          <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1.5, mt: 2 }}>
+            <Button variant="outlined" onClick={handleCloseModal} sx={{ width: 100, height: 44, borderColor: "#CBD5E1", color: "#64748B", borderRadius: "6px" }}>취소</Button>
+            <Button variant="contained" onClick={handleCloseModal} sx={{ width: 100, height: 44, bgcolor: "#3B82F6", "&:hover": { bgcolor: "#2563EB" }, borderRadius: "6px", color: "#FFFFFF" }}>등록</Button>
+          </Box>
+        </Box>
+      </Modal>
 
     </Box>
   );
