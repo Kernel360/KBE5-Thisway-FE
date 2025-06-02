@@ -62,7 +62,8 @@ const Sidebar = () => {
 // ];
 
 const CompanyUserManagementPage = () => {
-  const [openModal, setOpenModal] = useState(false);
+  const [openAddModal, setOpenAddModal] = useState(false); // State for add modal
+  const [openEditModal, setOpenEditModal] = useState(false); // State for edit modal
   const [users, setUsers] = useState([]); // State to store fetched user data
   const [totalUsers, setTotalUsers] = useState(0); // State to store total user count
   const [companyChefCount, setCompanyChefCount] = useState(0); // State for COMPANY_CHEF count
@@ -77,6 +78,8 @@ const CompanyUserManagementPage = () => {
     password: "",
     confirmPassword: "",
   });
+
+  const [editingUser, setEditingUser] = useState(null); // State to store user being edited
 
   // Fetch user data on component mount
   useEffect(() => {
@@ -106,9 +109,9 @@ const CompanyUserManagementPage = () => {
     fetchUsers();
   }, []); // Empty dependency array means this effect runs once on mount
 
-  const handleOpenModal = () => setOpenModal(true);
-  const handleCloseModal = () => {
-    setOpenModal(false);
+  const handleOpenAddModal = () => setOpenAddModal(true);
+  const handleCloseAddModal = () => {
+    setOpenAddModal(false);
     setNewUser({
       name: "",
       email: "",
@@ -120,15 +123,35 @@ const CompanyUserManagementPage = () => {
     }); // Reset form on close
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setNewUser({ ...newUser, [name]: value });
+  const handleOpenEditModal = (user) => {
+    setEditingUser({ ...user, password: "", confirmPassword: "" }); // Set user data and clear password fields
+    setOpenEditModal(true);
   };
 
-  const handleSubmit = () => {
+  const handleCloseEditModal = () => {
+    setOpenEditModal(false);
+    setEditingUser(null); // Clear editing user state
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    if (editingUser) {
+      setEditingUser({ ...editingUser, [name]: value });
+    } else {
+      setNewUser({ ...newUser, [name]: value });
+    }
+  };
+
+  const handleSubmitAdd = () => {
     // TODO: Implement user registration logic using authApi.post('/members', newUser)
     console.log("New User Data:", newUser);
-    handleCloseModal();
+    handleCloseAddModal();
+  };
+
+  const handleSubmitEdit = () => {
+    // TODO: Implement user update logic using authApi.put('/members/' + editingUser.id, editingUser)
+    console.log("Editing User Data:", editingUser);
+    handleCloseEditModal();
   };
 
   return (
@@ -152,7 +175,7 @@ const CompanyUserManagementPage = () => {
               variant="contained"
               startIcon={"+"}
               sx={{ height: 40, bgcolor: "primary.main", "&:hover": { bgcolor: "primary.dark" } }}
-              onClick={handleOpenModal} // Open modal on click
+              onClick={handleOpenAddModal} // Open add modal on click
             >
               사용자 등록
             </Button>
@@ -217,13 +240,13 @@ const CompanyUserManagementPage = () => {
                     <TableCell>{user.memo}</TableCell>
                     <TableCell>
                       {/* Use role from API response and map to Korean label */}
-                      <Box sx={{ bgcolor: user.role === "COMPANY_CHEF" ? "#EFF6FF" : "#F1F5F9", color: user.role === "COMPANY_CHEF" ? "primary.main" : "text.secondary", borderRadius: "12px", px: 1, py: 0.5, display: "inline-block", fontWeight: 500, fontSize: "12px" }}>
+                      <Box sx={{ bgcolor: user.role === "COMPANY_CHEF" ? "#EFF6FF" : user.role === "MEMBER" ? "#F1F5F9" : "#FFFFFF", color: user.role === "COMPANY_CHEF" ? "primary.main" : "text.secondary", borderRadius: "12px", px: 1, py: 0.5, display: "inline-block", fontWeight: 500, fontSize: "12px" }}>
                         {user.role === "COMPANY_CHEF" ? "관리자" : user.role === "MEMBER" ? "일반 사용자" : user.role}
                       </Box>
                     </TableCell>
                     <TableCell>
                       <Box sx={{ display: "flex", gap: 1 }}>
-                        <Button variant="contained" size="small" sx={{ minWidth: "unset", width: "32px", height: "32px", bgcolor: "#F1F5F9", color: "text.secondary", boxShadow: "none", "&:hover": { bgcolor: "#E2E8F0" } }}>✏️</Button>
+                        <Button variant="contained" size="small" sx={{ minWidth: "unset", width: "32px", height: "32px", bgcolor: "#F1F5F9", color: "text.secondary", boxShadow: "none", "&:hover": { bgcolor: "#E2E8F0" } }} onClick={() => handleOpenEditModal(user)}>✏️</Button>
                         <Button variant="contained" size="small" sx={{ minWidth: "unset", width: "32px", height: "32px", bgcolor: "#FEE2E2", color: "#EF4444", boxShadow: "none", "&:hover": { bgcolor: "#FECACA" } }}>🗑️</Button>
                       </Box>
                     </TableCell>
@@ -243,8 +266,8 @@ const CompanyUserManagementPage = () => {
 
         {/* User Registration Modal */}
         <Modal
-          open={openModal}
-          onClose={handleCloseModal}
+          open={openAddModal}
+          onClose={handleCloseAddModal}
           aria-labelledby="user-registration-modal-title"
           aria-describedby="user-registration-modal-description"
         >
@@ -266,7 +289,7 @@ const CompanyUserManagementPage = () => {
               <Typography id="user-registration-modal-title" variant="h6" component="h2" fontWeight={700}>
                 사용자 등록
               </Typography>
-              <IconButton onClick={handleCloseModal} size="small">
+              <IconButton onClick={handleCloseAddModal} size="small">
                 <CloseIcon fontSize="small" />
               </IconButton>
             </Box>
@@ -350,7 +373,7 @@ const CompanyUserManagementPage = () => {
                     value={newUser.role}
                     onChange={handleInputChange}
                   >
-                    {/* Use API role values */} {/* Changed ADMIN to COMPANY_CHEF for manager count */}
+                    {/* Use API role values */}
                     <FormControlLabel value="COMPANY_CHEF" control={<Radio size="small" />} label="관리자" />
                     <FormControlLabel value="MEMBER" control={<Radio size="small" />} label="일반 사용자" />
                      {/* Other roles can be added if needed */}
@@ -376,8 +399,123 @@ const CompanyUserManagementPage = () => {
             </Box>
 
             <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1.5, mt: 2 }}> {/* Action buttons */}
-              <Button variant="outlined" onClick={handleCloseModal} sx={{ width: 100, height: 44, borderColor: "#CBD5E1", color: "#64748B" }}>취소</Button>
-              <Button variant="contained" onClick={handleSubmit} sx={{ width: 100, height: 44, bgcolor: "primary.main", "&:hover": { bgcolor: "primary.dark" } }}>등록</Button>
+              <Button variant="outlined" onClick={handleCloseAddModal} sx={{ width: 100, height: 44, borderColor: "#CBD5E1", color: "#64748B" }}>취소</Button>
+              <Button variant="contained" onClick={handleSubmitAdd} sx={{ width: 100, height: 44, bgcolor: "primary.main", "&:hover": { bgcolor: "primary.dark" } }}>등록</Button>
+            </Box>
+          </Box>
+        </Modal>
+
+        {/* User Edit Modal */}
+        <Modal
+          open={openEditModal}
+          onClose={handleCloseEditModal}
+          aria-labelledby="user-edit-modal-title"
+          aria-describedby="user-edit-modal-description"
+        >
+          <Box sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 600, // Consistent width with add modal
+            bgcolor: "background.paper",
+            borderRadius: "12px", // Consistent border radius
+            boxShadow: 24,
+            p: 3, // Consistent padding
+            display: "flex",
+            flexDirection: "column",
+            gap: 2.5, // Consistent gap
+          }}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}> {/* Header box */}
+              <Typography id="user-edit-modal-title" variant="h6" component="h2" fontWeight={700}>
+                사용자 수정
+              </Typography>
+              <IconButton onClick={handleCloseEditModal} size="small">
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </Box>
+
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}> {/* Form box */}
+              <Grid container spacing={2}> {/* First row: Name, Phone */}
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body2" fontWeight={500} mb={0.5}>이름 *</Typography>
+                  <TextField
+                    name="name"
+                    value={editingUser?.name || ""}
+                    onChange={handleInputChange}
+                    fullWidth
+                    size="small"
+                    placeholder="이름 입력"
+                    sx={{ bgcolor: "#F8FAFC" }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body2" fontWeight={500} mb={0.5}>연락처 *</Typography>
+                  <TextField
+                    name="phone"
+                    value={editingUser?.phone || ""}
+                    onChange={handleInputChange}
+                    fullWidth
+                    size="small"
+                    placeholder="010-0000-0000"
+                    sx={{ bgcolor: "#F8FAFC" }}
+                  />
+                </Grid>
+              </Grid>
+
+              <Box> {/* Second row: Email */}
+                <Typography variant="body2" fontWeight={500} mb={0.5}>이메일 *</Typography>
+                <TextField
+                  name="email"
+                  value={editingUser?.email || ""}
+                  onChange={handleInputChange}
+                  fullWidth
+                  size="small"
+                  placeholder="이메일 입력"
+                  sx={{ bgcolor: "#F8FAFC" }}
+                />
+              </Box>
+
+               {/* Password fields are intentionally omitted as per Figma, assuming password change is separate or not in this modal */}
+
+              <Box> {/* Fourth row: Role */}
+                <Typography variant="body2" fontWeight={500} mb={0.5}>권한 *</Typography>
+                <FormControl component="fieldset">
+                  <RadioGroup
+                    row
+                    name="role"
+                    value={editingUser?.role || "MEMBER"}
+                    onChange={handleInputChange}
+                  >
+                    {/* Use API role values */}
+                    <FormControlLabel value="COMPANY_CHEF" control={<Radio size="small" />} label="관리자" />
+                    <FormControlLabel value="MEMBER" control={<Radio size="small" />} label="일반 사용자" />
+                     {/* Other roles can be added if needed */}
+                  </RadioGroup>
+                </FormControl>
+              </Box>
+
+              <Box> {/* Fifth row: Memo */}
+                <Typography variant="body2" fontWeight={500} mb={0.5}>메모</Typography>
+                <TextField
+                  name="memo"
+                  value={editingUser?.memo || ""}
+                  onChange={handleInputChange}
+                  fullWidth
+                  size="small"
+                  multiline
+                  rows={3} // Consistent rows
+                  placeholder="추가 정보 입력"
+                  sx={{ bgcolor: "#F8FAFC" }}
+                />
+              </Box>
+
+
+            </Box>
+
+            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1.5, mt: 2 }}> {/* Action buttons */}
+              <Button variant="outlined" onClick={handleCloseEditModal} sx={{ width: 100, height: 44, borderColor: "#CBD5E1", color: "#64748B" }}>취소</Button>
+              <Button variant="contained" onClick={handleSubmitEdit} sx={{ width: 100, height: 44, bgcolor: "primary.main", "&:hover": { bgcolor: "primary.dark" } }}>저장</Button>
             </Box>
           </Box>
         </Modal>
