@@ -71,6 +71,36 @@ const AdminUserManagementPage = () => {
     role: '',
   });
 
+  // State for companies list
+  const [companies, setCompanies] = useState([]);
+
+  // Fetch companies list
+  const fetchCompanies = async () => {
+    try {
+      // Assuming authApi is configured with a baseURL like /api
+      const response = await authApi.get("/companies");
+      console.log("Companies API response:", response);
+      // Adjusted based on the provided response structure: { companies: { content: [...] } }
+      if (response.data && response.data.companies && response.data.companies.content) {
+        const fetchedCompanies = response.data.companies.content;
+        setCompanies(fetchedCompanies);
+        console.log("Fetched Companies content:", fetchedCompanies);
+      } else {
+        console.warn("Companies data structure not as expected:", response.data);
+        setCompanies([]); // Set to empty if data structure is unexpected
+      }
+    } catch (err) {
+      console.error("Failed to fetch companies:", err);
+      // Handle error (e.g., show an error message)
+      setCompanies([]); // Clear companies on error
+    }
+  };
+
+  // Fetch companies on component mount
+  useEffect(() => {
+    fetchCompanies();
+  }, []); // Empty dependency array means this runs once on mount
+
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
 
@@ -118,6 +148,40 @@ const AdminUserManagementPage = () => {
   const tableHeaders = managementType === "user" ?
     ["번호", "이름", "이메일", "연락처", "소속 업체", "권한", "상태", "관리"] :
     ["번호", "업체명", "이메일", "연락처", "메모", "관리"];
+
+  const handleSubmitAdd = async () => {
+    console.log("New User Data:", newUser);
+
+    // 필수 필드 유효성 검사
+    if (!newUser.name || !newUser.email || !newUser.password || !newUser.phone || !newUser.role || !newUser.company) { // company 필드 추가
+      alert("필수 입력 항목(*)을 모두 채워주세요.");
+      return;
+    }
+
+    // 비밀번호 확인 일치 여부 확인
+    if (newUser.password !== newUser.confirmPassword) {
+        alert("비밀번호와 비밀번호 확인이 일치하지 않습니다.");
+        return;
+    }
+
+    try {
+      const registrationPayload = {
+        companyId: newUser.company, // 선택된 회사 ID 사용
+        role: newUser.role,
+        name: newUser.name,
+        email: newUser.email,
+        password: newUser.password,
+        phone: newUser.phone,
+        memo: newUser.memo,
+      };
+
+      // ... existing code ...
+
+    } catch (err) {
+      console.error("Failed to register user:", err);
+      // Handle error (e.g., show an error message)
+    }
+  };
 
   return (
     <Box sx={{ p: 4, backgroundColor: "background.default", minHeight: "100vh" }}>
@@ -334,14 +398,25 @@ const AdminUserManagementPage = () => {
 
             <Box>
               <Typography variant="body2" fontWeight={500} mb={0.5}>소속 업체 *</Typography>
-              <TextField
-                name="company"
-                placeholder="업체 선택"
-                sx={{ bgcolor: "#F8FAFC", border: "1px solid #CBD5E1", borderRadius: "6px", "& fieldset": { border: "none" } }}
-                value={newUser.company}
-                onChange={handleInputChange}
-                fullWidth
-              />
+              <FormControl fullWidth size="small" sx={{ bgcolor: "#F8FAFC", border: "1px solid #CBD5E1", borderRadius: "6px", ".MuiOutlinedInput-notchedOutline": { border: "none" } }}>
+                <InputLabel id="company-select-label">업체 선택</InputLabel>
+                <Select
+                  labelId="company-select-label"
+                  id="company-select"
+                  name="company"
+                  value={newUser.company}
+                  label="업체 선택"
+                  onChange={handleInputChange}
+                >
+                  {companies.map((company, index) => (
+                    // Assuming company object has 'name' for display
+                    // Using index as key and company.name as value for now, as ID is not available
+                    <MenuItem key={index} value={company.name}>
+                      {company.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Box>
 
             <Box>
@@ -379,7 +454,7 @@ const AdminUserManagementPage = () => {
 
           <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1.5, mt: 2 }}>
             <Button variant="outlined" onClick={handleCloseModal} sx={{ width: 100, height: 44, borderColor: "#CBD5E1", color: "#64748B", borderRadius: "6px" }}>취소</Button>
-            <Button variant="contained" onClick={handleCloseModal} sx={{ width: 100, height: 44, bgcolor: "#3B82F6", "&:hover": { bgcolor: "#2563EB" }, borderRadius: "6px", color: "#FFFFFF" }}>등록</Button>
+            <Button variant="contained" onClick={handleSubmitAdd} sx={{ width: 100, height: 44, bgcolor: "#3B82F6", "&:hover": { bgcolor: "#2563EB" }, borderRadius: "6px", color: "#FFFFFF" }}>등록</Button>
           </Box>
         </Box>
       </Modal>
