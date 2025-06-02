@@ -134,11 +134,7 @@ function App() {
           />
           <Route
             path="/car-registration"
-            element={
-              <MainLayout>
-                <CarRegistrationPage />
-              </MainLayout>
-            }
+            element={<CarRegistrationPage />}
           />
           {/* TODO: login required */}
           <Route path="*" element={<NotFoundPage />} />
