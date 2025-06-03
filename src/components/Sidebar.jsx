@@ -6,20 +6,44 @@ import defaultProfile from "../assets/default-profile.png";
 
 function Sidebar() {
   const location = useLocation();
-  const userRole = 'ADMIN'; // 예시일 뿐 추후 API 연결하고 수정.
+  const userRole = 'COMPANY_CHEF'; // 예시일 뿐 추후 API 연결하고 수정.
 
   const menuItems = [
-    { label: '대시보드', path: '/admin/dashboard', roles: ['ADMIN'] },
+    {
+      label: '대시보드',
+      rolePaths: [
+        { role: 'ADMIN', path: '/admin/dashboard' },
+        { roles: ['COMPANY_ADMIN', 'COMPANY_CHEF'], path: '/dashboard' },
+        { roles: ['MEMBER'], path: '/member/dashboard'}
+      ]
+    },
     { label: '기업 관리', path: '/admin/company', roles: ['ADMIN'] },
-    { label: '사용자 관리', path: '/admin/user', roles: ['ADMIN', 'COMPANY_ADMIN'] },
-    { label: '차량 승인', path: '/admin/vehicle-approval', roles: ['ADMIN'] },
+    {
+      label: '사용자 관리',
+      rolePaths: [
+        { role: 'ADMIN', path: '/admin/user' },
+        { role: 'COMPANY_CHEF', path: '/company/user-management' },
+      ]
+    },
     { label: '차량 관리', path: '/company/car-management', roles: ['COMPANY_CHEF', 'COMPANY_ADMIN'] },
-    { label: '차량 상세', path: '/company/car-detail', roles: ['COMPANY_CHEF', 'COMPANY_ADMIN'] },
+    { label: '차량 상세', path: '/company/car-detail', roles: ['COMPANY_CHEF', 'COMPANY_ADMIN'] },  // 이건 추후 사이드바에서는 삭제 예정
   ]
 
-  const filteredMenuItems = menuItems.filter(item =>
-    item.roles.includes(userRole)
-  );
+  const filteredMenuItems = menuItems
+    .map(item => {
+      if (item.roles && item.path) {
+        if (item.roles.includes(userRole)) return { ...item, path: item.path };
+        return null;
+      }
+      if (item.rolePaths) {
+        const matched = item.rolePaths.find(rp =>
+          (rp.role && rp.role === userRole) || (rp.roles && rp.roles.includes(userRole))
+        );
+        if (matched) return { ...item, path: matched.path };
+        return null;
+      }
+      return null;
+    }).filter(Boolean);
 
   return (
     <SidebarContainer>
