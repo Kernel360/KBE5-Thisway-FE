@@ -5,29 +5,7 @@ const globalStyles = (theme) => ({
         lineHeight: theme.typography.lineHeight,
         color: theme.palette.text.primary,
         backgroundColor: theme.palette.background.default,
-    },
-    ".app": {
-        display: "flex",
-        height: "100vh",
-    },
-    ".main-content": {
-        flex: 1,
-        padding: "20px",
-        overflowY: "auto",
-    },
-    ".page-header": {
-        fontSize: "20px",
-        fontWeight: "700",
-        color: theme.palette.text.secondary,
-        marginTop: "10px",
-        marginBottom: "16px",
-    },
-    ".header-content": {
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: "24px",
-    },
+    }
 });
 
 export default globalStyles;

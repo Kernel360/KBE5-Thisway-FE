@@ -49,7 +49,9 @@ const CompanyCarDetailPage = () => {
 
   return (
     <Container>
-      <PageTitle>차량 상세 정보 <CarNumber>{carInfo.carNumber}</CarNumber></PageTitle>
+      <Header>
+        <PageTitle>차량 상세 정보 <CarNumber>{carInfo.carNumber}</CarNumber></PageTitle>
+      </Header>
       <ContentWrapper>
         <LeftColumn>
           <Section>
@@ -153,10 +155,9 @@ const CompanyCarDetailPage = () => {
   );
 };
 
-const Container = styled.div`
-  padding: 10px 30px;
-  margin: 0 auto;
-`;
+const Container = styled.div.attrs(() => ({
+  className: 'page-container'
+}))``;
 
 const ContentWrapper = styled.div`
   display: grid;
@@ -176,11 +177,13 @@ const RightColumn = styled.div`
   height: 100%;
 `;
 
+const Header = styled.div.attrs(() => ({
+  className: 'page-header-wrapper'
+}))``;
+
 const PageTitle = styled.h1.attrs(() => ({
   className: 'page-header'
-}))`
-
-`;
+}))``;
 
 const CarNumber = styled.span`
   color: ${({ theme }) => theme.palette.primary.main};
