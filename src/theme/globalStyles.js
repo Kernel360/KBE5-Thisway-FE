@@ -15,10 +15,11 @@ const globalStyles = (theme) => ({
         padding: "20px",
         overflowY: "auto",
     },
-    ".page-header h1": {
-        fontSize: "24px",
+    ".page-header": {
+        fontSize: "20px",
         fontWeight: "700",
         color: theme.palette.text.secondary,
+        marginTop: "10px",
         marginBottom: "16px",
     },
     ".header-content": {

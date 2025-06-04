@@ -97,7 +97,7 @@ export default Sidebar;
 const SidebarContainer = styled.aside`
   width: 250px;
   background-color: ${({ theme }) => theme.palette.background.paper};
-  padding: 10px 20px 20px;
+  padding: 15px 20px 20px;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
@@ -120,6 +120,7 @@ const LogoTitle = styled.h1`
 `;
 
 const Nav = styled.nav`
+  margin-top: 20px;
   flex: 1;
 `;
 
