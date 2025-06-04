@@ -3,58 +3,66 @@ import styled from "styled-components";
 import { Link, useLocation } from "react-router-dom";
 import logo from "../assets/logo.png";
 import defaultProfile from "../assets/default-profile.png";
+import useUserStore from "@/store/userStore";
+
+// 역할 한글 변환 함수
+const getRoleLabel = (role) => {
+  switch (role) {
+    case "ADMIN":
+      return "최고 관리자";
+    case "COMPANY_ADMIN":
+      return "업체 최고 관리자";
+    case "COMPANY_CHEF":
+      return "업체 관리자";
+    case "MEMBER":
+      return "일반 사용자";
+    default:
+      return "알 수 없음";
+  }
+};
 
 function Sidebar() {
   const location = useLocation();
-  const userRole = "COMPANY_CHEF"; // 예시일 뿐 추후 API 연결하고 수정.
+  const user = useUserStore((state) => state.user);
+  const userRole = user?.ROLE_ADMIN
+    ? "ADMIN"
+    : user?.ROLE_COMPANY_ADMIN
+    ? "COMPANY_ADMIN"
+    : user?.ROLE_COMPANY_CHEF
+    ? "COMPANY_CHEF"
+    : user?.ROLE_MEMBER
+    ? "MEMBER"
+    : null;
 
-  const menuItems = [
-    {
-      label: "대시보드",
-      rolePaths: [
-        { role: "ADMIN", path: "/admin/dashboard" },
-        { roles: ["COMPANY_ADMIN", "COMPANY_CHEF"], path: "/dashboard" },
-        { roles: ["MEMBER"], path: "/member/dashboard" },
-      ],
-    },
-    { label: "기업 관리", path: "/admin/company", roles: ["ADMIN"] },
-    {
-      label: "사용자 관리",
-      rolePaths: [
-        { role: "ADMIN", path: "/admin/user" },
-        { role: "COMPANY_CHEF", path: "/company/user-management" },
-      ],
-    },
-    {
-      label: "차량 관리",
-      path: "/company/car-management",
-      roles: ["COMPANY_CHEF", "COMPANY_ADMIN"],
-    },
-    {
-      label: "차량 상세",
-      path: "/company/car-detail",
-      roles: ["COMPANY_CHEF", "COMPANY_ADMIN"],
-    }, // 이건 추후 사이드바에서는 삭제 예정
+  // 권한별 메뉴 정의
+  const adminMenu = [
+    { label: "대시보드", path: "/admin/dashboard" },
+    { label: "차량 관리", path: "/admin/car-management" },
+    { label: "사용자/업체 관리", path: "/admin/user" },
+    { label: "통계", path: "/admin/statistics" },
+  ];
+  const companyMenu = [
+    { label: "대시보드", path: "/company/dashboard" },
+    { label: "차량 관리", path: "/company/car-management" },
+    { label: "사용자 관리", path: "/company/user-management" },
+    { label: "운행 기록", path: "/company/trip-history" },
+    { label: "통계", path: "/company/statistics" },
+    { label: "설정", path: "/company/settings" },
+  ];
+  const memberMenu = [
+    { label: "내 대시보드", path: "/member/dashboard" },
+    { label: "차량 예약", path: "/member/car-reservation" },
+    { label: "내 이용 내역", path: "/member/usage-history" },
+    { label: "운행 일지", path: "/member/drive-log" },
+    { label: "내 정보 관리", path: "/member/profile" },
+    { label: "고객 센터", path: "/member/support" },
   ];
 
-  const filteredMenuItems = menuItems
-    .map((item) => {
-      if (item.roles && item.path) {
-        if (item.roles.includes(userRole)) return { ...item, path: item.path };
-        return null;
-      }
-      if (item.rolePaths) {
-        const matched = item.rolePaths.find(
-          (rp) =>
-            (rp.role && rp.role === userRole) ||
-            (rp.roles && rp.roles.includes(userRole)),
-        );
-        if (matched) return { ...item, path: matched.path };
-        return null;
-      }
-      return null;
-    })
-    .filter(Boolean);
+  let menuToShow = [];
+  if (userRole === "ADMIN") menuToShow = adminMenu;
+  else if (userRole === "COMPANY_ADMIN" || userRole === "COMPANY_CHEF")
+    menuToShow = companyMenu;
+  else if (userRole === "MEMBER") menuToShow = memberMenu;
 
   return (
     <SidebarContainer>
@@ -64,7 +72,7 @@ function Sidebar() {
       </LogoSection>
       <Nav>
         <NavList>
-          {filteredMenuItems.map((item) => (
+          {menuToShow.map((item) => (
             <NavItem key={item.path}>
               <NavLink
                 as={Link}
@@ -83,8 +91,10 @@ function Sidebar() {
             <img src={defaultProfile} alt="Member Profile" />
           </ProfileImage>
           <ProfileText>
-            <MemberLabel>관리자</MemberLabel>
-            <MemberEmail>admin@thisway.com</MemberEmail>
+            <MemberLabel>
+              {user ? getRoleLabel(userRole) : "로그인 필요"}
+            </MemberLabel>
+            <MemberEmail>{user?.email || "이메일 정보 없음"}</MemberEmail>
           </ProfileText>
         </MemberProfile>
       </MemberInfo>
