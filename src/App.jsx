@@ -1,6 +1,8 @@
 import React from "react";
 import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
-import { CssBaseline } from "@mui/material";
+import { CssBaseline, GlobalStyles } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
+import StyledGlobalStyle from "@/theme/StyledGlobalStyle";
 import MainLayout from "@/layouts/MainLayout";
 import AuthLayout from "@/layouts/AuthLayout";
 import LoginPage from "@/pages/auth/LoginPage";
@@ -11,7 +13,8 @@ import CompanyCarManagementPage from "@/pages/company/CompanyCarManagementPage";
 import CompanyCarDetailPage from "@/pages/company/CompanyCarDetailPage";
 import CompanyUserManagementPage from "@/pages/company/CompanyUserManagementPage";
 import AdminDashboardPage from "@/pages/admin/AdminDashboardPage";
-import AdminManagementPage from "@/pages/admin/AdminManagementPage";
+import AdminUserManagementPage from "@/pages/admin/AdminUserManagementPage";
+import globalStyles from "@/theme/globalStyles";
 import TripDetailViewPage from "@/pages/trip/TripDetailViewPage";
 import CarRegistrationPage from "@/pages/car/CarRegistrationPage";
 import RedirectByRole from "@/pages/RedirectByRole";
@@ -135,7 +138,7 @@ const routeList = [
     path: ROUTES.admin.manage,
     element: (
       <MainLayout>
-        <AdminManagementPage />
+        <AdminUserManagementPage />
       </MainLayout>
     ),
   },
@@ -216,6 +219,7 @@ function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const resetUser = useUserStore((state) => state.resetUser);
+  const theme = useTheme();
 
   useEffect(() => {
     const token = getToken();
@@ -237,13 +241,15 @@ function App() {
     if (!token || isTokenExpired(token)) {
       resetUser();
       localStorage.removeItem("token");
-      // navigate("/login", { replace: true });
+      navigate("/login", { replace: true });
     }
   }, [location, navigate, resetUser]);
 
   return (
     <>
       <CssBaseline />
+      <GlobalStyles styles={globalStyles(theme)} />
+      <StyledGlobalStyle />
       <Routes>
         {routeList.map(({ path, element }) => (
           <Route key={path} path={path} element={element} />

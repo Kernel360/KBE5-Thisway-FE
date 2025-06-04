@@ -19,7 +19,7 @@ const RedirectByRole = () => {
     } else if (role === "COMPANY_ADMIN" || role === "COMPANY_CHEF") {
       navigate("/company/dashboard", { replace: true });
     } else if (role === "MEMBER") {
-      navigate("/user/dashboard", { replace: true });
+      navigate("/member/dashboard", { replace: true });
     } else {
       navigate("/login", { replace: true });
     }

@@ -52,7 +52,6 @@ const CompanyUserManagementPage = () => {
 
   const [newUser, setNewUser] = useState({
     name: "",
-    phone: "",
     email: "",
     phone: "",
     memo: "",
@@ -86,8 +85,6 @@ const CompanyUserManagementPage = () => {
   /*
   const fetchUsers = async () => {
     try {
-      setLoading(true);
-      setError(null);
       const response = await authApi.get("/members");
       if (response.data && response.data.members) {
         const fetchedUsers = response.data.members.content;
@@ -136,48 +133,12 @@ const CompanyUserManagementPage = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setNewUser({ ...newUser, [name]: value });
-  };
-
-  useEffect(() => {
-    if (managementType === "user") {
-      fetchUsers();
+    if (editingUser) {
+      setEditingUser({ ...editingUser, [name]: value });
     } else {
-      setUsers([]);
-      setLoading(false);
+      setNewUser({ ...newUser, [name]: value });
     }
-  }, [managementType]);
-
-  const usersPerPage = 4;
-  const currentData = managementType === "user" ? users : mockCompanies;
-
-  const filteredData = currentData.filter(
-    (item) =>
-      (item.name && item.name.toLowerCase().includes(search.toLowerCase())) ||
-      (item.email && item.email.toLowerCase().includes(search.toLowerCase())) ||
-      (item.company &&
-        item.company.toLowerCase().includes(search.toLowerCase())) ||
-      (item.role && item.role.toLowerCase().includes(search.toLowerCase())) ||
-      (item.status && item.status.toLowerCase().includes(search.toLowerCase())),
-  );
-  const pagedData = filteredData.slice(
-    (page - 1) * usersPerPage,
-    page * usersPerPage,
-  );
-
-  const tableHeaders =
-    managementType === "user"
-      ? [
-          "번호",
-          "이름",
-          "이메일",
-          "연락처",
-          "소속 업체",
-          "권한",
-          "상태",
-          "관리",
-        ]
-      : ["번호", "업체명", "이메일", "연락처", "메모", "관리"];
+  };
 
   const handleSubmitAdd = () => {
     // 더미 데이터용 임시 처리
@@ -204,7 +165,6 @@ const CompanyUserManagementPage = () => {
       const filteredUsers = users.filter((user) => user.id !== userId);
       setUsers(filteredUsers);
     }
-    fetchUsers();
   };
 
   return (
