@@ -2,10 +2,8 @@ import axios from "axios";
 
 // JWT 토큰 저장 함수
 export function saveTokenFromResponse(response) {
-  const authHeader =
-    response.headers["authorization"] || response.headers["Authorization"];
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    const token = authHeader.substring(7);
+  const token = response.data?.token;
+  if (token) {
     localStorage.setItem("token", token);
     return token;
   }
