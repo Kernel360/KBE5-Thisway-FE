@@ -1,8 +1,10 @@
 import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ThemeProvider as MuiThemeProvider, CssBaseline } from "@mui/material";
+import { ThemeProvider as MuiThemeProvider, CssBaseline, GlobalStyles } from "@mui/material";
 import { ThemeProvider as StyledThemeProvider } from "styled-components";
+import StyledGlobalStyle from '@/theme/StyledGlobalStyle';
 import theme from "@/theme";
+import globalStyles from "@/theme/globalStyles";
 import MainLayout from "@/layouts/MainLayout";
 import AuthLayout from "@/layouts/AuthLayout";
 import LoginPage from "@/pages/auth/LoginPage";
@@ -28,6 +30,8 @@ function App() {
     <MuiThemeProvider theme={theme}>
       <StyledThemeProvider theme={theme}>
         <CssBaseline />
+        <GlobalStyles styles={globalStyles(theme)} />
+        <StyledGlobalStyle />
         <BrowserRouter>
           <Routes>
             <Route
