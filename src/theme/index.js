@@ -8,18 +8,18 @@ const theme = createTheme({
     lineHeight: 1.5,
     h1: {
       fontWeight: 700,
-      fontSize: "2.5rem",
+      fontSize: "20px",
     },
     h2: {
       fontWeight: 700,
-      fontSize: "2rem",
+      fontSize: "32px",
     },
     h3: {
       fontWeight: 500,
-      fontSize: "1.5rem",
+      fontSize: "24px",
     },
     body1: {
-      fontSize: "1rem",
+      fontSize: "16px",
     },
   },
 });
