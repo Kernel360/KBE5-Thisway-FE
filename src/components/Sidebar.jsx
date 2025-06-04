@@ -37,14 +37,17 @@ function Sidebar() {
   // 권한별 메뉴 정의
   const adminMenu = [
     { label: "대시보드", path: "/admin/dashboard" },
-    { label: "차량 관리", path: "/admin/car-management" },
-    { label: "사용자/업체 관리", path: "/admin/user" },
+    // { label: "차량 관리", path: "/admin/car-management" },
+    { label: "사용자/업체 관리", path: "/admin/manage" },
     { label: "통계", path: "/admin/statistics" },
   ];
   const companyMenu = [
     { label: "대시보드", path: "/company/dashboard" },
     { label: "차량 관리", path: "/company/car-management" },
-    { label: "사용자 관리", path: "/company/user-management" },
+    // 사용자 관리는 COMPANY_ADMIN만 볼 수 있음
+    ...(userRole === "COMPANY_ADMIN"
+      ? [{ label: "사용자 관리", path: "/company/user-management" }]
+      : []),
     { label: "운행 기록", path: "/company/trip-history" },
     { label: "통계", path: "/company/statistics" },
     { label: "설정", path: "/company/settings" },

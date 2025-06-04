@@ -29,3 +29,11 @@ export function getUserRole() {
   if (payload.ROLE_MEMBER) return "MEMBER";
   return null;
 }
+
+export function isTokenExpired(token) {
+  if (!token) return true;
+  const payload = parseJwt(token);
+  if (!payload || !payload.exp) return true;
+  // exp는 초 단위, JS의 Date.now()는 ms 단위
+  return Date.now() >= payload.exp * 1000;
+}

@@ -7,14 +7,12 @@ const RedirectByRole = () => {
 
   useEffect(() => {
     const token = getToken();
-    console.log(token);
 
     if (!token) {
       navigate("/login", { replace: true });
       return;
     }
     const role = getUserRole(token);
-    console.log(role);
 
     if (role === "ADMIN") {
       navigate("/admin/dashboard", { replace: true });

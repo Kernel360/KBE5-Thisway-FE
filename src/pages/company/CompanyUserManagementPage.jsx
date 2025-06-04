@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import {
   Box,
   Grid,
-  Card,
-  CardContent,
   Typography,
+  TextField,
+  Button,
   Table,
   TableBody,
   TableCell,
@@ -12,148 +12,272 @@ import {
   TableHead,
   TableRow,
   Paper,
-  TextField,
-  Button,
+  Chip,
+  IconButton,
   Pagination,
-  Modal,
-  Select,
-  MenuItem,
+  ButtonGroup,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   FormControl,
   InputLabel,
+  Select,
+  MenuItem,
+  CircularProgress,
+  Alert,
+  Modal,
   RadioGroup,
   FormControlLabel,
   Radio,
-  IconButton,
 } from "@mui/material";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 import CloseIcon from "@mui/icons-material/Close";
-import { authApi } from "../../utils/api"; // Import authApi - Corrected path
+import { authApi } from "../../utils/api";
 
-// Sidebar component (simplified for now, actual implementation might be in a separate file)
-const Sidebar = () => {
-  return (
-    <Box sx={{ width: 240, flexShrink: 0, bgcolor: "white", p: 2, borderRight: "1px solid #E2E8F0" }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h6" fontWeight={700} color="primary.dark">차량 관제 시스템</Typography>
-      </Box>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="subtitle2" color="text.secondary" mb={1}>메뉴</Typography>
-        {/* Menu items */}
-        <Box>대시보드</Box>
-        <Box>차량 관리</Box>
-        <Box sx={{ bgcolor: "#EFF6FF", p: 1, borderRadius: "6px", color: "primary.main", fontWeight: 900 }}>사용자 관리</Box>
-        <Box>운행 기록</Box>
-        <Box>통계</Box>
-        <Box>설정</Box>
-      </Box>
-      <Box sx={{ mt: "auto", bgcolor: "#F8FAFC", p: 1.5, borderRadius: "6px" }}>
-        <Typography variant="body2" fontWeight={700} color="text.primary">김관리</Typography>
-        <Typography variant="caption" color="text.secondary">업체 관리자</Typography>
-      </Box>
-    </Box>
-  );
-};
+// mock 데이터 (API 연동 후 삭제 예정)
+const mockUsers = [
+  {
+    id: 1,
+    name: "김관리",
+    email: "kim@abc-rent.com",
+    phone: "010-1234-5678",
+    company: "ABC 렌트카",
+    memo: "김관리입니다.",
+    role: "관리자",
+    status: "활성",
+  },
+  {
+    id: 2,
+    name: "이부장",
+    email: "lee@abc-rent.com",
+    phone: "010-2345-6789",
+    company: "ABC 렌트카",
+    memo: "이부장입니다.",
+    role: "관리자",
+    status: "활성",
+  },
+  {
+    id: 3,
+    name: "박대리",
+    email: "park@abc-rent.com",
+    phone: "010-3456-7890",
+    company: "가나다 상사",
+    memo: "박대리입니다.",
+    role: "일반 사용자",
+    status: "활성",
+  },
+  {
+    id: 4,
+    name: "최사원",
+    email: "choi@abc-rent.com",
+    phone: "010-4567-8901",
+    company: "라마바 서비스",
+    memo: "최사원입니다.",
+    role: "일반 사용자",
+    status: "비활성",
+  },
+  {
+    id: 5,
+    name: "홍길동",
+    email: "hong@example.com",
+    phone: "010-5678-1234",
+    company: "가나다 상사",
+    memo: "테스트 계정",
+    role: "일반 사용자",
+    status: "활성",
+  },
+  {
+    id: 6,
+    name: "김영희",
+    email: "kimyh@test.com",
+    phone: "010-6789-0123",
+    company: "ABC 렌트카",
+    memo: "",
+    role: "일반 사용자",
+    status: "활성",
+  },
+  {
+    id: 7,
+    name: "박철수",
+    email: "parkcs@example.com",
+    phone: "010-7890-1234",
+    company: "라마바 서비스",
+    memo: "",
+    role: "관리자",
+    status: "비활성",
+  },
+];
+
+// 임시 mock 업체 데이터 (필요시 사용)
+const mockCompanies = [
+  {
+    id: 1,
+    name: "ABC 렌트카",
+    email: "info@abc-rent.com",
+    phone: "02-1234-5678",
+    memo: "본사",
+  },
+  // ...
+];
 
 const CompanyUserManagementPage = () => {
-  const [openAddModal, setOpenAddModal] = useState(false); // State for add modal
-  const [openEditModal, setOpenEditModal] = useState(false); // State for edit modal
-  const [users, setUsers] = useState([]); // State to store fetched user data
-  const [totalUsers, setTotalUsers] = useState(0); // State to store total user count
-  const [companyChefCount, setCompanyChefCount] = useState(0); // State for COMPANY_CHEF count
-  const [memberCount, setMemberCount] = useState(0); // State for MEMBER count
-
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [managementType, setManagementType] = useState("user");
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [newUser, setNewUser] = useState({
     name: "",
-    email: "",
     phone: "",
-    memo: "",
-    role: "MEMBER", // Default role for new user
+    email: "",
     password: "",
     confirmPassword: "",
+    company: "",
+    role: "",
   });
 
-  const [editingUser, setEditingUser] = useState(null); // State to store user being edited
+  // State for companies list
+  const [companies, setCompanies] = useState([]);
+
+  // Fetch companies list
+  const fetchCompanies = async () => {
+    try {
+      // Assuming authApi is configured with a baseURL like /api
+      const response = await authApi.get("/companies");
+      console.log("Companies API response:", response);
+      // Adjusted based on the provided response structure: { companies: { content: [...] } }
+      if (
+        response.data &&
+        response.data.companies &&
+        response.data.companies.content
+      ) {
+        const fetchedCompanies = response.data.companies.content;
+        setCompanies(fetchedCompanies);
+        console.log("Fetched Companies content:", fetchedCompanies);
+      } else {
+        console.warn(
+          "Companies data structure not as expected:",
+          response.data,
+        );
+        setCompanies([]); // Set to empty if data structure is unexpected
+      }
+    } catch (err) {
+      console.error("Failed to fetch companies:", err);
+      // Handle error (e.g., show an error message)
+      setCompanies([]); // Clear companies on error
+    }
+  };
+
+  // Fetch companies on component mount
+  useEffect(() => {
+    fetchCompanies();
+  }, []); // Empty dependency array means this runs once on mount
 
   // Fetch user data
   const fetchUsers = async () => {
     try {
+      setLoading(true);
+      setError(null);
       const response = await authApi.get("/members");
       // Assuming the response data structure matches the provided sample
-      if (response.data && response.data.members) {
-        const fetchedUsers = response.data.members.content;
-        setUsers(fetchedUsers);
-        setTotalUsers(response.data.members.totalElements);
-
-        // Calculate role counts
-        const chefCount = fetchedUsers.filter(user => user.role === 'COMPANY_CHEF').length;
-        const memberCnt = fetchedUsers.filter(user => user.role === 'MEMBER').length;
-        
-        setCompanyChefCount(chefCount);
-        setMemberCount(memberCnt);
-
+      if (
+        response.data &&
+        response.data.members &&
+        response.data.members.content
+      ) {
+        setUsers(response.data.members.content);
+        console.log("Fetched Users content:", response.data.members.content);
+      } else {
+        console.warn("Users data structure not as expected:", response.data);
+        setUsers([]); // Set to empty if data structure is unexpected
       }
-    } catch (error) {
-      console.error("Error fetching users:", error);
-      // Handle error (e.g., show an error message)
+    } catch (err) {
+      setError("사용자 정보를 불러오는데 실패했습니다.");
+      console.error("Failed to fetch users:", err);
+      setUsers([]); // Clear users on error
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Fetch user data on component mount
-  useEffect(() => {
-    fetchUsers();
-  }, []); // Empty dependency array means this effect runs once on mount
-
-  const handleOpenAddModal = () => setOpenAddModal(true);
-  const handleCloseAddModal = () => {
-    setOpenAddModal(false);
-    setNewUser({
-      name: "",
-      email: "",
-      phone: "",
-      memo: "",
-      role: "MEMBER", // Reset to default role
-      password: "",
-      confirmPassword: "",
-    }); // Reset form on close
-  };
-
-  const handleOpenEditModal = (user) => {
-    setEditingUser({ ...user, password: "", confirmPassword: "" }); // Set user data and clear password fields
-    setOpenEditModal(true);
-  };
-
-  const handleCloseEditModal = () => {
-    setOpenEditModal(false);
-    setEditingUser(null); // Clear editing user state
-  };
+  const handleOpenModal = () => setIsModalOpen(true);
+  const handleCloseModal = () => setIsModalOpen(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    if (editingUser) {
-      setEditingUser({ ...editingUser, [name]: value });
-    } else {
-      setNewUser({ ...newUser, [name]: value });
-    }
+    setNewUser({ ...newUser, [name]: value });
   };
 
+  useEffect(() => {
+    if (managementType === "user") {
+      fetchUsers();
+    } else {
+      setUsers([]);
+      setLoading(false);
+    }
+  }, [managementType]);
+
+  const usersPerPage = 4;
+  const currentData = managementType === "user" ? users : mockCompanies;
+
+  const filteredData = currentData.filter(
+    (item) =>
+      (item.name && item.name.toLowerCase().includes(search.toLowerCase())) ||
+      (item.email && item.email.toLowerCase().includes(search.toLowerCase())) ||
+      (item.company &&
+        item.company.toLowerCase().includes(search.toLowerCase())) ||
+      (item.role && item.role.toLowerCase().includes(search.toLowerCase())) ||
+      (item.status && item.status.toLowerCase().includes(search.toLowerCase())),
+  );
+  const pagedData = filteredData.slice(
+    (page - 1) * usersPerPage,
+    page * usersPerPage,
+  );
+
+  const tableHeaders =
+    managementType === "user"
+      ? [
+          "번호",
+          "이름",
+          "이메일",
+          "연락처",
+          "소속 업체",
+          "권한",
+          "상태",
+          "관리",
+        ]
+      : ["번호", "업체명", "이메일", "연락처", "메모", "관리"];
+
   const handleSubmitAdd = async () => {
-    // TODO: Implement user registration logic using authApi.post('/members', newUser)
     console.log("New User Data:", newUser);
 
-    // 필수 필드 유효성 검사 (간단하게 비어있지 않은지 확인)
-    if (!newUser.name || !newUser.email || !newUser.password || !newUser.phone || !newUser.role) {
+    // 필수 필드 유효성 검사
+    if (
+      !newUser.name ||
+      !newUser.email ||
+      !newUser.password ||
+      !newUser.phone ||
+      !newUser.role ||
+      !newUser.company
+    ) {
+      // company 필드 추가
       alert("필수 입력 항목(*)을 모두 채워주세요.");
       return;
     }
 
     // 비밀번호 확인 일치 여부 확인
     if (newUser.password !== newUser.confirmPassword) {
-        alert("비밀번호와 비밀번호 확인이 일치하지 않습니다.");
-        return;
+      alert("비밀번호와 비밀번호 확인이 일치하지 않습니다.");
+      return;
     }
 
     try {
       const registrationPayload = {
-        companyId: 1, // 하드코딩: 회사 ID
+        companyId: newUser.company, // 선택된 회사 ID 사용
         role: newUser.role,
         name: newUser.name,
         email: newUser.email,
@@ -162,419 +286,492 @@ const CompanyUserManagementPage = () => {
         memo: newUser.memo,
       };
 
-      console.log("Registration Payload:", registrationPayload); // 실제 전송될 데이터 확인
-
-      // API 호출
-      const response = await authApi.post("/members", registrationPayload);
-      console.log("User registration successful:", response.data);
-
-      alert("사용자 등록이 완료되었습니다."); // 성공 메시지 표시
-      handleCloseAddModal(); // 모달 닫기
-      fetchUsers(); // 사용자 목록 새로고침
-
-    } catch (error) {
-      console.error("Error registering user:", error);
-      // 오류 처리 (예: 오류 메시지 표시)
-      alert(`사용자 등록에 실패했습니다: ${error.message || '알 수 없는 오류'}`);
+      // ... existing code ...
+    } catch (err) {
+      console.error("Failed to register user:", err);
+      // Handle error (e.g., show an error message)
     }
-  };
-
-  const handleSubmitEdit = () => {
-    // TODO: Implement user update logic using authApi.put('/members/' + editingUser.id, editingUser)
-    console.log("Editing User Data:", editingUser);
-    handleCloseEditModal();
   };
 
   // Handle user deletion
   const handleDeleteUser = async (userId) => {
-    if (window.confirm("이 사용자를 삭제하시겠습니까?")) { // Confirmation prompt
+    if (window.confirm("이 사용자를 삭제하시겠습니까?")) {
+      // Confirmation prompt
       try {
         // Adjust the URL based on your API endpoint structure if needed
-        await authApi.delete(`/members/${userId}`);
-        console.log(`User with ID ${userId} deleted successfully.`);
-        fetchUsers(); // Re-fetch users after deletion
+        const response = await authApi.delete(`/members/${userId}`); // response를 받도록 수정
+
+        // Check if the status is 204 (NO_CONTENT) for success
+        if (response.status === 204) {
+          console.log(`User with ID ${userId} deleted successfully.`);
+          // Refresh the user list after successful deletion
+          // Optionally show a success message
+          alert("사용자 삭제가 완료되었습니다.");
+        } else {
+          // If status is not 204, treat as an error or unexpected response
+          console.warn(
+            `User deletion for ID ${userId} returned unexpected status: ${response.status}`,
+            response,
+          );
+          alert(`사용자 삭제에 실패했습니다. (상태 코드: ${response.status})`);
+        }
       } catch (error) {
         console.error(`Error deleting user with ID ${userId}:`, error);
-        // Handle error (e.g., show an error message to the user)
-        alert("사용자 삭제에 실패했습니다.");
+        // Handle network errors or other issues
+        alert(
+          `사용자 삭제 중 오류가 발생했습니다: ${
+            error.message || "알 수 없는 오류"
+          }`,
+        );
       }
     }
+    fetchUsers();
   };
 
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "#F5F7FA" }}>
-      {/* <Sidebar /> */}
-      <Box sx={{ flexGrow: 1, p: 3 }}>
-        {/* Header */}
-        <Box sx={{ mb: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Box>
-            <Typography variant="h4" fontWeight={700} color="text.primary">사용자 관리</Typography>
-            <Typography variant="subtitle1" color="text.secondary">ABC 렌트카의 사용자를 관리합니다.</Typography>
-          </Box>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <TextField
+    <Box
+      sx={{ p: 4, backgroundColor: "background.default", minHeight: "100vh" }}
+    >
+      <Typography variant="h4" fontWeight={700} mb={4} color="primary.main">
+        사용자/업체 관리
+      </Typography>
+      <Box>
+        <Grid
+          container
+          justifyContent="space-between"
+          alignItems="center"
+          spacing={2}
+          mb={2}
+        >
+          <Grid item>
+            <ButtonGroup
               variant="outlined"
-              size="small"
-              placeholder="사용자 검색..."
-              sx={{ width: 240, bgcolor: "white" }}
-            />
-            <Button
-              variant="contained"
-              startIcon={"+"}
-              sx={{ height: 40, bgcolor: "primary.main", "&:hover": { bgcolor: "primary.dark" } }}
-              onClick={handleOpenAddModal} // Open add modal on click
+              aria-label="management type button group"
             >
-              사용자 등록
-            </Button>
-          </Box>
-        </Box>
-
-        {/* User Stats */}
-        <Grid container spacing={2} mb={4}>
-          <Grid item xs={12} sm={4}>
-            <Card sx={{ boxShadow: 1, borderRadius: "8px" }}>
-              <CardContent>
-                <Typography variant="subtitle2" color="text.secondary">전체 사용자</Typography>
-                {/* Display total user count from API response */}
-                <Typography variant="h5" fontWeight={700} color="text.primary">{totalUsers}명</Typography>
-              </CardContent>
-            </Card>
+              <Button
+                variant={managementType === "user" ? "contained" : "outlined"}
+                onClick={() => setManagementType("user")}
+              >
+                사용자
+              </Button>
+              <Button
+                variant={
+                  managementType === "company" ? "contained" : "outlined"
+                }
+                onClick={() => setManagementType("company")}
+              >
+                업체
+              </Button>
+            </ButtonGroup>
           </Grid>
-          <Grid item xs={12} sm={4}>
-            <Card sx={{ boxShadow: 1, borderRadius: "8px" }}>
-              <CardContent>
-                <Typography variant="subtitle2" color="text.secondary">관리자</Typography>
-                 {/* Display COMPANY_CHEF count */}
-                <Typography variant="h5" fontWeight={700} color="primary.main">{companyChefCount}명</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={4}>
-            <Card sx={{ boxShadow: 1, borderRadius: "8px" }}>
-              <CardContent>
-                <Typography variant="subtitle2" color="text.secondary">일반 사용자</Typography>
-                 {/* Display MEMBER count */}
-                <Typography variant="h5" fontWeight={700} color="text.secondary">{memberCount}명</Typography>
-              </CardContent>
-            </Card>
+          <Grid item>
+            <Box sx={{ display: "flex", gap: 2 }}>
+              <TextField
+                size="small"
+                placeholder={
+                  managementType === "user" ? "사용자 검색..." : "업체 검색..."
+                }
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                sx={{ width: 220 }}
+              />
+              {managementType === "user" && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleOpenModal}
+                >
+                  + 사용자 등록
+                </Button>
+              )}
+              {managementType === "company" && (
+                <Button variant="contained" color="primary">
+                  + 업체 등록
+                </Button>
+              )}
+            </Box>
           </Grid>
         </Grid>
 
-        {/* User Table */}
-        <Box sx={{ boxShadow: 1, borderRadius: "8px", overflow: "hidden" }}>
-          <TableContainer component={Paper}>
+        {loading && (
+          <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+            <CircularProgress />
+          </Box>
+        )}
+        {error && (
+          <Box sx={{ mt: 4 }}>
+            <Alert severity="error">{error}</Alert>
+          </Box>
+        )}
+
+        {!loading && !error && (
+          <TableContainer
+            component={Paper}
+            sx={{ borderRadius: 3, boxShadow: 2, mb: 3 }}
+          >
             <Table>
               <TableHead>
-                <TableRow sx={{ bgcolor: "#F8FAFC" }}>
-                  <TableCell sx={{ fontWeight: 700, color: "#334155", width: "60px" }}>번호</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: "#334155", width: "160px" }}>이름</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: "#334155", width: "200px" }}>이메일</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: "#334155", width: "140px" }}>연락처</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: "#334155", width: "140px" }}>메모</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: "#334155", width: "120px" }}>권한</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: "#334155", width: "100px" }}>관리</TableCell>
+                <TableRow>
+                  {tableHeaders.map((header, index) => (
+                    <TableCell
+                      key={index}
+                      sx={{
+                        fontWeight: 700,
+                        color: "primary.main",
+                        backgroundColor: "grey.100",
+                      }}
+                    >
+                      {header}
+                    </TableCell>
+                  ))}
                 </TableRow>
               </TableHead>
               <TableBody>
-                {users.map((user, index) => (
-                  // Use user.id from API response as key
-                  <TableRow key={user.id || index} sx={{ "&:last-child td, &:last-child th": { border: 0 } }}>
-                    {/* Use index + 1 for sequential numbering as API might not provide a sequential number field */}
-                    <TableCell>{index + 1}</TableCell>
-                    <TableCell>{user.name}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.phone}</TableCell>
-                    <TableCell>{user.memo}</TableCell>
+                {pagedData.map((item, idx) => (
+                  <TableRow key={item.id}>
+                    <TableCell>{(page - 1) * usersPerPage + idx + 1}</TableCell>
+                    <TableCell>{item.name}</TableCell>
+                    <TableCell>{item.email}</TableCell>
+                    <TableCell>{item.phone}</TableCell>
+                    {managementType === "user" && item.company && (
+                      <TableCell>{item.company}</TableCell>
+                    )}
+                    {managementType === "user" && item.role && (
+                      <TableCell>
+                        <Chip
+                          label={item.role}
+                          color={item.role === "관리자" ? "primary" : "default"}
+                          size="small"
+                        />
+                      </TableCell>
+                    )}
+                    {managementType === "user" && item.status && (
+                      <TableCell>
+                        <Chip
+                          label={item.status}
+                          color={item.status === "활성" ? "primary" : "default"}
+                          size="small"
+                        />
+                      </TableCell>
+                    )}
                     <TableCell>
-                      {/* Use role from API response and map to Korean label */}
-                      <Box sx={{ bgcolor: user.role === "COMPANY_CHEF" ? "#EFF6FF" : user.role === "MEMBER" ? "#F1F5F9" : "#FFFFFF", color: user.role === "COMPANY_CHEF" ? "primary.main" : "text.secondary", borderRadius: "12px", px: 1, py: 0.5, display: "inline-block", fontWeight: 500, fontSize: "12px" }}>
-                        {user.role === "COMPANY_CHEF" ? "관리자" : user.role === "MEMBER" ? "일반 사용자" : user.role}
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: "flex", gap: 1 }}>
-                        <Button variant="contained" size="small" sx={{ minWidth: "unset", width: "32px", height: "32px", bgcolor: "#F1F5F9", color: "text.secondary", boxShadow: "none", "&:hover": { bgcolor: "#E2E8F0" } }} onClick={() => handleOpenEditModal(user)}>✏️</Button>
-                        <Button variant="contained" size="small" sx={{ minWidth: "unset", width: "32px", height: "32px", bgcolor: "#FEE2E2", color: "#EF4444", boxShadow: "none", "&:hover": { bgcolor: "#FECACA" } }} onClick={() => handleDeleteUser(user.id)}>🗑️</Button>
-                      </Box>
+                      <IconButton size="small">
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleDeleteUser(item.id)}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </TableContainer>
-        </Box>
+        )}
 
-        {/* Pagination */}
-        {/* TODO: Implement pagination logic based on fetched data */}
-        <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
-          {/* Assuming pagination count should be based on totalPages from API */}
-          <Pagination count={Math.ceil(totalUsers / 10)} shape="rounded" />
-        </Box>
-
-        {/* User Registration Modal */}
-        <Modal
-          open={openAddModal}
-          onClose={handleCloseAddModal}
-          aria-labelledby="user-registration-modal-title"
-          aria-describedby="user-registration-modal-description"
-        >
-          <Box sx={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: 600, // Adjusted width based on Figma
-            bgcolor: "background.paper",
-            borderRadius: "12px", // Adjusted border radius
-            boxShadow: 24,
-            p: 3, // Adjusted padding
-            display: "flex",
-            flexDirection: "column",
-            gap: 2.5, // Adjusted gap
-          }}>
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}> {/* Header box */}
-              <Typography id="user-registration-modal-title" variant="h6" component="h2" fontWeight={700}>
-                사용자 등록
-              </Typography>
-              <IconButton onClick={handleCloseAddModal} size="small">
-                <CloseIcon fontSize="small" />
-              </IconButton>
+        {!loading &&
+          !error &&
+          (filteredData.length > usersPerPage || page > 1) && (
+            <Box sx={{ display: "flex", justifyContent: "center" }}>
+              <Pagination
+                count={Math.ceil(filteredData.length / usersPerPage)}
+                page={page}
+                onChange={(_, value) => setPage(value)}
+                color="primary"
+              />
             </Box>
+          )}
 
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}> {/* Form box */}
-              <Grid container spacing={2}> {/* First row: Name, Phone */}
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="body2" fontWeight={500} mb={0.5}>이름 *</Typography>
-                  <TextField
-                    name="name"
-                    value={newUser.name}
-                    onChange={handleInputChange}
-                    fullWidth
-                    size="small"
-                    placeholder="이름 입력"
-                    sx={{ bgcolor: "#F8FAFC" }}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="body2" fontWeight={500} mb={0.5}>연락처 *</Typography>
-                  <TextField
-                    name="phone"
-                    value={newUser.phone}
-                    onChange={handleInputChange}
-                    fullWidth
-                    size="small"
-                    placeholder="01012345678"
-                    sx={{ bgcolor: "#F8FAFC" }}
-                  />
-                </Grid>
-              </Grid>
-
-              <Box> {/* Second row: Email */}
-                <Typography variant="body2" fontWeight={500} mb={0.5}>이메일 *</Typography>
-                <TextField
-                  name="email"
-                  value={newUser.email}
-                  onChange={handleInputChange}
-                  fullWidth
-                  size="small"
-                  placeholder="이메일 입력"
-                  sx={{ bgcolor: "#F8FAFC" }}
-                />
-              </Box>
-
-              <Grid container spacing={2}> {/* Third row: Password, Confirm Password */}
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="body2" fontWeight={500} mb={0.5}>비밀번호 *</Typography>
-                  <TextField
-                    name="password"
-                    value={newUser.password}
-                    onChange={handleInputChange}
-                    fullWidth
-                    size="small"
-                    type="password"
-                    placeholder="비밀번호 입력"
-                    sx={{ bgcolor: "#F8FAFC" }}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="body2" fontWeight={500} mb={0.5}>비밀번호 확인 *
-                  </Typography>
-                  <TextField
-                    name="confirmPassword"
-                    value={newUser.confirmPassword}
-                    onChange={handleInputChange}
-                    fullWidth
-                    size="small"
-                    type="password"
-                    placeholder="비밀번호 확인"
-                    sx={{ bgcolor: "#F8FAFC" }}
-                  />
-                </Grid>
-              </Grid>
-
-              <Box> {/* Fourth row: Role */}
-                <Typography variant="body2" fontWeight={500} mb={0.5}>권한 *</Typography>
-                <FormControl component="fieldset">
-                  <RadioGroup
-                    row
-                    name="role"
-                    value={newUser.role}
-                    onChange={handleInputChange}
-                  >
-                    {/* Use API role values */}
-                    <FormControlLabel value="COMPANY_CHEF" control={<Radio size="small" />} label="관리자" />
-                    <FormControlLabel value="MEMBER" control={<Radio size="small" />} label="일반 사용자" />
-                     {/* Other roles can be added if needed */}
-                  </RadioGroup>
-                </FormControl>
-              </Box>
-
-              <Box> {/* Fifth row: Memo */}
-                <Typography variant="body2" fontWeight={500} mb={0.5}>메모</Typography>
-                <TextField
-                  name="memo"
-                  value={newUser.memo}
-                  onChange={handleInputChange}
-                  fullWidth
-                  size="small"
-                  multiline
-                  rows={3} // Adjusted rows
-                  placeholder="추가 정보 입력"
-                  sx={{ bgcolor: "#F8FAFC" }}
-                />
-              </Box>
-
-            </Box>
-
-            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1.5, mt: 2 }}> {/* Action buttons */}
-              <Button variant="outlined" onClick={handleCloseAddModal} sx={{ width: 100, height: 44, borderColor: "#CBD5E1", color: "#64748B" }}>취소</Button>
-              <Button variant="contained" onClick={handleSubmitAdd} sx={{ width: 100, height: 44, bgcolor: "primary.main", "&:hover": { bgcolor: "primary.dark" } }}>등록</Button>
-            </Box>
+        {!loading && !error && filteredData.length === 0 && (
+          <Box sx={{ textAlign: "center", mt: 4 }}>
+            <Typography color="text.secondary">데이터가 없습니다.</Typography>
           </Box>
-        </Modal>
-
-        {/* User Edit Modal */}
-        <Modal
-          open={openEditModal}
-          onClose={handleCloseEditModal}
-          aria-labelledby="user-edit-modal-title"
-          aria-describedby="user-edit-modal-description"
-        >
-          <Box sx={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: 600, // Consistent width with add modal
-            bgcolor: "background.paper",
-            borderRadius: "12px", // Consistent border radius
-            boxShadow: 24,
-            p: 3, // Consistent padding
-            display: "flex",
-            flexDirection: "column",
-            gap: 2.5, // Consistent gap
-          }}>
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}> {/* Header box */}
-              <Typography id="user-edit-modal-title" variant="h6" component="h2" fontWeight={700}>
-                사용자 수정
-              </Typography>
-              <IconButton onClick={handleCloseEditModal} size="small">
-                <CloseIcon fontSize="small" />
-              </IconButton>
-            </Box>
-
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}> {/* Form box */}
-              <Grid container spacing={2}> {/* First row: Name, Phone */}
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="body2" fontWeight={500} mb={0.5}>이름 *</Typography>
-                  <TextField
-                    name="name"
-                    value={editingUser?.name || ""}
-                    onChange={handleInputChange}
-                    fullWidth
-                    size="small"
-                    placeholder="이름 입력"
-                    sx={{ bgcolor: "#F8FAFC" }}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="body2" fontWeight={500} mb={0.5}>연락처 *</Typography>
-                  <TextField
-                    name="phone"
-                    value={editingUser?.phone || ""}
-                    onChange={handleInputChange}
-                    fullWidth
-                    size="small"
-                    placeholder="01012345678"
-                    sx={{ bgcolor: "#F8FAFC" }}
-                  />
-                </Grid>
-              </Grid>
-
-              <Box> {/* Second row: Email */}
-                <Typography variant="body2" fontWeight={500} mb={0.5}>이메일 *</Typography>
-                <TextField
-                  name="email"
-                  value={editingUser?.email || ""}
-                  onChange={handleInputChange}
-                  fullWidth
-                  size="small"
-                  placeholder="이메일 입력"
-                  sx={{ bgcolor: "#F8FAFC" }}
-                />
-              </Box>
-
-               {/* Password fields are intentionally omitted as per Figma, assuming password change is separate or not in this modal */}
-
-              <Box> {/* Fourth row: Role */}
-                <Typography variant="body2" fontWeight={500} mb={0.5}>권한 *</Typography>
-                <FormControl component="fieldset">
-                  <RadioGroup
-                    row
-                    name="role"
-                    value={editingUser?.role || "MEMBER"}
-                    onChange={handleInputChange}
-                  >
-                    {/* Use API role values */}
-                    <FormControlLabel value="COMPANY_CHEF" control={<Radio size="small" />} label="관리자" />
-                    <FormControlLabel value="MEMBER" control={<Radio size="small" />} label="일반 사용자" />
-                     {/* Other roles can be added if needed */}
-                  </RadioGroup>
-                </FormControl>
-              </Box>
-
-              <Box> {/* Fifth row: Memo */}
-                <Typography variant="body2" fontWeight={500} mb={0.5}>메모</Typography>
-                <TextField
-                  name="memo"
-                  value={editingUser?.memo || ""}
-                  onChange={handleInputChange}
-                  fullWidth
-                  size="small"
-                  multiline
-                  rows={3} // Consistent rows
-                  placeholder="추가 정보 입력"
-                  sx={{ bgcolor: "#F8FAFC" }}
-                />
-              </Box>
-
-              {/* Last Login field */}
-              <Box>
-                <Typography variant="body2" fontWeight={500} color="text.secondary">
-                  마지막 로그인: {editingUser?.lastLogin || "정보 없음"}
-                </Typography>
-              </Box>
-
-            </Box>
-
-            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1.5, mt: 2 }}> {/* Action buttons */}
-              <Button variant="outlined" onClick={handleCloseEditModal} sx={{ width: 100, height: 44, borderColor: "#CBD5E1", color: "#64748B" }}>취소</Button>
-              <Button variant="contained" onClick={handleSubmitEdit} sx={{ width: 100, height: 44, bgcolor: "primary.main", "&:hover": { bgcolor: "primary.dark" } }}>저장</Button>
-            </Box>
-          </Box>
-        </Modal>
-
+        )}
       </Box>
+
+      <Modal
+        open={isModalOpen}
+        onClose={handleCloseModal}
+        aria-labelledby="user-registration-modal-title"
+        aria-describedby="user-registration-modal-description"
+      >
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 600,
+            bgcolor: "background.paper",
+            borderRadius: "12px",
+            boxShadow: 24,
+            p: 3,
+            display: "flex",
+            flexDirection: "column",
+            gap: 2.5,
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 1.5,
+            }}
+          >
+            <Typography
+              id="user-registration-modal-title"
+              variant="h6"
+              component="h2"
+              fontWeight={700}
+            >
+              사용자 등록
+            </Typography>
+            <IconButton
+              onClick={handleCloseModal}
+              size="small"
+              sx={{
+                bgcolor: "#F1F5F9",
+                borderRadius: "16px",
+                width: 32,
+                height: 32,
+              }}
+            >
+              <CloseIcon fontSize="small" sx={{ color: "#64748B" }} />
+            </IconButton>
+          </Box>
+
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" fontWeight={500} mb={0.5}>
+                  이름 *
+                </Typography>
+                <TextField
+                  name="name"
+                  placeholder="이름 입력"
+                  sx={{
+                    bgcolor: "#F8FAFC",
+                    border: "1px solid #CBD5E1",
+                    borderRadius: "6px",
+                    "& fieldset": { border: "none" },
+                  }}
+                  value={newUser.name}
+                  onChange={handleInputChange}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" fontWeight={500} mb={0.5}>
+                  연락처 *
+                </Typography>
+                <TextField
+                  name="phone"
+                  placeholder="010-0000-0000"
+                  sx={{
+                    bgcolor: "#F8FAFC",
+                    border: "1px solid #CBD5E1",
+                    borderRadius: "6px",
+                    "& fieldset": { border: "none" },
+                  }}
+                  value={newUser.phone}
+                  onChange={handleInputChange}
+                  fullWidth
+                />
+              </Grid>
+            </Grid>
+
+            <Box>
+              <Typography variant="body2" fontWeight={500} mb={0.5}>
+                이메일 *
+              </Typography>
+              <TextField
+                name="email"
+                placeholder="이메일 입력"
+                sx={{
+                  bgcolor: "#F8FAFC",
+                  border: "1px solid #CBD5E1",
+                  borderRadius: "6px",
+                  "& fieldset": { border: "none" },
+                }}
+                value={newUser.email}
+                onChange={handleInputChange}
+                fullWidth
+              />
+            </Box>
+
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" fontWeight={500} mb={0.5}>
+                  비밀번호 *
+                </Typography>
+                <TextField
+                  name="password"
+                  placeholder="비밀번호 입력"
+                  sx={{
+                    bgcolor: "#F8FAFC",
+                    border: "1px solid #CBD5E1",
+                    borderRadius: "6px",
+                    "& fieldset": { border: "none" },
+                  }}
+                  value={newUser.password}
+                  onChange={handleInputChange}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="body2" fontWeight={500} mb={0.5}>
+                  비밀번호 확인 *
+                </Typography>
+                <TextField
+                  name="confirmPassword"
+                  placeholder="비밀번호 확인"
+                  sx={{
+                    bgcolor: "#F8FAFC",
+                    border: "1px solid #CBD5E1",
+                    borderRadius: "6px",
+                    "& fieldset": { border: "none" },
+                  }}
+                  value={newUser.confirmPassword}
+                  onChange={handleInputChange}
+                  fullWidth
+                />
+              </Grid>
+            </Grid>
+
+            <Box>
+              <Typography variant="body2" fontWeight={500} mb={0.5}>
+                소속 업체 *
+              </Typography>
+              <FormControl
+                fullWidth
+                size="small"
+                sx={{
+                  bgcolor: "#F8FAFC",
+                  border: "1px solid #CBD5E1",
+                  borderRadius: "6px",
+                  ".MuiOutlinedInput-notchedOutline": { border: "none" },
+                }}
+              >
+                <InputLabel id="company-select-label">업체 선택</InputLabel>
+                <Select
+                  labelId="company-select-label"
+                  id="company-select"
+                  name="company"
+                  value={newUser.company}
+                  label="업체 선택"
+                  onChange={handleInputChange}
+                >
+                  {companies.map((company, index) => (
+                    // Assuming company object has 'name' for display
+                    // Using index as key and company.name as value for now, as ID is not available
+                    <MenuItem key={index} value={company.name}>
+                      {company.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+
+            <Box>
+              <Typography variant="body2" fontWeight={500} mb={0.5}>
+                권한 *
+              </Typography>
+              <FormControl component="fieldset" fullWidth>
+                <RadioGroup
+                  row
+                  name="role"
+                  value={newUser.role}
+                  onChange={handleInputChange}
+                >
+                  <FormControlLabel
+                    value="관리자"
+                    control={<Radio size="small" />}
+                    label="관리자"
+                  />
+                  <FormControlLabel
+                    value="업체 최고 관리자"
+                    control={<Radio size="small" />}
+                    label="업체 최고 관리자"
+                  />
+                  <FormControlLabel
+                    value="업체관리자"
+                    control={<Radio size="small" />}
+                    label="업체관리자"
+                  />
+                  <FormControlLabel
+                    value="일반 유저"
+                    control={<Radio size="small" />}
+                    label="일반 유저"
+                  />
+                </RadioGroup>
+              </FormControl>
+            </Box>
+
+            <Box>
+              <Typography variant="body2" fontWeight={500} mb={0.5}>
+                메모
+              </Typography>
+              <TextField
+                name="memo"
+                placeholder="추가 정보 입력"
+                sx={{
+                  bgcolor: "#F8FAFC",
+                  border: "1px solid #CBD5E1",
+                  borderRadius: "6px",
+                  "& fieldset": { border: "none" },
+                }}
+                value={newUser.memo}
+                onChange={handleInputChange}
+                multiline
+                rows={3}
+                fullWidth
+              />
+            </Box>
+          </Box>
+
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: 1.5,
+              mt: 2,
+            }}
+          >
+            <Button
+              variant="outlined"
+              onClick={handleCloseModal}
+              sx={{
+                width: 100,
+                height: 44,
+                borderColor: "#CBD5E1",
+                color: "#64748B",
+                borderRadius: "6px",
+              }}
+            >
+              취소
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleSubmitAdd}
+              sx={{
+                width: 100,
+                height: 44,
+                bgcolor: "#3B82F6",
+                "&:hover": { bgcolor: "#2563EB" },
+                borderRadius: "6px",
+                color: "#FFFFFF",
+              }}
+            >
+              등록
+            </Button>
+          </Box>
+        </Box>
+      </Modal>
     </Box>
   );
 };
