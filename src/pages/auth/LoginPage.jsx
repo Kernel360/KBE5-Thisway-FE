@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Button,
@@ -13,6 +13,7 @@ import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { loginApi, saveTokenFromResponse } from "@/utils/api";
 import { useNavigate } from "react-router-dom";
+import { getToken, getUserRole } from "@/utils/auth";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -21,6 +22,20 @@ const LoginPage = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = getToken();
+
+    console.log(token);
+    if (!token) return;
+
+    const role = getUserRole(token);
+
+    if (role === "ADMIN") navigate("/admin/dashboard", { replace: true });
+    else if (role === "COMPANY_ADMIN" || role === "COMPANY_CHEF")
+      navigate("/company/dashboard", { replace: true });
+    else if (role === "MEMBER") navigate("/user/dashboard", { replace: true });
+  }, [navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -34,7 +49,7 @@ const LoginPage = () => {
     try {
       const response = await loginApi.post("/auth/login", { email, password });
       saveTokenFromResponse(response);
-      navigate("/dashboard");
+      navigate("/");
     } catch (err) {
       if (err.response && err.response.status === 401) {
         setError(

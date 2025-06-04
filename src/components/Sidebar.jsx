@@ -6,44 +6,55 @@ import defaultProfile from "../assets/default-profile.png";
 
 function Sidebar() {
   const location = useLocation();
-  const userRole = 'COMPANY_CHEF'; // 예시일 뿐 추후 API 연결하고 수정.
+  const userRole = "COMPANY_CHEF"; // 예시일 뿐 추후 API 연결하고 수정.
 
   const menuItems = [
     {
-      label: '대시보드',
+      label: "대시보드",
       rolePaths: [
-        { role: 'ADMIN', path: '/admin/dashboard' },
-        { roles: ['COMPANY_ADMIN', 'COMPANY_CHEF'], path: '/dashboard' },
-        { roles: ['MEMBER'], path: '/member/dashboard'}
-      ]
+        { role: "ADMIN", path: "/admin/dashboard" },
+        { roles: ["COMPANY_ADMIN", "COMPANY_CHEF"], path: "/dashboard" },
+        { roles: ["MEMBER"], path: "/member/dashboard" },
+      ],
     },
-    { label: '기업 관리', path: '/admin/company', roles: ['ADMIN'] },
+    { label: "기업 관리", path: "/admin/company", roles: ["ADMIN"] },
     {
-      label: '사용자 관리',
+      label: "사용자 관리",
       rolePaths: [
-        { role: 'ADMIN', path: '/admin/user' },
-        { role: 'COMPANY_CHEF', path: '/company/user-management' },
-      ]
+        { role: "ADMIN", path: "/admin/user" },
+        { role: "COMPANY_CHEF", path: "/company/user-management" },
+      ],
     },
-    { label: '차량 관리', path: '/company/car-management', roles: ['COMPANY_CHEF', 'COMPANY_ADMIN'] },
-    { label: '차량 상세', path: '/company/car-detail', roles: ['COMPANY_CHEF', 'COMPANY_ADMIN'] },  // 이건 추후 사이드바에서는 삭제 예정
-  ]
+    {
+      label: "차량 관리",
+      path: "/company/car-management",
+      roles: ["COMPANY_CHEF", "COMPANY_ADMIN"],
+    },
+    {
+      label: "차량 상세",
+      path: "/company/car-detail",
+      roles: ["COMPANY_CHEF", "COMPANY_ADMIN"],
+    }, // 이건 추후 사이드바에서는 삭제 예정
+  ];
 
   const filteredMenuItems = menuItems
-    .map(item => {
+    .map((item) => {
       if (item.roles && item.path) {
         if (item.roles.includes(userRole)) return { ...item, path: item.path };
         return null;
       }
       if (item.rolePaths) {
-        const matched = item.rolePaths.find(rp =>
-          (rp.role && rp.role === userRole) || (rp.roles && rp.roles.includes(userRole))
+        const matched = item.rolePaths.find(
+          (rp) =>
+            (rp.role && rp.role === userRole) ||
+            (rp.roles && rp.roles.includes(userRole)),
         );
         if (matched) return { ...item, path: matched.path };
         return null;
       }
       return null;
-    }).filter(Boolean);
+    })
+    .filter(Boolean);
 
   return (
     <SidebarContainer>
@@ -53,8 +64,8 @@ function Sidebar() {
       </LogoSection>
       <Nav>
         <NavList>
-          {filteredMenuItems.map(item => (
-            <NavItem key = {item.path}>
+          {filteredMenuItems.map((item) => (
+            <NavItem key={item.path}>
               <NavLink
                 as={Link}
                 to={item.path}
@@ -78,7 +89,7 @@ function Sidebar() {
         </MemberProfile>
       </MemberInfo>
     </SidebarContainer>
-  )
+  );
 }
 
 export default Sidebar;
@@ -103,7 +114,7 @@ const LogoImage = styled.img`
 `;
 
 const LogoTitle = styled.h1`
-  color: #1E3A8A;
+  color: #1e3a8a;
   font-size: 23px;
   font-weight: 700;
 `;
@@ -132,8 +143,12 @@ const NavLink = styled(Link)`
   transition: all 0.3s ease;
   font-size: 15px;
   font-weight: 500;
-  background-color: ${({ $active, theme }) => ($active ? theme.palette.secondary.main : "transparent")};
-  color: ${({ $active, theme }) => ($active ? theme.palette.secondary.contrastText : theme.palette.text.disabled)};
+  background-color: ${({ $active, theme }) =>
+    $active ? theme.palette.secondary.main : "transparent"};
+  color: ${({ $active, theme }) =>
+    $active
+      ? theme.palette.secondary.contrastText
+      : theme.palette.text.disabled};
   font-weight: ${({ $active }) => ($active ? 700 : 500)};
 
   &:hover {
