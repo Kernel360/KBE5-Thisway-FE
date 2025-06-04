@@ -1,503 +1,385 @@
 import React, { useState, useEffect } from "react";
-import {
-  Box,
-  Grid,
-  Typography,
-  TextField,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Chip,
-  IconButton,
-  Pagination,
-  ButtonGroup,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  CircularProgress,
-  Alert,
-  Modal,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-} from "@mui/material";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
-import CloseIcon from "@mui/icons-material/Close";
+import styled from "styled-components";
 import { authApi } from "../../utils/api";
+import SearchInput from "../../components/SearchInput";
+import Button from "../../components/Button";
+import Pagination from "../../components/Pagination";
+import AdminUserRegisterModal from "./AdminUserRegisterModal";
 
-// mock 데이터 (API 연동 후 삭제 예정)
-const mockUsers = [
-  { id: 1, name: "김관리", email: "kim@abc-rent.com", phone: "010-1234-5678", company: "ABC 렌트카", memo: "김관리입니다.", role: "관리자", status: "활성" },
-  { id: 2, name: "이부장", email: "lee@abc-rent.com", phone: "010-2345-6789", company: "ABC 렌트카", memo: "이부장입니다.", role: "관리자", status: "활성" },
-  { id: 3, name: "박대리", email: "park@abc-rent.com", phone: "010-3456-7890", company: "가나다 상사", memo: "박대리입니다.", role: "일반 사용자", status: "활성" },
-  { id: 4, name: "최사원", email: "choi@abc-rent.com", phone: "010-4567-8901", company: "라마바 서비스", memo: "최사원입니다.", role: "일반 사용자", status: "비활성" },
-  { id: 5, name: "홍길동", email: "hong@example.com", phone: "010-5678-1234", company: "가나다 상사", memo: "테스트 계정", role: "일반 사용자", status: "활성" },
-  { id: 6, name: "김영희", email: "kimyh@test.com", phone: "010-6789-0123", company: "ABC 렌트카", memo: "", role: "일반 사용자", status: "활성" },
-  { id: 7, name: "박철수", email: "parkcs@example.com", phone: "010-7890-1234", company: "라마바 서비스", memo: "", role: "관리자", status: "비활성" },
+// mock 데이터
+const DUMMY_USERS = [
+  { id: 1, name: "김관리", email: "kim@abc-rent.com", phone: "010-1234-5678", company: "ABC 렌트카", memo: "김관리입니다.", role: "COMPANY_ADMIN", status: "활성" },
+  { id: 2, name: "이부장", email: "lee@abc-rent.com", phone: "010-2345-6789", company: "ABC 렌트카", memo: "이부장입니다.", role: "COMPANY_CHEF", status: "활성" },
+  { id: 3, name: "박대리", email: "park@abc-rent.com", phone: "010-3456-7890", company: "가나다 상사", memo: "박대리입니다.", role: "MEMBER", status: "활성" },
+  { id: 4, name: "최사원", email: "choi@abc-rent.com", phone: "010-4567-8901", company: "라마바 서비스", memo: "최사원입니다.", role: "ADMIN", status: "비활성" },
+  { id: 5, name: "홍길동", email: "hong@example.com", phone: "010-5678-1234", company: "가나다 상사", memo: "테스트 계정", role: "MEMBER", status: "활성" },
+  { id: 6, name: "김영희", email: "kimyh@test.com", phone: "010-6789-0123", company: "ABC 렌트카", memo: "", role: "COMPANY_ADMIN", status: "활성" },
+  { id: 7, name: "박철수", email: "parkcs@example.com", phone: "010-7890-1234", company: "라마바 서비스", memo: "", role: "ADMIN", status: "비활성" },
+  { id: 8, name: "이미나", email: "lee.mina@abc-rent.com", phone: "010-8901-2345", company: "ABC 렌트카", memo: "", role: "COMPANY_ADMIN", status: "활성" },
+  { id: 9, name: "정수민", email: "jsm@abc-rent.com", phone: "010-9012-3456", company: "ABC 렌트카", memo: "", role: "COMPANY_ADMIN", status: "활성" },
+  { id: 10, name: "강동원", email: "kdw@ganada.com", phone: "010-0123-4567", company: "가나다 상사", memo: "", role: "MEMBER", status: "활성" },
+  { id: 11, name: "윤서연", email: "ysy@ramaba.com", phone: "010-1234-5679", company: "라마바 서비스", memo: "", role: "ADMIN", status: "활성" },
+  { id: 12, name: "임재현", email: "ljh@abc-rent.com", phone: "010-2345-6780", company: "ABC 렌트카", memo: "", role: "COMPANY_CHEF", status: "활성" },
+  { id: 13, name: "한지민", email: "hjm@ganada.com", phone: "010-3456-7891", company: "가나다 상사", memo: "", role: "COMPANY_ADMIN", status: "비활성" },
+  { id: 14, name: "오민수", email: "oms@ramaba.com", phone: "010-4567-8902", company: "라마바 서비스", memo: "", role: "ADMIN", status: "활성" },
+  { id: 15, name: "서영준", email: "syj@abc-rent.com", phone: "010-5678-9013", company: "ABC 렌트카", memo: "", role: "COMPANY_ADMIN", status: "활성" },
+  { id: 16, name: "장미란", email: "jmr@ganada.com", phone: "010-6789-0124", company: "가나다 상사", memo: "", role: "COMPANY_CHEF", status: "활성" },
+  { id: 17, name: "김태희", email: "kth@ramaba.com", phone: "010-7890-1235", company: "라마바 서비스", memo: "", role: "ADMIN", status: "활성" },
+  { id: 18, name: "이승기", email: "lsg@abc-rent.com", phone: "010-8901-2346", company: "ABC 렌트카", memo: "", role: "COMPANY_ADMIN", status: "비활성" },
+  { id: 19, name: "박보영", email: "pby@ganada.com", phone: "010-9012-3457", company: "가나다 상사", memo: "", role: "MEMBER", status: "활성" },
+  { id: 20, name: "최우식", email: "cws@ramaba.com", phone: "010-0123-4568", company: "라마바 서비스", memo: "", role: "ADMIN", status: "활성" },
+  { id: 21, name: "정유미", email: "jym@abc-rent.com", phone: "010-1234-5670", company: "ABC 렌트카", memo: "", role: "COMPANY_ADMIN", status: "활성" },
+  { id: 22, name: "강하늘", email: "khn@ganada.com", phone: "010-2345-6781", company: "가나다 상사", memo: "", role: "MEMBER", status: "활성" },
+  { id: 23, name: "손예진", email: "syj@ramaba.com", phone: "010-3456-7892", company: "라마바 서비스", memo: "", role: "ADMIN", status: "비활성" },
+  { id: 24, name: "현빈", email: "hyunbin@abc-rent.com", phone: "010-4567-8903", company: "ABC 렌트카", memo: "", role: "COMPANY_ADMIN", status: "활성" }
 ];
 
-// 임시 mock 업체 데이터 (필요시 사용)
-const mockCompanies = [
-    { id: 1, name: "ABC 렌트카", email: "info@abc-rent.com", phone: "02-1234-5678", memo: "본사" },
-    // ...
+const DUMMY_COMPANIES = [
+  { id: 1, name: "ABC 렌트카", email: "info@abc-rent.com", phone: "02-1234-5678", memo: "본사", status: "활성" },
+  { id: 2, name: "가나다 상사", email: "contact@ganada.com", phone: "02-2345-6789", memo: "지점", status: "활성" },
+  { id: 3, name: "라마바 서비스", email: "help@ramaba.com", phone: "02-3456-7890", memo: "협력사", status: "비활성" },
 ];
+
+// 유효성 검사를 위한 정규식
+const EMAIL_REGEX = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+const PHONE_REGEX = /^[0-9]{2,3}-[0-9]{3,4}-[0-9]{4}$/;
+
+const getRoleDisplayName = (role) => {
+  switch (role) {
+    case 'ADMIN':
+      return '관리자';
+    case 'COMPANY_CHEF':
+    case 'COMPANY_ADMIN':
+      return '업체 관리자';
+    case 'MEMBER':
+      return '일반 사용자';
+    default:
+      return role;
+  }
+};
 
 const AdminUserManagementPage = () => {
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
   const [managementType, setManagementType] = useState("user");
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newUser, setNewUser] = useState({
-    name: '',
-    phone: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    company: '',
-    role: '',
-  });
+  const [users, setUsers] = useState(DUMMY_USERS);
+  const [companies, setCompanies] = useState(DUMMY_COMPANIES);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalType, setModalType] = useState("create");
+  const [selectedItem, setSelectedItem] = useState(null);
 
-  // State for companies list
-  const [companies, setCompanies] = useState([]);
+  // 검색어에 따른 필터링
+  const filteredData = managementType === "user" 
+    ? users.filter(user => 
+        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.phone.includes(searchTerm) ||
+        user.company.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : companies.filter(company => 
+        company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        company.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        company.phone.includes(searchTerm)
+      );
 
-  // Fetch companies list
-  const fetchCompanies = async () => {
-    try {
-      // Assuming authApi is configured with a baseURL like /api
-      const response = await authApi.get("/companies");
-      console.log("Companies API response:", response);
-      // Adjusted based on the provided response structure: { companies: { content: [...] } }
-      if (response.data && response.data.companies && response.data.companies.content) {
-        const fetchedCompanies = response.data.companies.content;
-        setCompanies(fetchedCompanies);
-        console.log("Fetched Companies content:", fetchedCompanies);
+  // 페이지네이션 계산
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentItems = filteredData.slice(startIndex, endIndex);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  const handleDelete = (id) => {
+    if (window.confirm(`이 ${managementType === "user" ? "사용자" : "업체"}를 삭제하시겠습니까?`)) {
+      if (managementType === "user") {
+        setUsers(users.filter(user => user.id !== id));
       } else {
-        console.warn("Companies data structure not as expected:", response.data);
-        setCompanies([]); // Set to empty if data structure is unexpected
+        setCompanies(companies.filter(company => company.id !== id));
       }
-    } catch (err) {
-      console.error("Failed to fetch companies:", err);
-      // Handle error (e.g., show an error message)
-      setCompanies([]); // Clear companies on error
     }
   };
 
-  // Fetch companies on component mount
-  useEffect(() => {
-    fetchCompanies();
-  }, []); // Empty dependency array means this runs once on mount
-
-  // Fetch user data
-  const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await authApi.get("/members");
-      // Assuming the response data structure matches the provided sample
-      if (response.data && response.data.members && response.data.members.content) {
-        setUsers(response.data.members.content);
-        console.log("Fetched Users content:", response.data.members.content);
-      } else {
-        console.warn("Users data structure not as expected:", response.data);
-        setUsers([]); // Set to empty if data structure is unexpected
-      }
-    } catch (err) {
-      setError("사용자 정보를 불러오는데 실패했습니다.");
-      console.error("Failed to fetch users:", err);
-      setUsers([]); // Clear users on error
-    } finally {
-      setLoading(false);
-    }
+  const handleOpenModal = (type, item = null) => {
+    setModalType(type);
+    setSelectedItem(item);
+    setModalOpen(true);
   };
 
-  const handleOpenModal = () => setIsModalOpen(true);
-  const handleCloseModal = () => setIsModalOpen(false);
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setNewUser({ ...newUser, [name]: value });
+  const handleCloseModal = () => {
+    setModalOpen(false);
+    setSelectedItem(null);
   };
 
-  useEffect(() => {
-    if (managementType === "user") {
-      fetchUsers();
-    } else {
-      setUsers([]);
-      setLoading(false);
-    }
-  }, [managementType]);
-
-  const usersPerPage = 4;
-  const currentData = managementType === "user" ? users : mockCompanies;
-
-  const filteredData = currentData.filter(
-    (item) =>
-      (item.name && item.name.toLowerCase().includes(search.toLowerCase())) ||
-      (item.email && item.email.toLowerCase().includes(search.toLowerCase())) ||
-      (item.company && item.company.toLowerCase().includes(search.toLowerCase())) ||
-      (item.role && item.role.toLowerCase().includes(search.toLowerCase())) ||
-      (item.status && item.status.toLowerCase().includes(search.toLowerCase()))
-  );
-  const pagedData = filteredData.slice((page - 1) * usersPerPage, page * usersPerPage);
-
-  const tableHeaders = managementType === "user" ?
-    ["번호", "이름", "이메일", "연락처", "소속 업체", "권한", "상태", "관리"] :
-    ["번호", "업체명", "이메일", "연락처", "메모", "관리"];
-
-  const handleSubmitAdd = async () => {
-    console.log("New User Data:", newUser);
-
-    // 필수 필드 유효성 검사
-    if (!newUser.name || !newUser.email || !newUser.password || !newUser.phone || !newUser.role || !newUser.company) { // company 필드 추가
-      alert("필수 입력 항목(*)을 모두 채워주세요.");
+  const handleSubmit = (formData, type) => {
+    // 이메일 유효성 검사
+    if (!EMAIL_REGEX.test(formData.email)) {
+      alert("유효한 이메일 주소를 입력해주세요.");
       return;
     }
 
-    // 비밀번호 확인 일치 여부 확인
-    if (newUser.password !== newUser.confirmPassword) {
-        alert("비밀번호와 비밀번호 확인이 일치하지 않습니다.");
-        return;
+    // 전화번호 유효성 검사
+    if (!PHONE_REGEX.test(formData.phone)) {
+      alert("전화번호 형식이 올바르지 않습니다. (예: 02-1234-5678 또는 010-1234-5678)");
+      return;
     }
 
-    try {
-      const registrationPayload = {
-        companyId: newUser.company, // 선택된 회사 ID 사용
-        role: newUser.role,
-        name: newUser.name,
-        email: newUser.email,
-        password: newUser.password,
-        phone: newUser.phone,
-        memo: newUser.memo,
+    if (type === "create") {
+      const newData = {
+        ...formData,
+        id: Math.max(...(managementType === "user" ? users : companies).map(item => item.id)) + 1
       };
 
-      // ... existing code ...
-
-    } catch (err) {
-      console.error("Failed to register user:", err);
-      // Handle error (e.g., show an error message)
-    }
-  };
-
-  // Handle user deletion
-  const handleDeleteUser = async (userId) => {
-    if (window.confirm("이 사용자를 삭제하시겠습니까?")) { // Confirmation prompt
-      try {
-        // Adjust the URL based on your API endpoint structure if needed
-        const response = await authApi.delete(`/members/${userId}`); // response를 받도록 수정
-
-        // Check if the status is 204 (NO_CONTENT) for success
-        if (response.status === 204) {
-          console.log(`User with ID ${userId} deleted successfully.`);
-          // Refresh the user list after successful deletion
-          // Optionally show a success message
-          alert("사용자 삭제가 완료되었습니다.");
-        } else {
-          // If status is not 204, treat as an error or unexpected response
-          console.warn(`User deletion for ID ${userId} returned unexpected status: ${response.status}`, response);
-          alert(`사용자 삭제에 실패했습니다. (상태 코드: ${response.status})`);
-        }
-
-      } catch (error) {
-        console.error(`Error deleting user with ID ${userId}:`, error);
-        // Handle network errors or other issues
-        alert(`사용자 삭제 중 오류가 발생했습니다: ${error.message || '알 수 없는 오류'}`);
+      if (managementType === "user") {
+        setUsers([...users, newData]);
+      } else {
+        setCompanies([...companies, newData]);
+      }
+    } else {
+      if (managementType === "user") {
+        setUsers(users.map(user => user.id === formData.id ? formData : user));
+      } else {
+        setCompanies(companies.map(company => company.id === formData.id ? formData : company));
       }
     }
-    fetchUsers();
+    handleCloseModal();
   };
 
   return (
-    <Box sx={{ p: 4, backgroundColor: "background.default", minHeight: "100vh" }}>
-      <Typography variant="h4" fontWeight={700} mb={4} color="primary.main">
-        사용자/업체 관리
-      </Typography>
-      <Box>
-        <Grid container justifyContent="space-between" alignItems="center" spacing={2} mb={2}>
-            <Grid item>
-                <ButtonGroup variant="outlined" aria-label="management type button group">
-                    <Button
-                        variant={managementType === "user" ? "contained" : "outlined"}
-                        onClick={() => setManagementType("user")}
-                    >
-                        사용자
-                    </Button>
-                    <Button
-                        variant={managementType === "company" ? "contained" : "outlined"}
-                        onClick={() => setManagementType("company")}
-                    >
-                        업체
-                    </Button>
-                </ButtonGroup>
-            </Grid>
-            <Grid item>
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <TextField
-                  size="small"
-                  placeholder={managementType === "user" ? "사용자 검색..." : "업체 검색..."}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  sx={{ width: 220 }}
-                />
-                {managementType === "user" && (
-                  <Button variant="contained" color="primary" onClick={handleOpenModal}>
-                    + 사용자 등록
-                  </Button>
-                )}
-                {managementType === "company" && (
-                  <Button variant="contained" color="primary">
-                    + 업체 등록
-                  </Button>
-                )}
-              </Box>
-            </Grid>
-          </Grid>
+    <Container>
+      <Header>
+        <HeaderLeft>
+          <PageTitle>사용자/업체 관리</PageTitle>
+        </HeaderLeft>
+        <HeaderRight>
+          <SearchInput
+            placeholder={`${managementType === "user" ? "사용자" : "업체"} 검색...`}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <Button
+            onClick={() => handleOpenModal("create")}
+            startIcon="+"
+          >
+            {managementType === "user" ? "사용자 등록" : "업체 등록"}
+          </Button>
+        </HeaderRight>
+      </Header>
 
-        {loading && <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>}
-        {error && <Box sx={{ mt: 4 }}><Alert severity="error">{error}</Alert></Box>}
+      <TabContainer>
+        <TabButton 
+          active={managementType === "user"}
+          onClick={() => setManagementType("user")}
+        >
+          사용자
+        </TabButton>
+        <TabButton 
+          active={managementType === "company"}
+          onClick={() => setManagementType("company")}
+        >
+          업체
+        </TabButton>
+      </TabContainer>
 
-        {!loading && !error && (
-          <TableContainer component={Paper} sx={{ borderRadius: 3, boxShadow: 2, mb: 3 }}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  {tableHeaders.map((header, index) => (
-                      <TableCell key={index} sx={{ fontWeight: 700, color: "primary.main", backgroundColor: "grey.100" }}>
-                          {header}
-                      </TableCell>
-                  ))}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {pagedData.map((item, idx) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{(page - 1) * usersPerPage + idx + 1}</TableCell>
+      <TableContainer>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableHeaderCell width="60px">번호</TableHeaderCell>
+              {managementType === "user" ? (
+                <>
+                  <TableHeaderCell width="120px">이름</TableHeaderCell>
+                  <TableHeaderCell width="180px">이메일</TableHeaderCell>
+                  <TableHeaderCell width="140px">연락처</TableHeaderCell>
+                  <TableHeaderCell width="140px">소속 업체</TableHeaderCell>
+                  <TableHeaderCell width="100px">권한</TableHeaderCell>
+                  <TableHeaderCell width="100px">상태</TableHeaderCell>
+                </>
+              ) : (
+                <>
+                  <TableHeaderCell width="200px">업체명</TableHeaderCell>
+                  <TableHeaderCell width="180px">이메일</TableHeaderCell>
+                  <TableHeaderCell width="140px">연락처</TableHeaderCell>
+                  <TableHeaderCell width="200px">메모</TableHeaderCell>
+                  <TableHeaderCell width="100px">상태</TableHeaderCell>
+                </>
+              )}
+              <TableHeaderCell width="100px">관리</TableHeaderCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {currentItems.map((item, index) => (
+              <TableRow key={item.id}>
+                <TableCell>{startIndex + index + 1}</TableCell>
+                {managementType === "user" ? (
+                  <>
                     <TableCell>{item.name}</TableCell>
                     <TableCell>{item.email}</TableCell>
                     <TableCell>{item.phone}</TableCell>
-                    {managementType === "user" && item.company && <TableCell>{item.company}</TableCell>}
-                    {managementType === "user" && item.role && (
-                      <TableCell>
-                        <Chip
-                          label={item.role}
-                          color={item.role === "관리자" ? "primary" : "default"}
-                          size="small"
-                        />
-                      </TableCell>
-                    )}
-                    {managementType === "user" && item.status && (
-                      <TableCell>
-                        <Chip
-                          label={item.status}
-                          color={item.status === "활성" ? "primary" : "default"}
-                          size="small"
-                        />
-                      </TableCell>
-                    )}
+                    <TableCell>{item.company}</TableCell>
                     <TableCell>
-                      <IconButton size="small">
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton size="small" color="error" onClick={() => handleDeleteUser(item.id)}>
-                        <DeleteIcon />
-                      </IconButton>
+                      <RoleBadge role={item.role}>
+                        {getRoleDisplayName(item.role)}
+                      </RoleBadge>
                     </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
+                    <TableCell>
+                      <StatusBadge status={item.status}>
+                        {item.status === "활성" ? "활성" : "비활성"}
+                      </StatusBadge>
+                    </TableCell>
+                  </>
+                ) : (
+                  <>
+                    <TableCell>{item.name}</TableCell>
+                    <TableCell>{item.email}</TableCell>
+                    <TableCell>{item.phone}</TableCell>
+                    <TableCell>{item.memo}</TableCell>
+                    <TableCell>
+                      <StatusBadge status={item.status}>
+                        {item.status === "활성" ? "활성" : "비활성"}
+                      </StatusBadge>
+                    </TableCell>
+                  </>
+                )}
+                <TableCell>
+                  <ButtonGroup>
+                    <ActionButton edit onClick={() => handleOpenModal("edit", item)}>✏️</ActionButton>
+                    <ActionButton delete onClick={() => handleDelete(item.id)}>🗑️</ActionButton>
+                  </ButtonGroup>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
-        {!loading && !error && (filteredData.length > usersPerPage || page > 1) && (
-          <Box sx={{ display: "flex", justifyContent: "center" }}>
-            <Pagination
-              count={Math.ceil(filteredData.length / usersPerPage)}
-              page={page}
-              onChange={(_, value) => setPage(value)}
-              color="primary"
-            />
-          </Box>
-        )}
+      {currentItems.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+        />
+      )}
 
-        {!loading && !error && filteredData.length === 0 && (
-            <Box sx={{ textAlign: 'center', mt: 4 }}>
-                <Typography color="text.secondary">데이터가 없습니다.</Typography>
-            </Box>
-        )}
-
-      </Box>
-
-      <Modal
-        open={isModalOpen}
+      <AdminUserRegisterModal
+        isOpen={modalOpen}
         onClose={handleCloseModal}
-        aria-labelledby="user-registration-modal-title"
-        aria-describedby="user-registration-modal-description"
-      >
-        <Box sx={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: 600,
-          bgcolor: "background.paper",
-          borderRadius: "12px",
-          boxShadow: 24,
-          p: 3,
-          display: "flex",
-          flexDirection: "column",
-          gap: 2.5,
-        }}>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
-            <Typography id="user-registration-modal-title" variant="h6" component="h2" fontWeight={700}>
-              사용자 등록
-            </Typography>
-            <IconButton onClick={handleCloseModal} size="small" sx={{ bgcolor: "#F1F5F9", borderRadius: "16px", width: 32, height: 32 }}>
-              <CloseIcon fontSize="small" sx={{ color: "#64748B" }} />
-            </IconButton>
-          </Box>
-
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body2" fontWeight={500} mb={0.5}>이름 *</Typography>
-                <TextField
-                  name="name"
-                  placeholder="이름 입력"
-                  sx={{ bgcolor: "#F8FAFC", border: "1px solid #CBD5E1", borderRadius: "6px", "& fieldset": { border: "none" } }}
-                  value={newUser.name}
-                  onChange={handleInputChange}
-                  fullWidth
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body2" fontWeight={500} mb={0.5}>연락처 *</Typography>
-                <TextField
-                  name="phone"
-                  placeholder="010-0000-0000"
-                  sx={{ bgcolor: "#F8FAFC", border: "1px solid #CBD5E1", borderRadius: "6px", "& fieldset": { border: "none" } }}
-                  value={newUser.phone}
-                  onChange={handleInputChange}
-                  fullWidth
-                />
-              </Grid>
-            </Grid>
-
-            <Box>
-              <Typography variant="body2" fontWeight={500} mb={0.5}>이메일 *</Typography>
-              <TextField
-                name="email"
-                placeholder="이메일 입력"
-                sx={{ bgcolor: "#F8FAFC", border: "1px solid #CBD5E1", borderRadius: "6px", "& fieldset": { border: "none" } }}
-                value={newUser.email}
-                onChange={handleInputChange}
-                fullWidth
-              />
-            </Box>
-
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body2" fontWeight={500} mb={0.5}>비밀번호 *</Typography>
-                <TextField
-                  name="password"
-                  placeholder="비밀번호 입력"
-                  sx={{ bgcolor: "#F8FAFC", border: "1px solid #CBD5E1", borderRadius: "6px", "& fieldset": { border: "none" } }}
-                  value={newUser.password}
-                  onChange={handleInputChange}
-                  fullWidth
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Typography variant="body2" fontWeight={500} mb={0.5}>비밀번호 확인 *</Typography>
-                <TextField
-                  name="confirmPassword"
-                  placeholder="비밀번호 확인"
-                  sx={{ bgcolor: "#F8FAFC", border: "1px solid #CBD5E1", borderRadius: "6px", "& fieldset": { border: "none" } }}
-                  value={newUser.confirmPassword}
-                  onChange={handleInputChange}
-                  fullWidth
-                />
-              </Grid>
-            </Grid>
-
-            <Box>
-              <Typography variant="body2" fontWeight={500} mb={0.5}>소속 업체 *</Typography>
-              <FormControl fullWidth size="small" sx={{ bgcolor: "#F8FAFC", border: "1px solid #CBD5E1", borderRadius: "6px", ".MuiOutlinedInput-notchedOutline": { border: "none" } }}>
-                <InputLabel id="company-select-label">업체 선택</InputLabel>
-                <Select
-                  labelId="company-select-label"
-                  id="company-select"
-                  name="company"
-                  value={newUser.company}
-                  label="업체 선택"
-                  onChange={handleInputChange}
-                >
-                  {companies.map((company, index) => (
-                    // Assuming company object has 'name' for display
-                    // Using index as key and company.name as value for now, as ID is not available
-                    <MenuItem key={index} value={company.name}>
-                      {company.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
-
-            <Box>
-              <Typography variant="body2" fontWeight={500} mb={0.5}>권한 *</Typography>
-              <FormControl component="fieldset" fullWidth>
-                <RadioGroup
-                  row
-                  name="role"
-                  value={newUser.role}
-                  onChange={handleInputChange}
-                >
-                  <FormControlLabel value="관리자" control={<Radio size="small" />} label="관리자" />
-                  <FormControlLabel value="업체 최고 관리자" control={<Radio size="small" />} label="업체 최고 관리자" />
-                  <FormControlLabel value="업체관리자" control={<Radio size="small" />} label="업체관리자" />
-                  <FormControlLabel value="일반 유저" control={<Radio size="small" />} label="일반 유저" />
-                </RadioGroup>
-              </FormControl>
-            </Box>
-
-            <Box>
-              <Typography variant="body2" fontWeight={500} mb={0.5}>메모</Typography>
-              <TextField
-                name="memo"
-                placeholder="추가 정보 입력"
-                sx={{ bgcolor: "#F8FAFC", border: "1px solid #CBD5E1", borderRadius: "6px", "& fieldset": { border: "none" } }}
-                value={newUser.memo}
-                onChange={handleInputChange}
-                multiline
-                rows={3}
-                fullWidth
-              />
-            </Box>
-
-          </Box>
-
-          <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1.5, mt: 2 }}>
-            <Button variant="outlined" onClick={handleCloseModal} sx={{ width: 100, height: 44, borderColor: "#CBD5E1", color: "#64748B", borderRadius: "6px" }}>취소</Button>
-            <Button variant="contained" onClick={handleSubmitAdd} sx={{ width: 100, height: 44, bgcolor: "#3B82F6", "&:hover": { bgcolor: "#2563EB" }, borderRadius: "6px", color: "#FFFFFF" }}>등록</Button>
-          </Box>
-        </Box>
-      </Modal>
-
-    </Box>
+        mode={managementType}
+        type={modalType}
+        initialData={selectedItem}
+        onSubmit={handleSubmit}
+      />
+    </Container>
   );
 };
+
+const Container = styled.div.attrs(() => ({
+  className: 'page-container'
+}))``;
+
+const Header = styled.div.attrs(() => ({
+  className: 'page-header-wrapper'
+}))``;
+
+const HeaderLeft = styled.div.attrs(() => ({
+  className: 'page-header'
+}))``;
+
+const HeaderRight = styled.div.attrs(() => ({
+  className: 'page-header-actions'
+}))`
+  display: flex;
+  gap: 16px;
+`;
+
+const PageTitle = styled.h1.attrs(() => ({
+  className: 'page-header'
+}))``;
+
+const TabContainer = styled.div`
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+`;
+
+const TabButton = styled.button`
+  padding: 8px 24px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid ${({ active, theme }) => 
+    active ? theme.palette.primary.main : 'transparent'};
+  color: ${({ active, theme }) => 
+    active ? theme.palette.primary.main : theme.palette.text.primary};
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 700;
+`;
+
+const TableContainer = styled.div.attrs(() => ({
+  className: 'table-container'
+}))``;
+
+const Table = styled.table.attrs(() => ({
+  className: 'table'
+}))``;
+
+const TableHead = styled.thead.attrs(() => ({
+  className: 'table-head'
+}))``;
+
+const TableBody = styled.tbody``;
+
+const TableRow = styled.tr.attrs(() => ({
+  className: 'table-row'
+}))``;
+
+const TableHeaderCell = styled.th.attrs(() => ({
+  className: 'table-header-cell'
+}))`
+  width: ${({ width }) => width || 'auto'};
+`;
+
+const TableCell = styled.td.attrs(() => ({
+  className: 'table-cell'
+}))``;
+
+const RoleBadge = styled.span.attrs(() => ({
+  className: 'badge'
+}))`
+  background-color: ${({ role, theme }) => 
+    role === "MEMBER" ? theme.palette.grey[100] : theme.palette.secondary.main};
+  color: ${({ role, theme }) => 
+    role === "MEMBER" ? theme.palette.text.disabled : theme.palette.secondary.contrastText};
+`;
+
+const StatusBadge = styled.span.attrs(() => ({
+  className: 'badge'
+}))`
+  background-color: ${({ status, theme }) => 
+    status === "활성" ? theme.palette.success.main : theme.palette.error.main};
+  color: ${({ status, theme }) => 
+    status === "활성" ? theme.palette.success.contrastText : theme.palette.error.contrastText};
+`;
+
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const ActionButton = styled.button.attrs(() => ({
+  className: 'action-button'
+}))`
+  background-color: ${({ theme }) => theme.palette.grey[100]};
+  color: ${({ edit, theme }) => 
+    edit ? theme.palette.text.secondary : theme.palette.error.main};
+
+  &:hover {
+    background-color: ${({ edit, theme }) => 
+      edit ? theme.palette.grey[200] : theme.palette.error.main};
+  }
+`;
 
 export default AdminUserManagementPage;
