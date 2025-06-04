@@ -14,6 +14,7 @@ import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { loginApi, saveTokenFromResponse } from "@/utils/api";
 import { useNavigate } from "react-router-dom";
 import { getToken, getUserRole } from "@/utils/auth";
+import useUserStore from "@/store/userStore";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -22,6 +23,7 @@ const LoginPage = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const setToken = useUserStore((state) => state.setToken);
 
   useEffect(() => {
     const token = getToken();
@@ -49,6 +51,7 @@ const LoginPage = () => {
     try {
       const response = await loginApi.post("/auth/login", { email, password });
       saveTokenFromResponse(response);
+      setToken(response.data.token);
       navigate("/");
     } catch (err) {
       if (err.response && err.response.status === 401) {
