@@ -29,6 +29,7 @@ export const authApi = axios.create({
 authApi.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
+    console.log("token", token);
     if (token) {
       config.headers["Authorization"] = `Bearer ${token}`;
     }
@@ -40,13 +41,13 @@ authApi.interceptors.request.use(
 authApi.interceptors.response.use(
   (response) => response,
   (error) => {
+    console.log("error", error);
     if (
       error.response &&
       (error.response.status === 401 || error.response.status === 403)
     ) {
       localStorage.removeItem("token");
-      // 필요하다면 아래 주석을 해제해서 로그인 페이지로 이동
-      // window.location.href = '/login';
+      window.location.href = "/login";
     }
     return Promise.reject(error);
   },
