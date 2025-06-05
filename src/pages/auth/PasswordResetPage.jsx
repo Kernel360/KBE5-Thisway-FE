@@ -3,15 +3,24 @@ import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import Button from '../../components/Button';
 import logo from "../../assets/logo.png";
+import { loginApi } from "../../utils/api"
 
 const ResetPasswordPage = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
-  const [verificationCode, setVerificationCode] = useState('');
+  const [code, setVerificationCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [timer, setTimer] = useState(600); // 5분
+  const [timer, setTimer] = useState(600);
   const [isVerificationSent, setIsVerificationSent] = useState(false);
+  const [error, setError] = useState('');
+
+  const passwordMismatch = newPassword !== confirmPassword;
+  const isResetButtonEnabled =
+    code !== '' &&
+    newPassword !== '' &&
+    confirmPassword !== '' &&
+    newPassword === confirmPassword;
 
   useEffect(() => {
     let interval;
@@ -29,15 +38,42 @@ const ResetPasswordPage = () => {
     return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
   };
 
-  const handleSendVerification = () => {
-    // TODO: API 호출
-    setIsVerificationSent(true);
-    setTimer(300);
+  const handleSendVerification = async() => {
+    try {
+      setError('');
+      const response = await loginApi.post('/auth/verify-code', {email});
+
+      if (response.status === 200) {
+        setIsVerificationSent(true);
+        setTimer(600);
+      } else {
+        setError('인증 코드 발송에 실패했습니다. 다시 시도해주세요.');
+      }
+    } catch (error) {
+      setError('인증 코드 발송에 실패했습니다. 다시 시도해주세요.');
+    }
   };
 
-  const handleResetPassword = () => {
-    // TODO: API 호출
-    navigate('/password-reset/success');
+  const handleResetPassword = async () => {
+    try {
+      const response = await loginApi.put('/auth/password', {
+        email,
+        code,
+        newPassword,
+      });
+
+      if (response.status === 200) {
+        navigate('/password-reset/success');
+      } else {
+        navigate('/password-reset/error');
+      }
+    } catch (error) {
+      if (error.response?.status === 400) {
+        setError('인증번호가 올바르지 않습니다.');
+      } else {
+        navigate('/password-reset/error');
+      }
+    }
   };
 
   return (
@@ -56,7 +92,10 @@ const ResetPasswordPage = () => {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="user@example.com"
             />
-            <VerificationButton onClick={handleSendVerification}>
+            <VerificationButton 
+              onClick={handleSendVerification}
+              disabled={!email || isVerificationSent}
+            >
               인증 요청
             </VerificationButton>
           </InputGroup>
@@ -67,7 +106,7 @@ const ResetPasswordPage = () => {
           <InputGroup>
             <Input
               type="text"
-              value={verificationCode}
+              value={code}
               onChange={(e) => setVerificationCode(e.target.value)}
               placeholder="인증번호 6자리 입력"
               disabled={!isVerificationSent}
@@ -82,22 +121,30 @@ const ResetPasswordPage = () => {
             type="password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            placeholder="새 비밀번호 입력"
+            placeholder="새 비밀번호를 입력하세요"
           />
           <PasswordHint>영문, 숫자, 특수문자 포함 8자리 이상</PasswordHint>
         </FormGroup>
 
         <FormGroup>
-          <Label>비밀번호 확인 *</Label>
+          <Label>새 비밀번호 확인 *</Label>
           <Input
             type="password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             placeholder="비밀번호 재입력"
           />
+          {passwordMismatch && (
+            <ErrorText>새 비밀번호와 일치하지 않습니다.</ErrorText>
+          )}
         </FormGroup>
 
-        <ResetButton onClick={handleResetPassword}>
+        {error && <ErrorText>{error}</ErrorText>}
+
+        <ResetButton 
+          onClick={handleResetPassword}
+          disabled={!isResetButtonEnabled}
+        >
           비밀번호 변경
         </ResetButton>
 
@@ -231,6 +278,13 @@ const LoginLink = styled.button`
   &:hover {
     text-decoration: underline;
   }
+`;
+
+const ErrorText = styled.p`
+  color: ${({ theme }) => theme.palette.error.contrastText};
+  font-size: 13px;
+  margin-top: 8px;
+  margin-bottom: 10px;
 `;
 
 export default ResetPasswordPage; 

@@ -2,6 +2,7 @@ export const ROUTES = {
   login: "/login",
   passwordReset: "/password-reset",
   passwordResetSuccess: "/password-reset/success",
+  passwordResetError: "/password-reset/error",
   logout: "/logout",
   notFound: "*",
   root: "/",

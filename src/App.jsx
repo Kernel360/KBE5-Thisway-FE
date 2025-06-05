@@ -8,6 +8,7 @@ import AuthLayout from "@/layouts/AuthLayout";
 import LoginPage from "@/pages/auth/LoginPage";
 import PasswordResetPage from "@/pages/auth/PasswordResetPage";
 import PasswordResetSuccessPage from "@/pages/auth/PasswordResetSuccessPage";
+import PasswordResetErrorPage from "@/pages/auth/PasswordResetErrorPage";
 import CompanyDashboardPage from "@/pages/company/CompanyDashboardPage";
 import CompanyCarManagementPage from "@/pages/company/CompanyCarManagementPage";
 import CompanyCarDetailPage from "@/pages/company/CompanyCarDetailPage";
@@ -58,6 +59,14 @@ const routeList = [
         <PasswordResetSuccessPage />
       </AuthLayout>
     ),
+  },
+  {
+    path: ROUTES.passwordResetError,
+    element: (
+      <AuthLayout>
+        <PasswordResetErrorPage />
+      </AuthLayout>
+    )
   },
   // Company
   {
@@ -235,6 +244,7 @@ function App() {
       "/login",
       "/password-reset",
       "/password-reset/success",
+      "/password-reset/error",
     ];
     if (publicPaths.includes(location.pathname)) return;
 

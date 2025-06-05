@@ -17,7 +17,7 @@ const PasswordResetErrorPage = () => {
           다시 시도하시거나 관리자에게 문의해 주세요.
         </MessageBox>
         <ButtonGroup>
-          <RetryButton onClick={() => navigate('/auth/reset-password')}>
+          <RetryButton onClick={() => navigate('/password-reset')}>
             다시 시도하기
           </RetryButton>
           <LoginButton onClick={() => navigate('/login')} variant="outlined">
