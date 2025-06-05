@@ -2,23 +2,28 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import Button from '../../components/Button';
-import successIcon from "../../assets/success-icon.png";
+import errorIcon from "../../assets/error-icon.png";
 
-const PasswordResetSuccessPage = () => {
+const PasswordResetErrorPage = () => {
   const navigate = useNavigate();
 
   return (
     <Container>
       <ContentWrapper>
-        <IconWrapper src = {successIcon} />
-        <Title>비밀번호 변경 완료</Title>
-        <Description>비밀번호가 성공적으로 변경되었습니다.</Description>
+        <IconWrapper src={errorIcon} />
+        <Title>비밀번호 변경 실패</Title>
+        <Description>비밀번호 변경 중 오류가 발생했습니다.</Description>
         <MessageBox>
-          새로운 비밀번호로 로그인하여 서비스를 이용하세요.
+          다시 시도하시거나 관리자에게 문의해 주세요.
         </MessageBox>
-        <LoginButton onClick={() => navigate('/login')}>
-          로그인 화면으로 이동
-        </LoginButton>
+        <ButtonGroup>
+          <RetryButton onClick={() => navigate('/auth/reset-password')}>
+            다시 시도하기
+          </RetryButton>
+          <LoginButton onClick={() => navigate('/login')} variant="outlined">
+            로그인으로 돌아가기
+          </LoginButton>
+        </ButtonGroup>
       </ContentWrapper>
     </Container>
   );
@@ -64,17 +69,27 @@ const Description = styled.p`
 
 const MessageBox = styled.div`
   padding: 16px;
-  background-color: ${({ theme }) => theme.palette.success.main};
+  background-color: ${({ theme }) => theme.palette.error.main};
   border-radius: 8px;
-  color: ${({ theme }) => theme.palette.success.contrastText};
+  color: ${({ theme }) => theme.palette.error.contrastText};
   font-size: 14px;
   margin-bottom: 24px;
+`;
+
+const ButtonGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const RetryButton = styled(Button)`
+  width: 100%;
+  height: 48px;
 `;
 
 const LoginButton = styled(Button)`
   width: 100%;
   height: 48px;
-  margin-bottom: 16px;
 `;
 
-export default PasswordResetSuccessPage;
+export default PasswordResetErrorPage; 
