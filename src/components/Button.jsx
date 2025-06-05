@@ -93,27 +93,39 @@ const getSizeStyles = ({ size }) => {
   }
 };
 
-const StyledButton = styled.button.attrs(() => ({
-  className: 'button'
-}))`
+const StyledButton = styled.button`
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  padding: 8px 16px;
   border: none;
   border-radius: 4px;
-  font-weight: 500;
+  background-color: ${({ variant, theme }) =>
+    variant === 'outlined' ? 'transparent' : theme.palette.primary.main};
+  color: ${({ variant, theme }) =>
+    variant === 'outlined' ? theme.palette.primary.main : theme.palette.primary.contrastText};
+  font-size: 14px;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
-  gap: 8px;
-  width: ${({ fullWidth }) => fullWidth ? '100%' : 'auto'};
+  transition: all 0.2s;
+  border: 1px solid ${({ variant, theme }) =>
+    variant === 'outlined' ? theme.palette.primary.main : 'transparent'};
 
-  ${props => getVariantStyles(props)}
-  ${props => getSizeStyles(props)}
+  &:hover {
+    background-color: ${({ variant, theme }) =>
+      variant === 'outlined' ? theme.palette.action.hover : theme.palette.primary.dark};
+  }
 
   &:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
   }
+
+  ${({ fullWidth }) =>
+    fullWidth &&
+    css`
+      width: 100%;
+    `}
 `;
 
 const IconWrapper = styled.span`
