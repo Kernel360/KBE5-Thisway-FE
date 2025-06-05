@@ -40,13 +40,15 @@ const CompanyUserManagementPage = () => {
   const [users, setUsers] = useState(DUMMY_USERS);
   const [totalUsers, setTotalUsers] = useState(DUMMY_USERS.length);
   const [companyChefCount, setCompanyChefCount] = useState(
-    DUMMY_USERS.filter(user => user.role === 'COMPANY_CHEF' || user.role === 'COMPANY_ADMIN').length
+    DUMMY_USERS.filter(
+      (user) => user.role === "COMPANY_CHEF" || user.role === "COMPANY_ADMIN",
+    ).length,
   );
   const [memberCount, setMemberCount] = useState(
-    DUMMY_USERS.filter(user => user.role === 'MEMBER').length
+    DUMMY_USERS.filter((user) => user.role === "MEMBER").length,
   );
   const [currentPage, setCurrentPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
 
   const [newUser, setNewUser] = useState({
     name: "",
@@ -61,10 +63,11 @@ const CompanyUserManagementPage = () => {
   const [editingUser, setEditingUser] = useState(null);
 
   // 검색어에 따른 필터링
-  const filteredUsers = users.filter(user => 
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.phone.includes(searchTerm)
+  const filteredUsers = users.filter(
+    (user) =>
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.phone.includes(searchTerm),
   );
 
   // 페이지네이션 계산
@@ -149,8 +152,8 @@ const CompanyUserManagementPage = () => {
 
   const handleSubmitEdit = () => {
     // 더미 데이터용 임시 처리
-    const updatedUsers = users.map(user => 
-      user.id === editingUser.id ? editingUser : user
+    const updatedUsers = users.map((user) =>
+      user.id === editingUser.id ? editingUser : user,
     );
     setUsers(updatedUsers);
     handleCloseEditModal();
@@ -159,7 +162,7 @@ const CompanyUserManagementPage = () => {
   const handleDeleteUser = (userId) => {
     if (window.confirm("이 사용자를 삭제하시겠습니까?")) {
       // 더미 데이터용 임시 처리
-      const filteredUsers = users.filter(user => user.id !== userId);
+      const filteredUsers = users.filter((user) => user.id !== userId);
       setUsers(filteredUsers);
     }
   };
@@ -177,10 +180,7 @@ const CompanyUserManagementPage = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <Button
-            onClick={handleOpenAddModal}
-            startIcon="+"
-          >
+          <Button onClick={handleOpenAddModal} startIcon="+">
             사용자 등록
           </Button>
         </HeaderRight>
@@ -222,13 +222,26 @@ const CompanyUserManagementPage = () => {
                 <TableCell>{user.memo}</TableCell>
                 <TableCell>
                   <RoleBadge role={user.role}>
-                    {user.role === "COMPANY_CHEF" || user.role === "COMPANY_ADMIN" ? "관리자" : "일반 사용자"}
+                    {user.role === "COMPANY_CHEF" ||
+                    user.role === "COMPANY_ADMIN"
+                      ? "관리자"
+                      : "일반 사용자"}
                   </RoleBadge>
                 </TableCell>
                 <TableCell>
                   <ButtonGroup>
-                    <ActionButton edit onClick={() => handleOpenEditModal(user)}>✏️</ActionButton>
-                    <ActionButton delete onClick={() => handleDeleteUser(user.id)}>🗑️</ActionButton>
+                    <ActionButton
+                      edit
+                      onClick={() => handleOpenEditModal(user)}
+                    >
+                      ✏️
+                    </ActionButton>
+                    <ActionButton
+                      delete
+                      onClick={() => handleDeleteUser(user.id)}
+                    >
+                      🗑️
+                    </ActionButton>
                   </ButtonGroup>
                 </TableCell>
               </TableRow>
@@ -243,7 +256,7 @@ const CompanyUserManagementPage = () => {
         onPageChange={handlePageChange}
       />
 
-      <CompanyUserRegisterModal 
+      <CompanyUserRegisterModal
         isOpen={openAddModal}
         onClose={handleCloseAddModal}
         user={newUser}
@@ -252,7 +265,7 @@ const CompanyUserManagementPage = () => {
         mode="register"
       />
 
-      <CompanyUserRegisterModal 
+      <CompanyUserRegisterModal
         isOpen={openEditModal}
         onClose={handleCloseEditModal}
         user={editingUser || {}}
@@ -265,25 +278,24 @@ const CompanyUserManagementPage = () => {
 };
 
 const Container = styled.div.attrs(() => ({
-  className: 'page-container'
+  className: "page-container",
 }))``;
 
 const Header = styled.div.attrs(() => ({
-  className: 'page-header-wrapper'
+  className: "page-header-wrapper",
 }))``;
 
 const HeaderLeft = styled.div.attrs(() => ({
-  className: 'page-header'
+  className: "page-header",
 }))``;
 
 const HeaderRight = styled.div.attrs(() => ({
-  className: 'page-header-actions'
+  className: "page-header-actions",
 }))``;
 
 const PageTitle = styled.h1.attrs(() => ({
-  className: 'page-header'
-}))`
-`;
+  className: "page-header",
+}))``;
 
 const SubTitle = styled.p`
   color: ${({ theme }) => theme.palette.text.primary};
@@ -313,16 +325,21 @@ const StatLabel = styled.div`
 const StatValue = styled.div`
   font-size: 20px;
   font-weight: 700;
-  color: ${({ accent, theme }) => accent ? theme.palette.primary.main : theme.palette.text.primary};
+  color: ${({ accent, theme }) =>
+    accent ? theme.palette.primary.main : theme.palette.text.primary};
 `;
 
 const RoleBadge = styled.span.attrs(() => ({
-  className: 'badge'
+  className: "badge",
 }))`
-  background-color: ${({ role, theme }) => 
-    role === "COMPANY_CHEF" || role === "COMPANY_ADMIN" ? theme.palette.secondary.main : theme.palette.grey[100]};
-  color: ${({ role, theme }) => 
-    role === "COMPANY_CHEF" || role === "COMPANY_ADMIN" ? theme.palette.secondary.contrastText : theme.palette.text.disabled};
+  background-color: ${({ role, theme }) =>
+    role === "COMPANY_CHEF" || role === "COMPANY_ADMIN"
+      ? theme.palette.secondary.main
+      : theme.palette.grey[100]};
+  color: ${({ role, theme }) =>
+    role === "COMPANY_CHEF" || role === "COMPANY_ADMIN"
+      ? theme.palette.secondary.contrastText
+      : theme.palette.text.disabled};
 `;
 
 const ButtonGroup = styled.div`
@@ -331,44 +348,44 @@ const ButtonGroup = styled.div`
 `;
 
 const ActionButton = styled.button.attrs(() => ({
-  className: 'action-button'
+  className: "action-button",
 }))`
   background-color: ${({ theme }) => theme.palette.grey[100]};
-  color: ${({ edit, theme }) => 
+  color: ${({ edit, theme }) =>
     edit ? theme.palette.text.secondary : theme.palette.error.main};
 
   &:hover {
-    background-color: ${({ edit, theme }) => 
+    background-color: ${({ edit, theme }) =>
       edit ? theme.palette.grey[200] : theme.palette.error.main};
   }
 `;
 
 const TableContainer = styled.div.attrs(() => ({
-  className: 'table-container'
+  className: "table-container",
 }))``;
 
 const Table = styled.table.attrs(() => ({
-  className: 'table'
+  className: "table",
 }))``;
 
 const TableHead = styled.thead.attrs(() => ({
-  className: 'table-head'
+  className: "table-head",
 }))``;
 
 const TableBody = styled.tbody``;
 
 const TableRow = styled.tr.attrs(() => ({
-  className: 'table-row'
+  className: "table-row",
 }))``;
 
 const TableHeaderCell = styled.th.attrs(() => ({
-  className: 'table-header-cell'
+  className: "table-header-cell",
 }))`
-  width: ${({ width }) => width || 'auto'};
+  width: ${({ width }) => width || "auto"};
 `;
 
 const TableCell = styled.td.attrs(() => ({
-  className: 'table-cell'
+  className: "table-cell",
 }))``;
 
 export default CompanyUserManagementPage;

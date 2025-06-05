@@ -1,57 +1,57 @@
-import React, { useState } from 'react';
-import styled from 'styled-components';
+import React, { useState } from "react";
+import styled from "styled-components";
 
 const CompanyCarDetailPage = () => {
-  const [searchDate, setSearchDate] = useState('');
-  
+  const [searchDate, setSearchDate] = useState("");
+
   // 실제로는 URL 파라미터나 props로 받아올 carId를 사용하여 데이터를 가져올 예정
   const carInfo = {
-    carNumber: '서울 가 1234',
-    manufacturer: '현대 / 아반떼',
-    color: '흰색',
-    year: '2023년',
-    vehicleId: 'VH-2023-A001',
-    company: 'ABC 렌트카',
-    status: '운행중',
+    carNumber: "서울 가 1234",
+    manufacturer: "현대 / 아반떼",
+    color: "흰색",
+    year: "2023년",
+    vehicleId: "VH-2023-A001",
+    company: "ABC 렌트카",
+    status: "운행중",
     currentInfo: {
-      startTime: '2025-05-01 08:30:15',
-      operationTime: '01:45:22',
-      distance: '32.5 km',
-      currentSpeed: '65 km/h',
-      location: '서울시 강남구 테헤란로'
-    }
+      startTime: "2025-05-01 08:30:15",
+      operationTime: "01:45:22",
+      distance: "32.5 km",
+      currentSpeed: "65 km/h",
+      location: "서울시 강남구 테헤란로",
+    },
   };
 
   const recentOperations = [
     {
-      date: '2025-05-01',
-      time: '08:30 ~ 현재',
-      location: '서울시 강남구',
-      distance: '32.5 km'
+      date: "2025-05-01",
+      time: "08:30 ~ 현재",
+      location: "서울시 강남구",
+      distance: "32.5 km",
     },
     {
-      date: '2025-04-30',
-      time: '13:15 ~ 15:40',
-      location: '서울시 송파구',
-      distance: '45.2 km'
+      date: "2025-04-30",
+      time: "13:15 ~ 15:40",
+      location: "서울시 송파구",
+      distance: "45.2 km",
     },
     {
-      date: '2025-04-29',
-      time: '09:20 ~ 11:05',
-      location: '서울시 마포구',
-      distance: '28.7 km'
-    }
+      date: "2025-04-29",
+      time: "09:20 ~ 11:05",
+      location: "서울시 마포구",
+      distance: "28.7 km",
+    },
   ];
 
   const filteredOperations = searchDate
-    ? recentOperations.filter(op => op.date.includes(searchDate))
+    ? recentOperations.filter((op) => op.date.includes(searchDate))
     : recentOperations;
 
   return (
     <Container>
-      <Header>
-        <PageTitle>차량 상세 정보 <CarNumber>{carInfo.carNumber}</CarNumber></PageTitle>
-      </Header>
+      <PageTitle>
+        차량 상세 정보 <CarNumber>{carInfo.carNumber}</CarNumber>
+      </PageTitle>
       <ContentWrapper>
         <LeftColumn>
           <Section>
@@ -83,7 +83,9 @@ const CompanyCarDetailPage = () => {
               </InfoItem>
               <InfoItem>
                 <Label>상태</Label>
-                <Value><StatusBadge>{carInfo.status}</StatusBadge></Value>
+                <Value>
+                  <StatusBadge>{carInfo.status}</StatusBadge>
+                </Value>
               </InfoItem>
             </InfoList>
           </Section>
@@ -140,11 +142,20 @@ const CompanyCarDetailPage = () => {
         </LeftColumn>
 
         <RightColumn>
-          <Section style={{ height: '100%' }}>
+          <Section style={{ height: "100%" }}>
             <SectionTitle>실시간 위치 및 이동 경로</SectionTitle>
             <MapContainer>
               {/* 지도 컴포넌트가 들어갈 자리 */}
-              <div style={{ height: '100%', minHeight: '700px', background: '#f5f6f8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div
+                style={{
+                  height: "100%",
+                  minHeight: "700px",
+                  background: "#f5f6f8",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
                 지도가 표시될 영역
               </div>
             </MapContainer>
@@ -155,9 +166,10 @@ const CompanyCarDetailPage = () => {
   );
 };
 
-const Container = styled.div.attrs(() => ({
-  className: 'page-container'
-}))``;
+const Container = styled.div`
+  padding: 10px 30px;
+  margin: 0 auto;
+`;
 
 const ContentWrapper = styled.div`
   display: grid;
@@ -177,12 +189,8 @@ const RightColumn = styled.div`
   height: 100%;
 `;
 
-const Header = styled.div.attrs(() => ({
-  className: 'page-header-wrapper'
-}))``;
-
 const PageTitle = styled.h1.attrs(() => ({
-  className: 'page-header'
+  className: "page-header",
 }))``;
 
 const CarNumber = styled.span`
