@@ -64,8 +64,6 @@ const ResetPasswordPage = () => {
 
       if (response.status === 200) {
         navigate('/password-reset/success');
-      } else {
-        navigate('/password-reset/error');
       }
     } catch (error) {
       if (error.response?.status === 400) {
