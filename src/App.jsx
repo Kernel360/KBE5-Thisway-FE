@@ -2,7 +2,7 @@ import React from "react";
 import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { CssBaseline, GlobalStyles } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import StyledGlobalStyle from "@/theme/StyledGlobalStyle";
+import StyledGlobalStyle from "@/theme/styledGlobalStyle";
 import MainLayout from "@/layouts/MainLayout";
 import AuthLayout from "@/layouts/AuthLayout";
 import LoginPage from "@/pages/auth/LoginPage";
