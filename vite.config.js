@@ -10,17 +10,17 @@ export default defineConfig({
     },
   },
   server: {
-    // proxy: {
-    //   // TODO: 이후 Spring CORS 설정 필요
-    //   // 예: "/api"로 시작하는 요청은 모두 http://localhost:8080으로 프록시
-    //   "/api": {
-    //     target: "http://localhost:8080",
-    //     changeOrigin: true,
-    //     secure: false,
-    //     // 필요 시 pathRewrite도 설정 가능
-    //     rewrite: (path) => path.replace(/^\/api/, ""),
-    //   },
-    // },
+    proxy: {
+      // TODO: 이후 Spring CORS 설정 필요
+      // 예: "/api"로 시작하는 요청은 모두 http://localhost:8080으로 프록시
+      "/api": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+        secure: false,
+        // 필요 시 pathRewrite도 설정 가능
+        // rewrite: (path) => path.replace(/^\/api/, ""),
+      },
+    },
     open: true,
   },
 });
