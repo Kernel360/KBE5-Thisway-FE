@@ -6,32 +6,32 @@ import SearchInput from "../../components/SearchInput";
 import Button from "../../components/Button";
 import Pagination from "../../components/Pagination";
 
-// 더미 데이터
+//더미 데이터
 const DUMMY_USERS = [
-  {
-    id: 1,
-    name: "김관리",
-    email: "company_chef@thisway.com",
-    phone: "010-1234-5678",
-    memo: "관리자 계정",
-    role: "COMPANY_CHEF",
-  },
-  {
-    id: 2,
-    name: "이사원",
-    email: "member1@thisway.com",
-    phone: "010-2345-6789",
-    memo: "일반 사용자",
-    role: "MEMBER",
-  },
-  {
-    id: 3,
-    name: "박직원",
-    email: "company_admin@thisway.com",
-    phone: "010-3456-7890",
-    memo: "",
-    role: "COMPANY_ADMIN",
-  },
+  // {
+  //   id: 1,
+  //   name: "김관리",
+  //   email: "company_chef@thisway.com",
+  //   phone: "010-1234-5678",
+  //   memo: "관리자 계정",
+  //   role: "COMPANY_CHEF",
+  // },
+  // {
+  //   id: 2,
+  //   name: "이사원",
+  //   email: "member1@thisway.com",
+  //   phone: "010-2345-6789",
+  //   memo: "일반 사용자",
+  //   role: "MEMBER",
+  // },
+  // {
+  //   id: 3,
+  //   name: "박직원",
+  //   email: "company_admin@thisway.com",
+  //   phone: "010-3456-7890",
+  //   memo: "",
+  //   role: "COMPANY_ADMIN",
+  // },
 ];
 
 const CompanyUserManagementPage = () => {
@@ -204,57 +204,66 @@ const CompanyUserManagementPage = () => {
       <TableContainer>
         <Table>
           <TableHead>
-            <TableHeaderCell width="60px">번호</TableHeaderCell>
-            <TableHeaderCell width="160px">이름</TableHeaderCell>
-            <TableHeaderCell width="200px">이메일</TableHeaderCell>
-            <TableHeaderCell width="140px">연락처</TableHeaderCell>
-            <TableHeaderCell width="140px">메모</TableHeaderCell>
-            <TableHeaderCell width="120px">권한</TableHeaderCell>
-            <TableHeaderCell width="100px">관리</TableHeaderCell>
+            <TableRow>
+              <TableHeaderCell width="60px">번호</TableHeaderCell>
+              <TableHeaderCell width="160px">이름</TableHeaderCell>
+              <TableHeaderCell width="200px">이메일</TableHeaderCell>
+              <TableHeaderCell width="140px">연락처</TableHeaderCell>
+              <TableHeaderCell width="140px">메모</TableHeaderCell>
+              <TableHeaderCell width="120px">권한</TableHeaderCell>
+              <TableHeaderCell width="100px">관리</TableHeaderCell>
+            </TableRow>
           </TableHead>
           <TableBody>
-            {currentUsers.map((user, index) => (
-              <TableRow key={user.id}>
-                <TableCell>{startIndex + index + 1}</TableCell>
-                <TableCell>{user.name}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>{user.phone}</TableCell>
-                <TableCell>{user.memo}</TableCell>
-                <TableCell>
-                  <RoleBadge role={user.role}>
-                    {user.role === "COMPANY_CHEF" ||
-                    user.role === "COMPANY_ADMIN"
-                      ? "관리자"
-                      : "일반 사용자"}
-                  </RoleBadge>
-                </TableCell>
-                <TableCell>
-                  <ButtonGroup>
-                    <ActionButton
-                      edit
-                      onClick={() => handleOpenEditModal(user)}
-                    >
-                      ✏️
-                    </ActionButton>
-                    <ActionButton
-                      delete
-                      onClick={() => handleDeleteUser(user.id)}
-                    >
-                      🗑️
-                    </ActionButton>
-                  </ButtonGroup>
-                </TableCell>
-              </TableRow>
-            ))}
+            {currentUsers.length === 0 ? (
+                <TableRow>
+                  <EmptyCell colSpan={6}>등록된 사용자가 없습니다.</EmptyCell>
+                </TableRow>
+            ) : (currentUsers.map((user, index) => (
+                  <TableRow key={user.id}>
+                    <TableCell>{startIndex + index + 1}</TableCell>
+                    <TableCell>{user.name}</TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>{user.phone}</TableCell>
+                    <TableCell>{user.memo}</TableCell>
+                    <TableCell>
+                      <RoleBadge role={user.role}>
+                        {user.role === "COMPANY_CHEF" ||
+                        user.role === "COMPANY_ADMIN"
+                          ? "관리자"
+                          : "일반 사용자"}
+                      </RoleBadge>
+                    </TableCell>
+                    <TableCell>
+                      <ButtonGroup>
+                        <ActionButton
+                          edit
+                          onClick={() => handleOpenEditModal(user)}
+                        >
+                          ✏️
+                        </ActionButton>
+                        <ActionButton
+                          delete
+                          onClick={() => handleDeleteUser(user.id)}
+                        >
+                          🗑️
+                        </ActionButton>
+                      </ButtonGroup>
+                    </TableCell>
+                  </TableRow>
+               ))
+            )}
           </TableBody>
         </Table>
       </TableContainer>
 
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={handlePageChange}
-      />
+      {currentUsers.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+        />
+      )}
 
       <CompanyUserRegisterModal
         isOpen={openAddModal}
@@ -386,6 +395,10 @@ const TableHeaderCell = styled.th.attrs(() => ({
 
 const TableCell = styled.td.attrs(() => ({
   className: "table-cell",
+}))``;
+
+const EmptyCell = styled.td.attrs(() => ({
+  className: 'empty-cell'
 }))``;
 
 export default CompanyUserManagementPage;
