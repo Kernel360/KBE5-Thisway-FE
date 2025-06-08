@@ -184,6 +184,22 @@ const ForgotPassword = styled.button`
   font-size: 14px;
   color: ${({ theme }) => theme.palette.primary.main};
   cursor: pointer;
+  margin-bottom: 8px;
+
+  &:hover {
+    text-decoration: underline;
+  }
+`;
+
+const SignUpLink = styled.button`
+  display: block;
+  width: 100%;
+  padding: 8px;
+  border: none;
+  background: none;
+  font-size: 14px;
+  color: ${({ theme }) => theme.palette.secondary.main};
+  cursor: pointer;
 
   &:hover {
     text-decoration: underline;
