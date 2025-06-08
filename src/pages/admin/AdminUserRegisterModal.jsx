@@ -159,7 +159,7 @@ const AdminUserRegisterModal = ({
               onChange={handleChange}
             >
               <option value="MEMBER">일반 사용자</option>
-              <option value="COMPANY_CHEF">업체 관리자</option>
+              <option value="COMPANY_CHEF">업체 최고 관리자</option>
               <option value="COMPANY_ADMIN">업체 관리자</option>
               <option value="ADMIN">시스템 관리자</option>
             </Select>

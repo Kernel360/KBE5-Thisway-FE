@@ -7,13 +7,24 @@ const CompanyUserRegisterModal = ({
   user, 
   onChange, 
   onSubmit, 
-  mode = 'register' // 'register' or 'edit'
+  mode = 'register', // 'register' or 'edit'
+  error,
+  setError
 }) => {
   if (!isOpen) return null;
 
   const isEditMode = mode === 'edit';
   const title = isEditMode ? '사용자 수정' : '사용자 등록';
   const submitText = isEditMode ? '수정' : '등록';
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (user.password !== user.confirmPassword) {
+      // TODO: 에러 처리
+      return;
+    }
+    onSubmit();
+  };
 
   return (
     <Modal>
@@ -25,110 +36,132 @@ const CompanyUserRegisterModal = ({
         </ModalHeader>
 
         <ModalBody>
-          <FormGrid>
-            <FormColumn>
-              <FormGroup>
-                <Label>이름 *</Label>
-                <Input
-                  name="name"
-                  value={user.name || ""}
-                  onChange={onChange}
-                  placeholder="이름 입력"
-                />
-              </FormGroup>
-            </FormColumn>
-            <FormColumn>
-              <FormGroup>
-                <Label>연락처 *</Label>
-                <Input
-                  name="phone"
-                  value={user.phone || ""}
-                  onChange={onChange}
-                  placeholder="01012345678"
-                />
-              </FormGroup>
-            </FormColumn>
-          </FormGrid>
+          <form onSubmit={handleSubmit}>
+            {error && <ErrorMessage>{error}</ErrorMessage>}
+            
+            <FormGrid>
+              <FormColumn>
+                <FormGroup>
+                  <Label>이름 *</Label>
+                  <Input
+                    name="name"
+                    value={user.name || ""}
+                    onChange={onChange}
+                    placeholder="이름 입력"
+                    required
+                  />
+                </FormGroup>
+              </FormColumn>
+              <FormColumn>
+                <FormGroup>
+                  <Label>연락처 *</Label>
+                  <Input
+                    name="phone"
+                    value={user.phone || ""}
+                    onChange={onChange}
+                    placeholder="01012345678"
+                    required
+                  />
+                </FormGroup>
+              </FormColumn>
+            </FormGrid>
 
-          <FormGroup>
-            <Label>이메일 *</Label>
-            <Input
-              name="email"
-              value={user.email || ""}
-              onChange={onChange}
-              placeholder="이메일 입력"
-            />
-          </FormGroup>
+            <FormGroup>
+              <Label>이메일 *</Label>
+              <Input
+                type="email"
+                name="email"
+                value={user.email || ""}
+                onChange={onChange}
+                placeholder="이메일 입력"
+                required
+              />
+            </FormGroup>
 
-          <FormGrid>
-            <FormColumn>
-              <FormGroup>
-                <Label>{isEditMode ? '비밀번호' : '비밀번호 *'}</Label>
-                <Input
-                  type="password"
-                  name="password"
-                  value={user.password || ""}
-                  onChange={onChange}
-                  placeholder="비밀번호 입력"
-                />
-              </FormGroup>
-            </FormColumn>
-            <FormColumn>
-              <FormGroup>
-                <Label>{isEditMode ? '비밀번호 확인' : '비밀번호 확인 *'}</Label>
-                <Input
-                  type="password"
-                  name="confirmPassword"
-                  value={user.confirmPassword || ""}
-                  onChange={onChange}
-                  placeholder="비밀번호 확인"
-                />
-              </FormGroup>
-            </FormColumn>
-          </FormGrid>
+            <FormGrid>
+              <FormColumn>
+                <FormGroup>
+                  <Label>{mode === "register" ? "비밀번호 *" : "새 비밀번호"}</Label>
+                  <Input
+                    type="password"
+                    name="password"
+                    value={user.password || ""}
+                    onChange={onChange}
+                    placeholder={mode === "register" ? "비밀번호 입력" : "변경할 비밀번호 입력"}
+                    required={mode === "register"}
+                  />
+                </FormGroup>
+              </FormColumn>
+              <FormColumn>
+                <FormGroup>
+                  <Label>{mode === "register" ? "비밀번호 확인 *" : "새 비밀번호 확인"}</Label>
+                  <Input
+                    type="password"
+                    name="confirmPassword"
+                    value={user.confirmPassword || ""}
+                    onChange={onChange}
+                    placeholder="비밀번호 확인"
+                    required={mode === "register" || user.password}
+                  />
+                </FormGroup>
+              </FormColumn>
+            </FormGrid>
 
-          <FormGroup>
-            <Label>권한 *</Label>
-            <RadioGroup>
-              <RadioLabel>
-                <RadioInput
-                  type="radio"
-                  name="role"
-                  value="COMPANY_CHEF"
-                  checked={user.role === "COMPANY_CHEF"}
-                  onChange={onChange}
-                />
-                관리자
-              </RadioLabel>
-              <RadioLabel>
-                <RadioInput
-                  type="radio"
-                  name="role"
-                  value="MEMBER"
-                  checked={user.role === "MEMBER"}
-                  onChange={onChange}
-                />
-                일반 사용자
-              </RadioLabel>
-            </RadioGroup>
-          </FormGroup>
+            <FormGroup>
+              <Label>권한 *</Label>
+              <RadioGroup>
+                <RadioLabel>
+                  <RadioInput
+                    type="radio"
+                    name="role"
+                    value="COMPANY_CHEF"
+                    checked={user.role === "COMPANY_CHEF"}
+                    onChange={onChange}
+                  />
+                  최고 관리자
+                </RadioLabel>
+                <RadioLabel>
+                  <RadioInput
+                    type="radio"
+                    name="role"
+                    value="COMPANY_ADMIN"
+                    checked={user.role === "COMPANY_ADMIN"}
+                    onChange={onChange}
+                  />
+                  관리자
+                </RadioLabel>
+                <RadioLabel>
+                  <RadioInput
+                    type="radio"
+                    name="role"
+                    value="MEMBER"
+                    checked={user.role === "MEMBER"}
+                    onChange={onChange}
+                  />
+                  일반 사용자
+                </RadioLabel>
+              </RadioGroup>
+            </FormGroup>
 
-          <FormGroup>
-            <Label>메모</Label>
-            <TextArea
-              name="memo"
-              value={user.memo || ""}
-              onChange={onChange}
-              placeholder="추가 정보 입력"
-              rows={3}
-            />
-          </FormGroup>
+            <FormGroup>
+              <Label>메모</Label>
+              <TextArea
+                name="memo"
+                value={user.memo || ""}
+                onChange={onChange}
+                placeholder="추가 정보 입력"
+                rows={3}
+              />
+            </FormGroup>
+
+            <ModalFooter>
+              <CancelButton type="button" onClick={onClose}>취소</CancelButton>
+              <SubmitButton type="submit">
+                {mode === "register" ? "등록" : "수정"}
+              </SubmitButton>
+            </ModalFooter>
+          </form>
         </ModalBody>
-
-        <ModalFooter>
-          <CancelButton onClick={onClose}>취소</CancelButton>
-          <SubmitButton onClick={onSubmit}>{submitText}</SubmitButton>
-        </ModalFooter>
       </ModalContent>
     </Modal>
   );
@@ -261,7 +294,8 @@ const TextArea = styled.textarea`
 
 const RadioGroup = styled.div`
   display: flex;
-  gap: 24px;
+  flex-direction: column;
+  gap: 8px;
 `;
 
 const RadioLabel = styled.label`
@@ -275,6 +309,13 @@ const RadioLabel = styled.label`
 
 const RadioInput = styled.input`
   cursor: pointer;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  
+  &:checked {
+    accent-color: ${({ theme }) => theme.palette.primary.main};
+  }
 `;
 
 const CancelButton = styled.button`
@@ -304,6 +345,22 @@ const SubmitButton = styled.button`
 
   &:hover {
     background-color: ${({ theme }) => theme.palette.primary.dark};
+  }
+`;
+
+const ErrorMessage = styled.div`
+  color: ${({ theme }) => theme.palette.error.contrastText};
+  background-color: ${({ theme }) => theme.palette.error.main};
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  
+  &::before {
+    content: "⚠️";
+    margin-right: 8px;
   }
 `;
 
