@@ -7,32 +7,32 @@ import Pagination from "../../components/Pagination";
 import AdminUserRegisterModal from "./AdminUserRegisterModal";
 
 // mock 데이터
-const DUMMY_USERS = [
-  { id: 1, name: "김관리", email: "kim@abc-rent.com", phone: "010-1234-5678", company: "ABC 렌트카", memo: "김관리입니다.", role: "COMPANY_ADMIN", status: "활성" },
-  { id: 2, name: "이부장", email: "lee@abc-rent.com", phone: "010-2345-6789", company: "ABC 렌트카", memo: "이부장입니다.", role: "COMPANY_CHEF", status: "활성" },
-  { id: 3, name: "박대리", email: "park@abc-rent.com", phone: "010-3456-7890", company: "가나다 상사", memo: "박대리입니다.", role: "MEMBER", status: "활성" },
-  { id: 4, name: "최사원", email: "choi@abc-rent.com", phone: "010-4567-8901", company: "라마바 서비스", memo: "최사원입니다.", role: "ADMIN", status: "비활성" },
-  { id: 5, name: "홍길동", email: "hong@example.com", phone: "010-5678-1234", company: "가나다 상사", memo: "테스트 계정", role: "MEMBER", status: "활성" },
-  { id: 6, name: "김영희", email: "kimyh@test.com", phone: "010-6789-0123", company: "ABC 렌트카", memo: "", role: "COMPANY_ADMIN", status: "활성" },
-  { id: 7, name: "박철수", email: "parkcs@example.com", phone: "010-7890-1234", company: "라마바 서비스", memo: "", role: "ADMIN", status: "비활성" },
-  { id: 8, name: "이미나", email: "lee.mina@abc-rent.com", phone: "010-8901-2345", company: "ABC 렌트카", memo: "", role: "COMPANY_ADMIN", status: "활성" },
-  { id: 9, name: "정수민", email: "jsm@abc-rent.com", phone: "010-9012-3456", company: "ABC 렌트카", memo: "", role: "COMPANY_ADMIN", status: "활성" },
-  { id: 10, name: "강동원", email: "kdw@ganada.com", phone: "010-0123-4567", company: "가나다 상사", memo: "", role: "MEMBER", status: "활성" },
-  { id: 11, name: "윤서연", email: "ysy@ramaba.com", phone: "010-1234-5679", company: "라마바 서비스", memo: "", role: "ADMIN", status: "활성" },
-  { id: 12, name: "임재현", email: "ljh@abc-rent.com", phone: "010-2345-6780", company: "ABC 렌트카", memo: "", role: "COMPANY_CHEF", status: "활성" },
-  { id: 13, name: "한지민", email: "hjm@ganada.com", phone: "010-3456-7891", company: "가나다 상사", memo: "", role: "COMPANY_ADMIN", status: "비활성" },
-  { id: 14, name: "오민수", email: "oms@ramaba.com", phone: "010-4567-8902", company: "라마바 서비스", memo: "", role: "ADMIN", status: "활성" },
-  { id: 15, name: "서영준", email: "syj@abc-rent.com", phone: "010-5678-9013", company: "ABC 렌트카", memo: "", role: "COMPANY_ADMIN", status: "활성" },
-  { id: 16, name: "장미란", email: "jmr@ganada.com", phone: "010-6789-0124", company: "가나다 상사", memo: "", role: "COMPANY_CHEF", status: "활성" },
-  { id: 17, name: "김태희", email: "kth@ramaba.com", phone: "010-7890-1235", company: "라마바 서비스", memo: "", role: "ADMIN", status: "활성" },
-  { id: 18, name: "이승기", email: "lsg@abc-rent.com", phone: "010-8901-2346", company: "ABC 렌트카", memo: "", role: "COMPANY_ADMIN", status: "비활성" },
-  { id: 19, name: "박보영", email: "pby@ganada.com", phone: "010-9012-3457", company: "가나다 상사", memo: "", role: "MEMBER", status: "활성" },
-  { id: 20, name: "최우식", email: "cws@ramaba.com", phone: "010-0123-4568", company: "라마바 서비스", memo: "", role: "ADMIN", status: "활성" },
-  { id: 21, name: "정유미", email: "jym@abc-rent.com", phone: "010-1234-5670", company: "ABC 렌트카", memo: "", role: "COMPANY_ADMIN", status: "활성" },
-  { id: 22, name: "강하늘", email: "khn@ganada.com", phone: "010-2345-6781", company: "가나다 상사", memo: "", role: "MEMBER", status: "활성" },
-  { id: 23, name: "손예진", email: "syj@ramaba.com", phone: "010-3456-7892", company: "라마바 서비스", memo: "", role: "ADMIN", status: "비활성" },
-  { id: 24, name: "현빈", email: "hyunbin@abc-rent.com", phone: "010-4567-8903", company: "ABC 렌트카", memo: "", role: "COMPANY_ADMIN", status: "활성" }
-];
+// const DUMMY_USERS = [
+//   { id: 1, name: "김관리", email: "kim@abc-rent.com", phone: "010-1234-5678", company: "ABC 렌트카", memo: "김관리입니다.", role: "COMPANY_ADMIN", status: "활성" },
+//   { id: 2, name: "이부장", email: "lee@abc-rent.com", phone: "010-2345-6789", company: "ABC 렌트카", memo: "이부장입니다.", role: "COMPANY_CHEF", status: "활성" },
+//   { id: 3, name: "박대리", email: "park@abc-rent.com", phone: "010-3456-7890", company: "가나다 상사", memo: "박대리입니다.", role: "MEMBER", status: "활성" },
+//   { id: 4, name: "최사원", email: "choi@abc-rent.com", phone: "010-4567-8901", company: "라마바 서비스", memo: "최사원입니다.", role: "ADMIN", status: "비활성" },
+//   { id: 5, name: "홍길동", email: "hong@example.com", phone: "010-5678-1234", company: "가나다 상사", memo: "테스트 계정", role: "MEMBER", status: "활성" },
+//   { id: 6, name: "김영희", email: "kimyh@test.com", phone: "010-6789-0123", company: "ABC 렌트카", memo: "", role: "COMPANY_ADMIN", status: "활성" },
+//   { id: 7, name: "박철수", email: "parkcs@example.com", phone: "010-7890-1234", company: "라마바 서비스", memo: "", role: "ADMIN", status: "비활성" },
+//   { id: 8, name: "이미나", email: "lee.mina@abc-rent.com", phone: "010-8901-2345", company: "ABC 렌트카", memo: "", role: "COMPANY_ADMIN", status: "활성" },
+//   { id: 9, name: "정수민", email: "jsm@abc-rent.com", phone: "010-9012-3456", company: "ABC 렌트카", memo: "", role: "COMPANY_ADMIN", status: "활성" },
+//   { id: 10, name: "강동원", email: "kdw@ganada.com", phone: "010-0123-4567", company: "가나다 상사", memo: "", role: "MEMBER", status: "활성" },
+//   { id: 11, name: "윤서연", email: "ysy@ramaba.com", phone: "010-1234-5679", company: "라마바 서비스", memo: "", role: "ADMIN", status: "활성" },
+//   { id: 12, name: "임재현", email: "ljh@abc-rent.com", phone: "010-2345-6780", company: "ABC 렌트카", memo: "", role: "COMPANY_CHEF", status: "활성" },
+//   { id: 13, name: "한지민", email: "hjm@ganada.com", phone: "010-3456-7891", company: "가나다 상사", memo: "", role: "COMPANY_ADMIN", status: "비활성" },
+//   { id: 14, name: "오민수", email: "oms@ramaba.com", phone: "010-4567-8902", company: "라마바 서비스", memo: "", role: "ADMIN", status: "활성" },
+//   { id: 15, name: "서영준", email: "syj@abc-rent.com", phone: "010-5678-9013", company: "ABC 렌트카", memo: "", role: "COMPANY_ADMIN", status: "활성" },
+//   { id: 16, name: "장미란", email: "jmr@ganada.com", phone: "010-6789-0124", company: "가나다 상사", memo: "", role: "COMPANY_CHEF", status: "활성" },
+//   { id: 17, name: "김태희", email: "kth@ramaba.com", phone: "010-7890-1235", company: "라마바 서비스", memo: "", role: "ADMIN", status: "활성" },
+//   { id: 18, name: "이승기", email: "lsg@abc-rent.com", phone: "010-8901-2346", company: "ABC 렌트카", memo: "", role: "COMPANY_ADMIN", status: "비활성" },
+//   { id: 19, name: "박보영", email: "pby@ganada.com", phone: "010-9012-3457", company: "가나다 상사", memo: "", role: "MEMBER", status: "활성" },
+//   { id: 20, name: "최우식", email: "cws@ramaba.com", phone: "010-0123-4568", company: "라마바 서비스", memo: "", role: "ADMIN", status: "활성" },
+//   { id: 21, name: "정유미", email: "jym@abc-rent.com", phone: "010-1234-5670", company: "ABC 렌트카", memo: "", role: "COMPANY_ADMIN", status: "활성" },
+//   { id: 22, name: "강하늘", email: "khn@ganada.com", phone: "010-2345-6781", company: "가나다 상사", memo: "", role: "MEMBER", status: "활성" },
+//   { id: 23, name: "손예진", email: "syj@ramaba.com", phone: "010-3456-7892", company: "라마바 서비스", memo: "", role: "ADMIN", status: "비활성" },
+//   { id: 24, name: "현빈", email: "hyunbin@abc-rent.com", phone: "010-4567-8903", company: "ABC 렌트카", memo: "", role: "COMPANY_ADMIN", status: "활성" }
+// ];
 
 const DUMMY_COMPANIES = [
   { id: 1, name: "ABC 렌트카", email: "info@abc-rent.com", phone: "02-1234-5678", memo: "본사", status: "활성" },
@@ -60,7 +60,7 @@ const getRoleDisplayName = (role) => {
 
 const AdminUserManagementPage = () => {
   const [managementType, setManagementType] = useState("user");
-  const [users, setUsers] = useState(DUMMY_USERS);
+  const [users, setUsers] = useState([]);
   const [companies, setCompanies] = useState(DUMMY_COMPANIES);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -211,47 +211,56 @@ const AdminUserManagementPage = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {currentItems.map((item, index) => (
-              <TableRow key={item.id}>
-                <TableCell>{startIndex + index + 1}</TableCell>
-                {managementType === "user" ? (
-                  <>
-                    <TableCell>{item.name}</TableCell>
-                    <TableCell>{item.email}</TableCell>
-                    <TableCell>{item.phone}</TableCell>
-                    <TableCell>{item.company}</TableCell>
-                    <TableCell>
-                      <RoleBadge role={item.role}>
-                        {getRoleDisplayName(item.role)}
-                      </RoleBadge>
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={item.status}>
-                        {item.status === "활성" ? "활성" : "비활성"}
-                      </StatusBadge>
-                    </TableCell>
-                  </>
-                ) : (
-                  <>
-                    <TableCell>{item.name}</TableCell>
-                    <TableCell>{item.email}</TableCell>
-                    <TableCell>{item.phone}</TableCell>
-                    <TableCell>{item.memo}</TableCell>
-                    <TableCell>
-                      <StatusBadge status={item.status}>
-                        {item.status === "활성" ? "활성" : "비활성"}
-                      </StatusBadge>
-                    </TableCell>
-                  </>
-                )}
-                <TableCell>
-                  <ButtonGroup>
-                    <ActionButton edit onClick={() => handleOpenModal("edit", item)}>✏️</ActionButton>
-                    <ActionButton delete onClick={() => handleDelete(item.id)}>🗑️</ActionButton>
-                  </ButtonGroup>
-                </TableCell>
+            {currentItems.length === 0 ? (
+              <TableRow>
+                <EmptyCell colSpan={managementType === "user" ? 8 : 7}>
+                  {managementType === "user" 
+                    ? "등록된 사용자가 없습니다." 
+                    : "등록된 업체가 없습니다."}
+                </EmptyCell>
               </TableRow>
-            ))}
+            ) : (currentItems.map((item, index) => (
+                  <TableRow key={item.id}>
+                  <TableCell>{startIndex + index + 1}</TableCell>
+                  {managementType === "user" ? (
+                    <>
+                      <TableCell>{item.name}</TableCell>
+                      <TableCell>{item.email}</TableCell>
+                      <TableCell>{item.phone}</TableCell>
+                      <TableCell>{item.company}</TableCell>
+                      <TableCell>
+                        <RoleBadge role={item.role}>
+                          {getRoleDisplayName(item.role)}
+                        </RoleBadge>
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={item.status}>
+                          {item.status === "활성" ? "활성" : "비활성"}
+                        </StatusBadge>
+                      </TableCell>
+                    </>
+                  ) : (
+                    <>
+                      <TableCell>{item.name}</TableCell>
+                      <TableCell>{item.email}</TableCell>
+                      <TableCell>{item.phone}</TableCell>
+                      <TableCell>{item.memo}</TableCell>
+                      <TableCell>
+                        <StatusBadge status={item.status}>
+                          {item.status === "활성" ? "활성" : "비활성"}
+                        </StatusBadge>
+                      </TableCell>
+                    </>
+                  )}
+                  <TableCell>
+                    <ButtonGroup>
+                      <ActionButton edit onClick={() => handleOpenModal("edit", item)}>✏️</ActionButton>
+                      <ActionButton delete onClick={() => handleDelete(item.id)}>🗑️</ActionButton>
+                    </ButtonGroup>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </TableContainer>
@@ -344,6 +353,10 @@ const TableHeaderCell = styled.th.attrs(() => ({
 
 const TableCell = styled.td.attrs(() => ({
   className: 'table-cell'
+}))``;
+
+const EmptyCell = styled.td.attrs(() => ({
+  className: 'empty-cell'
 }))``;
 
 const RoleBadge = styled.span.attrs(() => ({

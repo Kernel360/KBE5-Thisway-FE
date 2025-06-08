@@ -1,4 +1,3 @@
-import React from "react";
 import styled from "styled-components";
 import { Link, useLocation } from "react-router-dom";
 import logo from "../assets/logo.png";
@@ -24,15 +23,15 @@ const getRoleLabel = (role) => {
 function Sidebar() {
   const location = useLocation();
   const user = useUserStore((state) => state.user);
-  const userRole = user?.ROLE_ADMIN
+  const userRole = user?.roles?.includes("ADMIN")
     ? "ADMIN"
-    : user?.ROLE_COMPANY_ADMIN
-    ? "COMPANY_ADMIN"
-    : user?.ROLE_COMPANY_CHEF
-    ? "COMPANY_CHEF"
-    : user?.ROLE_MEMBER
-    ? "MEMBER"
-    : null;
+    : user?.roles?.includes("COMPANY_ADMIN")
+      ? "COMPANY_ADMIN"
+      : user?.roles?.includes("COMPANY_CHEF")
+        ? "COMPANY_CHEF"
+        : user?.roles?.includes("MEMBER")
+          ? "MEMBER"
+          : null;
 
   // 권한별 메뉴 정의
   const adminMenu = [

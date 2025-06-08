@@ -23,11 +23,7 @@ export function getUserRole() {
   const token = getToken();
   const payload = parseJwt(token);
   if (!payload) return null;
-  if (payload.ROLE_ADMIN) return "ADMIN";
-  if (payload.ROLE_COMPANY_ADMIN) return "COMPANY_ADMIN";
-  if (payload.ROLE_COMPANY_CHEF) return "COMPANY_CHEF";
-  if (payload.ROLE_MEMBER) return "MEMBER";
-  return null;
+  return payload.roles[0];
 }
 
 export function isTokenExpired(token) {
