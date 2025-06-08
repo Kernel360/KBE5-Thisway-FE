@@ -60,7 +60,7 @@ const StyledGlobalStyle = createGlobalStyle`
   .table-container {
     background-color: ${({ theme }) => theme.palette.background.paper};
     border-radius: 8px;
-    box-shadow: 0 1px 3px ${({ theme }) => theme.palette.action.hover};
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     overflow: hidden;
     margin-bottom: 24px;
   }
@@ -72,12 +72,12 @@ const StyledGlobalStyle = createGlobalStyle`
   
   .table-head {
     background-color: ${({ theme }) => theme.palette.grey[100]};
-    border-bottom: 2px solid ${({ theme }) => theme.palette.divider};
+    border-bottom: 1.5px solid ${({ theme }) => theme.palette.grey[300]};
   }
   
   .table-row {
     &:not(:last-child) {
-      border-bottom: 1px solid ${({ theme }) => theme.palette.divider};
+      border-bottom: 1px solid ${({ theme }) => theme.palette.grey[200]};
     }
     
     &:hover {
@@ -86,7 +86,7 @@ const StyledGlobalStyle = createGlobalStyle`
   }
   
   .table-header-cell {
-    padding: 16px;
+    padding: 13px;
     text-align: left;
     font-weight: 600;
     color: ${({ theme }) => theme.palette.text.primary};
@@ -94,8 +94,14 @@ const StyledGlobalStyle = createGlobalStyle`
   }
   
   .table-cell {
-    padding: 16px;
+    padding: 13px;
     font-size: 14px;
+    color: ${({ theme }) => theme.palette.text.primary};
+  }
+
+  .empty-cell {
+    padding: 25px;
+    text-align: center;
     color: ${({ theme }) => theme.palette.text.primary};
   }
 
