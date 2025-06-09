@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import Button from '../../components/Button';
+import CompanySearchModal from './CompanySearchModal';
 
 const AdminUserRegisterModal = ({ 
   isOpen, 
@@ -12,33 +13,38 @@ const AdminUserRegisterModal = ({
   setError
 }) => {
   const [formData, setFormData] = useState({
-    companyId: '',
-    role: 'MEMBER',
     name: '',
     email: '',
+    phone: '',
+    role: 'MEMBER',
     password: '',
     confirmPassword: '',
-    phone: '',
+    companyId: '',
+    companyName: '',
     memo: ''
   });
+  const [companySearchOpen, setCompanySearchOpen] = useState(false);
 
   useEffect(() => {
     if (initialData) {
       setFormData({
         ...initialData,
-        companyId: initialData.companyId?.toString() || '',
         password: '',
-        confirmPassword: ''
+        confirmPassword: '',
+        companyName: initialData.companyName || '',
+        companyId: initialData.companyId?.toString() || '',
+        memo: initialData.memo || ''
       });
     } else {
       setFormData({
-        companyId: '',
-        role: 'MEMBER',
         name: '',
         email: '',
+        phone: '',
+        role: 'MEMBER',
         password: '',
         confirmPassword: '',
-        phone: '',
+        companyId: '',
+        companyName: '',
         memo: ''
       });
     }
@@ -49,7 +55,7 @@ const AdminUserRegisterModal = ({
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'companyId' ? value.replace(/[^0-9]/g, '') : value
+      [name]: value
     }));
     setError("");
   };
@@ -57,6 +63,21 @@ const AdminUserRegisterModal = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    if (!formData.name || !formData.email || !formData.phone) {
+      setError("모든 필수 항목을 입력해주세요.");
+      return;
+    }
+
+    if (!formData.companyId) {
+      setError("업체를 선택해주세요.");
+      return;
+    }
+
+    if (type === 'create' && !formData.password) {
+      setError("비밀번호를 입력해주세요.");
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       setError('비밀번호가 일치하지 않습니다.');
       return;
@@ -79,11 +100,20 @@ const AdminUserRegisterModal = ({
     }
   };
 
+  const handleCompanySelect = (company) => {
+    setFormData(prev => ({
+      ...prev,
+      companyId: company.id,
+      companyName: company.name,
+    }));
+    setCompanySearchOpen(false);
+  };
+
   if (!isOpen) return null;
 
   return (
-    <ModalOverlay>
-      <ModalContent>
+    <ModalOverlay onClick={onClose}>
+      <ModalContent onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <h2>{type === 'create' ? '신규 사용자 등록' : '사용자 정보 수정'}</h2>
           <CloseButton onClick={onClose}>&times;</CloseButton>
@@ -129,26 +159,21 @@ const AdminUserRegisterModal = ({
           </FormGroup>
 
           <FormGroup>
-            <Label>소속 업체 ID</Label>
-            <Input
-              type="text"
-              name="companyId"
-              value={formData.companyId}
-              onChange={handleChange}
-              placeholder="소속 업체 ID 입력"
-              required
-            />
-          </FormGroup>
-
-          <FormGroup>
-            <Label>메모</Label>
-            <TextArea
-              name="memo"
-              value={formData.memo}
-              onChange={handleChange}
-              placeholder="메모 입력"
-              rows={3}
-            />
+            <Label>소속 업체</Label>
+            <CompanySelectContainer>
+              <CompanyInput
+                type="text"
+                value={formData.companyName}
+                placeholder="업체를 선택하세요"
+                readOnly
+              />
+              <CompanySelectButton
+                type="button"
+                onClick={() => setCompanySearchOpen(true)}
+              >
+                업체 선택
+              </CompanySelectButton>
+            </CompanySelectContainer>
           </FormGroup>
 
           <FormGroup>
@@ -165,27 +190,42 @@ const AdminUserRegisterModal = ({
             </Select>
           </FormGroup>
 
-          <FormGroup>
-            <Label>{type === 'create' ? '비밀번호' : '새 비밀번호'}</Label>
-            <Input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder={type === 'create' ? '비밀번호 입력' : '변경할 비밀번호 입력 (선택)'}
-              required={type === 'create'}
-            />
-          </FormGroup>
+          {type === 'create' && (
+            <>
+              <FormGroup>
+                <Label>비밀번호 *</Label>
+                <Input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="비밀번호 입력"
+                  required
+                />
+              </FormGroup>
+
+              <FormGroup>
+                <Label>비밀번호 확인 *</Label>
+                <Input
+                  type="password"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  placeholder="비밀번호 확인"
+                  required
+                />
+              </FormGroup>
+            </>
+          )}
 
           <FormGroup>
-            <Label>비밀번호 확인</Label>
-            <Input
-              type="password"
-              name="confirmPassword"
-              value={formData.confirmPassword}
+            <Label>메모</Label>
+            <TextArea
+              name="memo"
+              value={formData.memo}
               onChange={handleChange}
-              placeholder="비밀번호 확인"
-              required={type === 'create' || formData.password !== ''}
+              placeholder="메모 입력"
+              rows={3}
             />
           </FormGroup>
 
@@ -198,6 +238,12 @@ const AdminUserRegisterModal = ({
             </Button>
           </ButtonGroup>
         </form>
+
+        <CompanySearchModal
+          isOpen={companySearchOpen}
+          onClose={() => setCompanySearchOpen(false)}
+          onSelect={handleCompanySelect}
+        />
       </ModalContent>
     </ModalOverlay>
   );
@@ -320,6 +366,21 @@ const ErrorMessage = styled.div`
   padding: 12px;
   border-radius: 4px;
   text-align: center;
+`;
+
+const CompanySelectContainer = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const CompanyInput = styled(Input)`
+  flex: 1;
+  background-color: ${({ theme }) => theme.palette.action.hover};
+  cursor: default;
+`;
+
+const CompanySelectButton = styled(Button)`
+  white-space: nowrap;
 `;
 
 export default AdminUserRegisterModal; 

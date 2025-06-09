@@ -38,6 +38,8 @@ const AdminUserManagementPage = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [error, setError] = useState("");
   const itemsPerPage = 10;
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const fetchUsers = async (page = 1) => {
     try {
@@ -77,20 +79,41 @@ const AdminUserManagementPage = () => {
     setCurrentPage(page);
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm(`이 ${managementType === "user" ? "사용자" : "업체"}를 삭제하시겠습니까?`)) {
+  const handleDelete = (id) => {
+    setItemToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (itemToDelete) {
       try {
         if (managementType === "user") {
-          await authApi.delete(`/members/${id}`);
-          fetchUsers(currentPage);
+          await authApi.delete(`/members/${itemToDelete}`);
+          if (users.length === 1 && currentPage > 1) {
+            setCurrentPage(1);
+          } else {
+            fetchUsers(currentPage);
+          }
         } else {
-          await authApi.delete(`/companies/${id}`);
-          fetchCompanies(currentPage);
+          await authApi.delete(`/companies/${itemToDelete}`);
+          if (companies.length === 1 && currentPage > 1) {
+            setCurrentPage(1);
+          } else {
+            fetchCompanies(currentPage);
+          }
         }
+        setDeleteDialogOpen(false);
+        setItemToDelete(null);
       } catch (error) {
         console.error(`Error deleting ${managementType}:`, error);
+        setError(error.response?.data?.message || `${managementType === "user" ? "사용자" : "업체"} 삭제에 실패했습니다.`);
       }
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setItemToDelete(null);
   };
 
   const handleOpenModal = (type, item = null) => {
@@ -296,6 +319,23 @@ const AdminUserManagementPage = () => {
           setError={setError}
         />
       )}
+
+      {deleteDialogOpen && (
+        <>
+          <Dialog>
+            <DialogOverlay onClick={handleDeleteCancel} />
+            <DialogContent>
+              <DialogTitle>{managementType === "user" ? "사용자" : "업체"} 삭제 확인</DialogTitle>
+              <DialogText>정말로 이 {managementType === "user" ? "사용자" : "업체"}를 삭제하시겠습니까?</DialogText>
+              <DialogSubText>삭제된 {managementType === "user" ? "사용자" : "업체"} 정보는 복구할 수 없습니다.</DialogSubText>
+              <DialogActions>
+                <CancelButton onClick={handleDeleteCancel}>취소</CancelButton>
+                <DeleteButton onClick={handleDeleteConfirm}>삭제</DeleteButton>
+              </DialogActions>
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
     </Container>
   );
 };
@@ -418,6 +458,52 @@ const ErrorMessage = styled.div`
   margin-bottom: 16px;
   font-size: 14px;
   text-align: center;
+`;
+
+const Dialog = styled.div.attrs(() => ({
+  className: 'dialog'
+}))``;
+
+const DialogOverlay = styled.div.attrs(() => ({
+  className: 'dialog-overlay'
+}))``;
+
+const DialogContent = styled.div.attrs(() => ({
+  className: 'dialog-content'
+}))``;
+
+const DialogTitle = styled.h2.attrs(() => ({
+  className: 'dialog-title'
+}))``;
+
+const DialogText = styled.p.attrs(() => ({
+  className: 'dialog-text'
+}))``;
+
+const DialogSubText = styled.p.attrs(() => ({
+  className: 'dialog-sub-text'
+}))``;
+
+const DialogActions = styled.div.attrs(() => ({
+  className: 'dialog-actions'
+}))``;
+
+const CancelButton = styled(Button)`
+  background: transparent;
+  color: ${({ theme }) => theme.palette.text.primary};
+  
+  &:hover {
+    background: ${({ theme }) => theme.palette.action.hover};
+  }
+`;
+
+const DeleteButton = styled(Button)`
+  background: ${({ theme }) => theme.palette.error.main};
+  color: ${({ theme }) => theme.palette.error.contrastText};
+  
+  &:hover {
+    background: ${({ theme }) => theme.palette.error.dark};
+  }
 `;
 
 export default AdminUserManagementPage;

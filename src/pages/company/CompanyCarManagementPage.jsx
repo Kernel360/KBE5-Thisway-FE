@@ -335,60 +335,33 @@ const ActionButton = styled.button.attrs(() => ({
   }
 `;
 
-const Dialog = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-`;
+const Dialog = styled.div.attrs(() => ({
+  className: 'dialog'
+}))``;
 
-const DialogOverlay = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-`;
+const DialogOverlay = styled.div.attrs(() => ({
+  className: 'dialog-overlay'
+}))``;
 
-const DialogContent = styled.div`
-  position: relative;
-  background: ${({ theme }) => theme.palette.background.paper};
-  padding: 24px;
-  border-radius: 8px;
-  width: 100%;
-  max-width: 400px;
-  z-index: 1001;
-`;
+const DialogContent = styled.div.attrs(() => ({
+  className: 'dialog-content'
+}))``;
 
-const DialogTitle = styled.h2`
-  font-size: 20px;
-  font-weight: 700;
-  margin: 0 0 16px;
-  color: ${({ theme }) => theme.palette.text.primary};
-`;
+const DialogTitle = styled.h2.attrs(() => ({
+  className: 'dialog-title'
+}))``;
 
-const DialogText = styled.p`
-  margin: 0 0 8px;
-  color: ${({ theme }) => theme.palette.text.primary};
-`;
+const DialogText = styled.p.attrs(() => ({
+  className: 'dialog-text'
+}))``;
 
-const DialogSubText = styled.p`
-  margin: 0 0 24px;
-  font-size: 14px;
-  color: ${({ theme }) => theme.palette.text.secondary};
-`;
+const DialogSubText = styled.p.attrs(() => ({
+  className: 'dialog-sub-text'
+}))``;
 
-const DialogActions = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-`;
+const DialogActions = styled.div.attrs(() => ({
+  className: 'dialog-actions'
+}))``;
 
 const CancelButton = styled(Button)`
   background: transparent;

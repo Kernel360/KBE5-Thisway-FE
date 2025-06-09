@@ -129,6 +129,61 @@ const StyledGlobalStyle = createGlobalStyle`
       cursor: not-allowed;
     }
   }
+
+  /* Dialog Styles */
+  .dialog {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  
+  .dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+  }
+  
+  .dialog-content {
+    position: relative;
+    background: ${({ theme }) => theme.palette.background.paper};
+    padding: 24px;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 400px;
+    z-index: 1001;
+  }
+  
+  .dialog-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0 0 16px;
+    color: ${({ theme }) => theme.palette.text.primary};
+  }
+  
+  .dialog-text {
+    margin: 0 0 8px;
+    color: ${({ theme }) => theme.palette.text.primary};
+  }
+  
+  .dialog-sub-text {
+    margin: 0 0 24px;
+    color: ${({ theme }) => theme.palette.text.primary};
+  }
+  
+  .dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
 `;
 
 export default StyledGlobalStyle;
