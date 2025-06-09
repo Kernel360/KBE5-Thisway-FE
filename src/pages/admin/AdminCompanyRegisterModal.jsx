@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import Button from '../../components/Button';
+import { useDaumPostcodePopup } from 'react-daum-postcode';
 
 const AdminCompanyRegisterModal = ({ 
   isOpen, 
@@ -20,6 +21,8 @@ const AdminCompanyRegisterModal = ({
     memo: '',
     gpsCycle: 60
   });
+
+  const openPostcodePopup = useDaumPostcodePopup();
 
   useEffect(() => {
     if (initialData) {
@@ -49,6 +52,12 @@ const AdminCompanyRegisterModal = ({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!formData.name || !formData.crn || !formData.contact) {
+      setError("모든 필수 항목을 입력해주세요.");
+      return;
+    }
+
     try {
       const submitData = {
         name: formData.name,
@@ -66,11 +75,23 @@ const AdminCompanyRegisterModal = ({
     }
   };
 
+  const handleAddressSearch = () => {
+    openPostcodePopup({
+      onComplete: (data) => {
+        setFormData(prev => ({
+          ...prev,
+          addrRoad: data.roadAddress,
+          addrDetail: ''
+        }));
+      }
+    });
+  };
+
   if (!isOpen) return null;
 
   return (
-    <ModalOverlay>
-      <ModalContent>
+    <ModalOverlay onClick={onClose}>
+      <ModalContent onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
           <h2>{type === 'create' ? '신규 업체 등록' : '업체 정보 수정'}</h2>
           <CloseButton onClick={onClose}>&times;</CloseButton>
@@ -78,6 +99,7 @@ const AdminCompanyRegisterModal = ({
 
         <form onSubmit={handleSubmit}>
           {error && <ErrorMessage>{error}</ErrorMessage>}
+
           <FormGroup>
             <Label>업체명</Label>
             <Input
@@ -91,13 +113,13 @@ const AdminCompanyRegisterModal = ({
           </FormGroup>
 
           <FormGroup>
-            <Label>사업자 등록번호</Label>
+            <Label>사업자등록번호</Label>
             <Input
               type="text"
               name="crn"
               value={formData.crn}
               onChange={handleChange}
-              placeholder="사업자 등록번호 입력"
+              placeholder="사업자등록번호 입력 (-없이 숫자만)"
               required
             />
           </FormGroup>
@@ -115,37 +137,25 @@ const AdminCompanyRegisterModal = ({
           </FormGroup>
 
           <FormGroup>
-            <Label>도로명 주소</Label>
-            <Input
-              type="text"
-              name="addrRoad"
-              value={formData.addrRoad}
-              onChange={handleChange}
-              placeholder="도로명 주소 입력"
-              required
-            />
-          </FormGroup>
-
-          <FormGroup>
-            <Label>상세 주소</Label>
+            <Label>주소</Label>
+            <AddressContainer>
+              <AddressInput
+                type="text"
+                name="addrRoad"
+                value={formData.addrRoad}
+                readOnly
+                placeholder="도로명 주소"
+              />
+              <Button type="button" onClick={handleAddressSearch}>
+                주소 검색
+              </Button>
+            </AddressContainer>
             <Input
               type="text"
               name="addrDetail"
               value={formData.addrDetail}
               onChange={handleChange}
               placeholder="상세 주소 입력"
-              required
-            />
-          </FormGroup>
-
-          <FormGroup>
-            <Label>메모</Label>
-            <TextArea
-              name="memo"
-              value={formData.memo}
-              onChange={handleChange}
-              placeholder="메모 입력"
-              rows={3}
             />
           </FormGroup>
 
@@ -158,6 +168,17 @@ const AdminCompanyRegisterModal = ({
               onChange={handleChange}
               min="1"
               required
+            />
+          </FormGroup>
+
+          <FormGroup>
+            <Label>메모</Label>
+            <TextArea
+              name="memo"
+              value={formData.memo}
+              onChange={handleChange}
+              placeholder="메모 입력"
+              rows={3}
             />
           </FormGroup>
 
@@ -247,6 +268,17 @@ const Input = styled.input`
     outline: none;
     border-color: ${({ theme }) => theme.palette.primary.main};
   }
+`;
+
+const AddressContainer = styled.div`
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+`;
+
+const AddressInput = styled(Input)`
+  flex: 1;
+  background-color: ${({ theme }) => theme.palette.action.hover};
 `;
 
 const TextArea = styled.textarea`
