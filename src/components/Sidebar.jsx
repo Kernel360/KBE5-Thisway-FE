@@ -9,9 +9,9 @@ const getRoleLabel = (role) => {
   switch (role) {
     case "ADMIN":
       return "최고 관리자";
-    case "COMPANY_ADMIN":
-      return "업체 최고 관리자";
     case "COMPANY_CHEF":
+      return "업체 최고 관리자";
+    case "COMPANY_ADMIN":
       return "업체 관리자";
     case "MEMBER":
       return "일반 사용자";
@@ -25,10 +25,10 @@ function Sidebar() {
   const user = useUserStore((state) => state.user);
   const userRole = user?.roles?.includes("ADMIN")
     ? "ADMIN"
-    : user?.roles?.includes("COMPANY_ADMIN")
-      ? "COMPANY_ADMIN"
-      : user?.roles?.includes("COMPANY_CHEF")
-        ? "COMPANY_CHEF"
+    : user?.roles?.includes("COMPANY_CHEF")
+      ? "COMPANY_CHEF"
+      : user?.roles?.includes("COMPANY_ADMIN")
+        ? "COMPANY_ADMIN"
         : user?.roles?.includes("MEMBER")
           ? "MEMBER"
           : null;
@@ -43,8 +43,8 @@ function Sidebar() {
   const companyMenu = [
     { label: "대시보드", path: "/company/dashboard" },
     { label: "차량 관리", path: "/company/car-management" },
-    // 사용자 관리는 COMPANY_ADMIN만 볼 수 있음
-    ...(userRole === "COMPANY_ADMIN"
+    // 사용자 관리는 COMPANY_CHEF만 볼 수 있음
+    ...(userRole === "COMPANY_CHEF"
       ? [{ label: "사용자 관리", path: "/company/user-management" }]
       : []),
     { label: "운행 기록", path: "/company/trip-history" },
