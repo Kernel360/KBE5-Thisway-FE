@@ -16,7 +16,7 @@ export const ROUTES = {
   company: {
     dashboard: "/company/dashboard",
     carManagement: "/company/car-management",
-    carDetail: "/company/car-detail",
+    carDetail: "/company/car-detail/:id",
     userManagement: "/company/user-management",
     tripHistory: "/company/trip-history",
     carRegistration: "/company/car-registration",
