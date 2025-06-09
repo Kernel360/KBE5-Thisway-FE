@@ -104,8 +104,8 @@ const StyledButton = styled.button`
     variant === 'outlined' ? 'transparent' : theme.palette.primary.main};
   color: ${({ variant, theme }) =>
     variant === 'outlined' ? theme.palette.primary.main : theme.palette.primary.contrastText};
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 14.5px;
+  font-weight: 800;
   cursor: pointer;
   transition: all 0.2s;
   border: 1px solid ${({ variant, theme }) =>

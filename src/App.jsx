@@ -14,7 +14,7 @@ import CompanyCarManagementPage from "@/pages/company/CompanyCarManagementPage";
 import CompanyCarDetailPage from "@/pages/company/CompanyCarDetailPage";
 import CompanyUserManagementPage from "@/pages/company/CompanyUserManagementPage";
 import AdminDashboardPage from "@/pages/admin/AdminDashboardPage";
-import AdminUserManagementPage from "@/pages/admin/AdminUserManagementPage";
+import AdminManagementPage from "@/pages/admin/AdminManagementPage";
 import globalStyles from "@/theme/globalStyles";
 import TripDetailViewPage from "@/pages/trip/TripDetailViewPage";
 import CarRegistrationPage from "@/pages/car/CarRegistrationPage";
@@ -147,7 +147,7 @@ const routeList = [
     path: ROUTES.admin.manage,
     element: (
       <MainLayout>
-        <AdminUserManagementPage />
+        <AdminManagementPage />
       </MainLayout>
     ),
   },

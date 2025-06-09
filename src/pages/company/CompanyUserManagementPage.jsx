@@ -1,54 +1,68 @@
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { authApi } from "../../utils/api";
+import { getCompanyId } from "../../utils/auth";
 import CompanyUserRegisterModal from "./CompanyUserRegisterModal";
 import SearchInput from "../../components/SearchInput";
 import Button from "../../components/Button";
 import Pagination from "../../components/Pagination";
 
 //더미 데이터
-const DUMMY_USERS = [
-  // {
-  //   id: 1,
-  //   name: "김관리",
-  //   email: "company_chef@thisway.com",
-  //   phone: "010-1234-5678",
-  //   memo: "관리자 계정",
-  //   role: "COMPANY_CHEF",
-  // },
-  // {
-  //   id: 2,
-  //   name: "이사원",
-  //   email: "member1@thisway.com",
-  //   phone: "010-2345-6789",
-  //   memo: "일반 사용자",
-  //   role: "MEMBER",
-  // },
-  // {
-  //   id: 3,
-  //   name: "박직원",
-  //   email: "company_admin@thisway.com",
-  //   phone: "010-3456-7890",
-  //   memo: "",
-  //   role: "COMPANY_ADMIN",
-  // },
-];
+// const DUMMY_USERS = [
+//   {
+//     id: 1,
+//     name: "김관리",
+//     email: "company_chef@thisway.com",
+//     phone: "010-1234-5678",
+//     memo: "관리자 계정",
+//     role: "COMPANY_CHEF",
+//   },
+//   {
+//     id: 2,
+//     name: "이사원",
+//     email: "member1@thisway.com",
+//     phone: "010-2345-6789",
+//     memo: "일반 사용자",
+//     role: "MEMBER",
+//   },
+//   {
+//     id: 3,
+//     name: "박직원",
+//     email: "company_admin@thisway.com",
+//     phone: "010-3456-7890",
+//     memo: "",
+//     role: "COMPANY_ADMIN",
+//   },
+// ];
+
+const getRoleDisplayName = (role) => {
+  switch (role) {
+    case 'COMPANY_CHEF':
+      return '최고관리자';
+    case 'COMPANY_ADMIN':
+      return '관리자';
+    case 'MEMBER':
+      return '일반 사용자';
+    default:
+      return role;
+  }
+};
 
 const CompanyUserManagementPage = () => {
   const [openAddModal, setOpenAddModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
-  const [users, setUsers] = useState(DUMMY_USERS);
-  const [totalUsers, setTotalUsers] = useState(DUMMY_USERS.length);
-  const [companyChefCount, setCompanyChefCount] = useState(
-    DUMMY_USERS.filter(
-      (user) => user.role === "COMPANY_CHEF" || user.role === "COMPANY_ADMIN",
-    ).length,
-  );
-  const [memberCount, setMemberCount] = useState(
-    DUMMY_USERS.filter((user) => user.role === "MEMBER").length,
-  );
-  const [currentPage, setCurrentPage] = useState(1);
+  const [users, setUsers] = useState([]);
+  const [totalElements, setTotalElements] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [summary, setSummary] = useState({
+    companyChefCount: 0,
+    companyAdminCount: 0,
+    memberCount: 0
+  });
+  const [error, setError] = useState("");
+  const itemsPerPage = 10;
 
   const [newUser, setNewUser] = useState({
     name: "",
@@ -62,6 +76,35 @@ const CompanyUserManagementPage = () => {
 
   const [editingUser, setEditingUser] = useState(null);
 
+  const fetchSummary = async () => {
+    try {
+      const response = await authApi.get("/members/summary");
+      if (response.data) {
+        setSummary(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching summary:", error);
+    }
+  };
+
+  const fetchUsers = async (page = 1) => {
+    try {
+      const response = await authApi.get(`/members?page=${page - 1}&size=${itemsPerPage}`);
+      if (response.data) {
+        setUsers(response.data.members);
+        setTotalElements(response.data.pageInfo.totalElements);
+        setTotalPages(response.data.pageInfo.totalPages);
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers(currentPage);
+    fetchSummary();
+  }, [currentPage]);
+
   // 검색어에 따른 필터링
   const filteredUsers = users.filter(
     (user) =>
@@ -70,42 +113,9 @@ const CompanyUserManagementPage = () => {
       user.phone.includes(searchTerm),
   );
 
-  // 페이지네이션 계산
-  const itemsPerPage = 10;
-  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentUsers = filteredUsers.slice(startIndex, endIndex);
-
   const handlePageChange = (page) => {
     setCurrentPage(page);
   };
-
-  // API 연동 주석 처리
-  /*
-  const fetchUsers = async () => {
-    try {
-      const response = await authApi.get("/members");
-      if (response.data && response.data.members) {
-        const fetchedUsers = response.data.members.content;
-        setUsers(fetchedUsers);
-        setTotalUsers(response.data.members.totalElements);
-        
-        const chefCount = fetchedUsers.filter(user => user.role === 'COMPANY_CHEF').length;
-        const memberCnt = fetchedUsers.filter(user => user.role === 'MEMBER').length;
-        
-        setCompanyChefCount(chefCount);
-        setMemberCount(memberCnt);
-      }
-    } catch (error) {
-      console.error("Error fetching users:", error);
-    }
-  };
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-  */
 
   const handleOpenAddModal = () => setOpenAddModal(true);
   const handleCloseAddModal = () => {
@@ -119,6 +129,7 @@ const CompanyUserManagementPage = () => {
       password: "",
       confirmPassword: "",
     });
+    setError("");
   };
 
   const handleOpenEditModal = (user) => {
@@ -129,6 +140,7 @@ const CompanyUserManagementPage = () => {
   const handleCloseEditModal = () => {
     setOpenEditModal(false);
     setEditingUser(null);
+    setError("");
   };
 
   const handleInputChange = (e) => {
@@ -140,30 +152,71 @@ const CompanyUserManagementPage = () => {
     }
   };
 
-  const handleSubmitAdd = () => {
-    // 더미 데이터용 임시 처리
-    const newUserData = {
-      ...newUser,
-      id: users.length + 1,
-    };
-    setUsers([...users, newUserData]);
-    handleCloseAddModal();
+  const handleSubmitAdd = async () => {
+    try {
+      if (newUser.password !== newUser.confirmPassword) {
+        setError("비밀번호가 일치하지 않습니다.");
+        return;
+      }
+
+      const companyId = getCompanyId();
+      const submitData = {
+        companyId: companyId,
+        role: newUser.role,
+        name: newUser.name,
+        email: newUser.email,
+        password: newUser.password,
+        phone: newUser.phone,
+        memo: newUser.memo || ""
+      };
+
+      await authApi.post("/members", submitData);
+      fetchUsers(currentPage);
+      handleCloseAddModal();
+    } catch (error) {
+      console.error("Error adding user:", error);
+      setError(error.response?.data?.message || "사용자 등록 중 오류가 발생했습니다.");
+    }
   };
 
-  const handleSubmitEdit = () => {
-    // 더미 데이터용 임시 처리
-    const updatedUsers = users.map((user) =>
-      user.id === editingUser.id ? editingUser : user,
-    );
-    setUsers(updatedUsers);
-    handleCloseEditModal();
+  const handleSubmitEdit = async () => {
+    try {
+      if (editingUser.password && editingUser.password !== editingUser.confirmPassword) {
+        setError("비밀번호가 일치하지 않습니다.");
+        return;
+      }
+
+      const companyId = getCompanyId();
+      const submitData = {
+        companyId: companyId,
+        role: editingUser.role,
+        name: editingUser.name,
+        email: editingUser.email,
+        phone: editingUser.phone,
+        memo: editingUser.memo || ""
+      };
+
+      if (editingUser.password) {
+        submitData.password = editingUser.password;
+      }
+
+      await authApi.put(`/members/${editingUser.id}`, submitData);
+      fetchUsers(currentPage);
+      handleCloseEditModal();
+    } catch (error) {
+      console.error("Error updating user:", error);
+      setError(error.response?.data?.message || "사용자 수정 중 오류가 발생했습니다.");
+    }
   };
 
-  const handleDeleteUser = (userId) => {
+  const handleDeleteUser = async (userId) => {
     if (window.confirm("이 사용자를 삭제하시겠습니까?")) {
-      // 더미 데이터용 임시 처리
-      const filteredUsers = users.filter((user) => user.id !== userId);
-      setUsers(filteredUsers);
+      try {
+        await authApi.delete(`/members/${userId}`);
+        fetchUsers(currentPage); // 사용자 목록 새로고침
+      } catch (error) {
+        console.error("Error deleting user:", error);
+      }
     }
   };
 
@@ -187,18 +240,20 @@ const CompanyUserManagementPage = () => {
       </Header>
 
       <StatsGrid>
-        <StatCard>
-          <StatLabel>전체 사용자</StatLabel>
-          <StatValue accent>{totalUsers}명</StatValue>
-        </StatCard>
-        <StatCard>
-          <StatLabel>관리자</StatLabel>
-          <StatValue>{companyChefCount}명</StatValue>
-        </StatCard>
-        <StatCard>
-          <StatLabel>일반 사용자</StatLabel>
-          <StatValue>{memberCount}명</StatValue>
-        </StatCard>
+        <StatsCard>
+          <StatsTitle>전체 사용자</StatsTitle>
+          <StatsValue>
+            {summary.companyChefCount + summary.companyAdminCount + summary.memberCount}
+          </StatsValue>
+        </StatsCard>
+        <StatsCard>
+          <StatsTitle>관리자</StatsTitle>
+          <StatsValue>{summary.companyChefCount + summary.companyAdminCount}</StatsValue>
+        </StatsCard>
+        <StatsCard>
+          <StatsTitle>일반 사용자</StatsTitle>
+          <StatsValue>{summary.memberCount}</StatsValue>
+        </StatsCard>
       </StatsGrid>
 
       <TableContainer>
@@ -206,58 +261,48 @@ const CompanyUserManagementPage = () => {
           <TableHead>
             <TableRow>
               <TableHeaderCell width="60px">번호</TableHeaderCell>
-              <TableHeaderCell width="160px">이름</TableHeaderCell>
-              <TableHeaderCell width="200px">이메일</TableHeaderCell>
+              <TableHeaderCell width="120px">이름</TableHeaderCell>
+              <TableHeaderCell width="180px">이메일</TableHeaderCell>
               <TableHeaderCell width="140px">연락처</TableHeaderCell>
-              <TableHeaderCell width="140px">메모</TableHeaderCell>
-              <TableHeaderCell width="120px">권한</TableHeaderCell>
+              <TableHeaderCell width="100px">권한</TableHeaderCell>
               <TableHeaderCell width="100px">관리</TableHeaderCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {currentUsers.length === 0 ? (
-                <TableRow>
-                  <EmptyCell colSpan={6}>등록된 사용자가 없습니다.</EmptyCell>
+            {filteredUsers.length === 0 ? (
+              <TableRow>
+                <EmptyCell colSpan={6}>등록된 사용자가 없습니다.</EmptyCell>
+              </TableRow>
+            ) : (
+              filteredUsers.map((user, index) => (
+                <TableRow key={user.id}>
+                  <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell>
+                  <TableCell>{user.name}</TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>{user.phone.replace(/(\d{3})(\d{3,4})(\d{4})/, '$1-$2-$3')}</TableCell>
+                  <TableCell>
+                    <RoleBadge role={user.role}>
+                      {getRoleDisplayName(user.role)}
+                    </RoleBadge>
+                  </TableCell>
+                  <TableCell>
+                    <ButtonGroup>
+                      <ActionButton edit onClick={() => handleOpenEditModal(user)}>
+                        ✏️
+                      </ActionButton>
+                      <ActionButton delete onClick={() => handleDeleteUser(user.id)}>
+                        🗑️
+                      </ActionButton>
+                    </ButtonGroup>
+                  </TableCell>
                 </TableRow>
-            ) : (currentUsers.map((user, index) => (
-                  <TableRow key={user.id}>
-                    <TableCell>{startIndex + index + 1}</TableCell>
-                    <TableCell>{user.name}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.phone}</TableCell>
-                    <TableCell>{user.memo}</TableCell>
-                    <TableCell>
-                      <RoleBadge role={user.role}>
-                        {user.role === "COMPANY_CHEF" ||
-                        user.role === "COMPANY_ADMIN"
-                          ? "관리자"
-                          : "일반 사용자"}
-                      </RoleBadge>
-                    </TableCell>
-                    <TableCell>
-                      <ButtonGroup>
-                        <ActionButton
-                          edit
-                          onClick={() => handleOpenEditModal(user)}
-                        >
-                          ✏️
-                        </ActionButton>
-                        <ActionButton
-                          delete
-                          onClick={() => handleDeleteUser(user.id)}
-                        >
-                          🗑️
-                        </ActionButton>
-                      </ButtonGroup>
-                    </TableCell>
-                  </TableRow>
-               ))
+              ))
             )}
           </TableBody>
         </Table>
       </TableContainer>
 
-      {currentUsers.length > 0 && (
+      {filteredUsers.length > 0 && (
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
@@ -272,6 +317,8 @@ const CompanyUserManagementPage = () => {
         onChange={handleInputChange}
         onSubmit={handleSubmitAdd}
         mode="register"
+        error={error}
+        setError={setError}
       />
 
       <CompanyUserRegisterModal
@@ -281,6 +328,8 @@ const CompanyUserManagementPage = () => {
         onChange={handleInputChange}
         onSubmit={handleSubmitEdit}
         mode="edit"
+        error={error}
+        setError={setError}
       />
     </Container>
   );
@@ -318,37 +367,55 @@ const StatsGrid = styled.div`
   margin-bottom: 24px;
 `;
 
-const StatCard = styled.div`
+const StatsCard = styled.div`
   background-color: ${({ theme }) => theme.palette.background.paper};
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 1px 3px ${({ theme }) => theme.palette.action.hover};
 `;
 
-const StatLabel = styled.div`
+const StatsTitle = styled.div`
   color: ${({ theme }) => theme.palette.text.secondary};
   font-size: 14px;
   margin-bottom: 8px;
 `;
 
-const StatValue = styled.div`
+const StatsValue = styled.div`
   font-size: 20px;
   font-weight: 700;
-  color: ${({ accent, theme }) =>
-    accent ? theme.palette.primary.main : theme.palette.text.primary};
+  color: ${({ theme }) => theme.palette.text.primary};
 `;
 
-const RoleBadge = styled.span.attrs(() => ({
-  className: "badge",
-}))`
-  background-color: ${({ role, theme }) =>
-    role === "COMPANY_CHEF" || role === "COMPANY_ADMIN"
-      ? theme.palette.secondary.main
-      : theme.palette.grey[100]};
-  color: ${({ role, theme }) =>
-    role === "COMPANY_CHEF" || role === "COMPANY_ADMIN"
-      ? theme.palette.secondary.contrastText
-      : theme.palette.text.disabled};
+const RoleBadge = styled.span`
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  background-color: ${({ role, theme }) => {
+    switch (role) {
+      case 'COMPANY_CHEF':
+        return theme.palette.success.main;
+      case 'COMPANY_ADMIN':
+        return theme.palette.secondary.main;
+      case 'MEMBER':
+        return theme.palette.grey[100];
+      default:
+        return theme.palette.grey[100];
+    }
+  }};
+  color: ${({ role, theme }) => {
+    switch (role) {
+      case 'COMPANY_CHEF':
+        return theme.palette.success.contrastText;
+      case 'COMPANY_ADMIN':
+        return theme.palette.secondary.contrastText;
+      case 'MEMBER':
+        return theme.palette.text.disabled;
+      default:
+        return theme.palette.text.disabled;
+    }
+  }};
 `;
 
 const ButtonGroup = styled.div`

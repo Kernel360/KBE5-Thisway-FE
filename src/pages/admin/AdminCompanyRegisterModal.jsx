@@ -2,44 +2,37 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import Button from '../../components/Button';
 
-const AdminUserRegisterModal = ({ 
+const AdminCompanyRegisterModal = ({ 
   isOpen, 
-  onClose,
-  type = 'create',
+  onClose, 
+  type = 'create', // 'create' | 'edit'
   initialData = null,
   onSubmit,
   error,
   setError
 }) => {
   const [formData, setFormData] = useState({
-    companyId: '',
-    role: 'MEMBER',
     name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    phone: '',
-    memo: ''
+    crn: '',
+    contact: '',
+    addrRoad: '',
+    addrDetail: '',
+    memo: '',
+    gpsCycle: 60
   });
 
   useEffect(() => {
     if (initialData) {
-      setFormData({
-        ...initialData,
-        companyId: initialData.companyId?.toString() || '',
-        password: '',
-        confirmPassword: ''
-      });
+      setFormData(initialData);
     } else {
       setFormData({
-        companyId: '',
-        role: 'MEMBER',
         name: '',
-        email: '',
-        password: '',
-        confirmPassword: '',
-        phone: '',
-        memo: ''
+        crn: '',
+        contact: '',
+        addrRoad: '',
+        addrDetail: '',
+        memo: '',
+        gpsCycle: 60
       });
     }
     setError("");
@@ -49,28 +42,22 @@ const AdminUserRegisterModal = ({
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'companyId' ? value.replace(/[^0-9]/g, '') : value
+      [name]: name === 'gpsCycle' ? parseInt(value) || 60 : value
     }));
     setError("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (formData.password !== formData.confirmPassword) {
-      setError('비밀번호가 일치하지 않습니다.');
-      return;
-    }
-
     try {
       const submitData = {
-        companyId: parseInt(formData.companyId, 10),
-        role: formData.role,
         name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        phone: formData.phone,
-        memo: formData.memo || ''
+        crn: formData.crn,
+        contact: formData.contact,
+        addrRoad: formData.addrRoad,
+        addrDetail: formData.addrDetail,
+        memo: formData.memo || '',
+        gpsCycle: formData.gpsCycle
       };
 
       await onSubmit(submitData, type);
@@ -85,33 +72,32 @@ const AdminUserRegisterModal = ({
     <ModalOverlay>
       <ModalContent>
         <ModalHeader>
-          <h2>{type === 'create' ? '신규 사용자 등록' : '사용자 정보 수정'}</h2>
+          <h2>{type === 'create' ? '신규 업체 등록' : '업체 정보 수정'}</h2>
           <CloseButton onClick={onClose}>&times;</CloseButton>
         </ModalHeader>
 
         <form onSubmit={handleSubmit}>
           {error && <ErrorMessage>{error}</ErrorMessage>}
-
           <FormGroup>
-            <Label>이름</Label>
+            <Label>업체명</Label>
             <Input
               type="text"
               name="name"
               value={formData.name}
               onChange={handleChange}
-              placeholder="이름 입력"
+              placeholder="업체명 입력"
               required
             />
           </FormGroup>
 
           <FormGroup>
-            <Label>이메일</Label>
+            <Label>사업자 등록번호</Label>
             <Input
-              type="email"
-              name="email"
-              value={formData.email}
+              type="text"
+              name="crn"
+              value={formData.crn}
               onChange={handleChange}
-              placeholder="이메일 입력"
+              placeholder="사업자 등록번호 입력"
               required
             />
           </FormGroup>
@@ -120,8 +106,8 @@ const AdminUserRegisterModal = ({
             <Label>연락처</Label>
             <Input
               type="text"
-              name="phone"
-              value={formData.phone}
+              name="contact"
+              value={formData.contact}
               onChange={handleChange}
               placeholder="연락처 입력 (숫자만)"
               required
@@ -129,13 +115,25 @@ const AdminUserRegisterModal = ({
           </FormGroup>
 
           <FormGroup>
-            <Label>소속 업체 ID</Label>
+            <Label>도로명 주소</Label>
             <Input
               type="text"
-              name="companyId"
-              value={formData.companyId}
+              name="addrRoad"
+              value={formData.addrRoad}
               onChange={handleChange}
-              placeholder="소속 업체 ID 입력"
+              placeholder="도로명 주소 입력"
+              required
+            />
+          </FormGroup>
+
+          <FormGroup>
+            <Label>상세 주소</Label>
+            <Input
+              type="text"
+              name="addrDetail"
+              value={formData.addrDetail}
+              onChange={handleChange}
+              placeholder="상세 주소 입력"
               required
             />
           </FormGroup>
@@ -152,40 +150,14 @@ const AdminUserRegisterModal = ({
           </FormGroup>
 
           <FormGroup>
-            <Label>권한</Label>
-            <Select
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-            >
-              <option value="MEMBER">일반 사용자</option>
-              <option value="COMPANY_CHEF">업체 최고 관리자</option>
-              <option value="COMPANY_ADMIN">업체 관리자</option>
-              <option value="ADMIN">시스템 관리자</option>
-            </Select>
-          </FormGroup>
-
-          <FormGroup>
-            <Label>{type === 'create' ? '비밀번호' : '새 비밀번호'}</Label>
+            <Label>GPS 갱신 주기 (초)</Label>
             <Input
-              type="password"
-              name="password"
-              value={formData.password}
+              type="number"
+              name="gpsCycle"
+              value={formData.gpsCycle}
               onChange={handleChange}
-              placeholder={type === 'create' ? '비밀번호 입력' : '변경할 비밀번호 입력 (선택)'}
-              required={type === 'create'}
-            />
-          </FormGroup>
-
-          <FormGroup>
-            <Label>비밀번호 확인</Label>
-            <Input
-              type="password"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              placeholder="비밀번호 확인"
-              required={type === 'create' || formData.password !== ''}
+              min="1"
+              required
             />
           </FormGroup>
 
@@ -277,20 +249,6 @@ const Input = styled.input`
   }
 `;
 
-const Select = styled.select`
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid ${({ theme }) => theme.palette.grey[300]};
-  border-radius: 4px;
-  font-size: 14px;
-  background-color: white;
-
-  &:focus {
-    outline: none;
-    border-color: ${({ theme }) => theme.palette.primary.main};
-  }
-`;
-
 const TextArea = styled.textarea`
   width: 100%;
   padding: 8px 12px;
@@ -322,4 +280,4 @@ const ErrorMessage = styled.div`
   text-align: center;
 `;
 
-export default AdminUserRegisterModal; 
+export default AdminCompanyRegisterModal; 

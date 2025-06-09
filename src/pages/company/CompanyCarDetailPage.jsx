@@ -1,11 +1,14 @@
 import React, { useState } from "react";
+import { useParams } from "react-router-dom";
 import styled from "styled-components";
 
 const CompanyCarDetailPage = () => {
+  const { id } = useParams();
   const [searchDate, setSearchDate] = useState("");
 
   // 실제로는 URL 파라미터나 props로 받아올 carId를 사용하여 데이터를 가져올 예정
   const carInfo = {
+    id: id,
     carNumber: "서울 가 1234",
     manufacturer: "현대 / 아반떼",
     color: "흰색",
@@ -49,9 +52,13 @@ const CompanyCarDetailPage = () => {
 
   return (
     <Container>
-      <PageTitle>
-        차량 상세 정보 <CarNumber>{carInfo.carNumber}</CarNumber>
-      </PageTitle>
+      <Header>
+        <HeaderLeft>
+          <PageTitle>
+            차량 상세 정보 <CarNumber>{carInfo.carNumber}</CarNumber>
+          </PageTitle>
+        </HeaderLeft>
+      </Header>
       <ContentWrapper>
         <LeftColumn>
           <Section>
@@ -166,10 +173,17 @@ const CompanyCarDetailPage = () => {
   );
 };
 
-const Container = styled.div`
-  padding: 10px 30px;
-  margin: 0 auto;
-`;
+const Container = styled.div.attrs(() => ({
+  className: 'page-container'
+}))``;
+
+const Header = styled.div.attrs(() => ({
+  className: 'page-header-wrapper'
+}))``;
+
+const HeaderLeft = styled.div.attrs(() => ({
+  className: 'page-header'
+}))``;
 
 const ContentWrapper = styled.div`
   display: grid;

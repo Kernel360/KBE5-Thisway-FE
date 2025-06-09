@@ -26,6 +26,13 @@ export function getUserRole() {
   return payload.roles[0];
 }
 
+export function getCompanyId() {
+  const token = getToken();
+  const payload = parseJwt(token);
+  if (!payload) return null;
+  return payload.companyId;
+}
+
 export function isTokenExpired(token) {
   if (!token) return true;
   const payload = parseJwt(token);
