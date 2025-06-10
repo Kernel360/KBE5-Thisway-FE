@@ -133,9 +133,7 @@ const CompanyUserManagementPage = () => {
         return;
       }
 
-      const companyId = getCompanyId();
       const submitData = {
-        companyId: companyId,
         role: newUser.role,
         name: newUser.name,
         email: newUser.email,
@@ -144,8 +142,24 @@ const CompanyUserManagementPage = () => {
         memo: newUser.memo || ""
       };
 
-      await authApi.post("/members", submitData);
+      const response = await authApi.post("/company-chef/members", submitData);
+      
+      // API 호출로 사용자 목록 업데이트
       fetchUsers(currentPage);
+
+      // StatsGrid 로컬 업데이트
+      setSummary(prev => {
+        const newSummary = { ...prev };
+        if (newUser.role === 'MEMBER') {
+          newSummary.memberCount++;
+        } else if (newUser.role === 'COMPANY_CHEF') {
+          newSummary.companyChefCount++;
+        } else if (newUser.role === 'COMPANY_ADMIN') {
+          newSummary.companyAdminCount++;
+        }
+        return newSummary;
+      });
+
       handleCloseAddModal();
     } catch (error) {
       console.error("Error adding user:", error);
@@ -163,7 +177,16 @@ const CompanyUserManagementPage = () => {
       };
 
       await authApi.put(`/company-chef/members/${editingUser.id}`, submitData);
-      fetchUsers(currentPage);
+
+      // 로컬 사용자 목록 업데이트
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          user.id === editingUser.id 
+            ? { ...user, ...submitData }
+            : user
+        )
+      );
+
       handleCloseEditModal();
     } catch (error) {
       console.error("Error updating user:", error);
@@ -179,12 +202,34 @@ const CompanyUserManagementPage = () => {
   const handleDeleteConfirm = async () => {
     if (itemToDelete) {
       try {
-        await authApi.delete(`/members/${itemToDelete}`);
-        if (users.length === 1 && currentPage > 1) {
-          setCurrentPage(1);
-        } else {
-          fetchUsers(currentPage);
+        await authApi.delete(`/company-chef/members/${itemToDelete}`);
+        
+        // 삭제된 사용자 찾기
+        const deletedUser = users.find(user => user.id === itemToDelete);
+        
+        // StatsGrid 업데이트
+        if (deletedUser) {
+          setSummary(prev => {
+            const newSummary = { ...prev };
+            if (deletedUser.role === 'MEMBER') {
+              newSummary.memberCount--;
+            } else if (deletedUser.role === 'COMPANY_CHEF') {
+              newSummary.companyChefCount--;
+            } else if (deletedUser.role === 'COMPANY_ADMIN') {
+              newSummary.companyAdminCount--;
+            }
+            return newSummary;
+          });
+
+          // 로컬 사용자 목록 업데이트
+          setUsers(prevUsers => prevUsers.filter(user => user.id !== itemToDelete));
         }
+
+        // 마지막 항목 삭제 시 이전 페이지로 이동
+        if (users.length === 1 && currentPage > 1) {
+          setCurrentPage(prev => prev - 1);
+        }
+
         setDeleteDialogOpen(false);
         setItemToDelete(null);
       } catch (error) {
