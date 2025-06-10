@@ -43,7 +43,7 @@ const AdminUserManagementPage = () => {
 
   const fetchUsers = async (page = 1) => {
     try {
-      const response = await authApi.get(`/members?page=${page - 1}&size=${itemsPerPage}`);
+      const response = await authApi.get(`/admin/members?page=${page - 1}&size=${itemsPerPage}`);
       if (response.data) {
         setUsers(response.data.members);
         setTotalElements(response.data.pageInfo.totalElements);
@@ -88,7 +88,7 @@ const AdminUserManagementPage = () => {
     if (itemToDelete) {
       try {
         if (managementType === "user") {
-          await authApi.delete(`/members/${itemToDelete}`);
+          await authApi.delete(`/admin/members/${itemToDelete}`);
           if (users.length === 1 && currentPage > 1) {
             setCurrentPage(1);
           } else {
@@ -144,9 +144,26 @@ const AdminUserManagementPage = () => {
         }
 
         if (type === "create") {
-          await authApi.post("/members", formData);
+          const createData = {
+            companyId: formData.companyId,
+            role: formData.role,
+            name: formData.name,
+            email: formData.email,
+            password: formData.password,
+            phone: formData.phone,
+            memo: formData.memo || ""
+          };
+          await authApi.post("/admin/members", createData);
+        } else if (type === "edit" && selectedItem?.id) {
+          const updateData = {
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            memo: formData.memo || ""
+          };
+          await authApi.put(`/admin/members/${selectedItem.id}`, updateData);
         } else {
-          await authApi.patch(`/members/${formData.id}`, formData);
+          throw new Error("사용자 ID가 없습니다.");
         }
         fetchUsers(currentPage);
       } else {
@@ -261,7 +278,7 @@ const AdminUserManagementPage = () => {
                     <TableCell>{item.name}</TableCell>
                     <TableCell>{item.email}</TableCell>
                       <TableCell>{item.phone.replace(/(\d{3})(\d{3,4})(\d{4})/, '$1-$2-$3')}</TableCell>
-                      <TableCell>{item.companyId}</TableCell>
+                      <TableCell>{item.companyName}</TableCell>
                       <TableCell>
                         <RoleBadge role={item.role}>
                           {getRoleDisplayName(item.role)}
