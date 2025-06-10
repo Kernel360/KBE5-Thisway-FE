@@ -19,11 +19,31 @@ const CompanyUserRegisterModal = ({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (user.password !== user.confirmPassword) {
-      // TODO: 에러 처리
+
+    if (!user.name || !user.email || !user.phone) {
+      setError("필수 항목을 모두 입력해주세요.");
       return;
     }
-    onSubmit();
+
+    if (mode === 'register') {
+      if (!user.password) {
+        setError("비밀번호를 입력해주세요.");
+        return;
+      }
+      if (user.password !== user.confirmPassword) {
+        setError("비밀번호가 일치하지 않습니다.");
+        return;
+      }
+    }
+
+    const submitData = {
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      memo: user.memo || ""
+    };
+
+    onSubmit(submitData, mode);
   };
 
   return (
@@ -78,79 +98,84 @@ const CompanyUserRegisterModal = ({
               />
             </FormGroup>
 
-            <FormGrid>
-              <FormColumn>
-                <FormGroup>
-                  <Label>{mode === "register" ? "비밀번호 *" : "새 비밀번호"}</Label>
-                  <Input
-                    type="password"
-                    name="password"
-                    value={user.password || ""}
-                    onChange={onChange}
-                    placeholder={mode === "register" ? "비밀번호 입력" : "변경할 비밀번호 입력"}
-                    required={mode === "register"}
-                  />
-                </FormGroup>
-              </FormColumn>
-              <FormColumn>
-                <FormGroup>
-                  <Label>{mode === "register" ? "비밀번호 확인 *" : "새 비밀번호 확인"}</Label>
-                  <Input
-                    type="password"
-                    name="confirmPassword"
-                    value={user.confirmPassword || ""}
-                    onChange={onChange}
-                    placeholder="비밀번호 확인"
-                    required={mode === "register" || user.password}
-                  />
-                </FormGroup>
-              </FormColumn>
-            </FormGrid>
+            {mode === 'register' && (
+              <>
+                <FormGrid>
+                  <FormColumn>
+                    <FormGroup>
+                      <Label>비밀번호 *</Label>
+                      <Input
+                        type="password"
+                        name="password"
+                        value={user.password || ""}
+                        onChange={onChange}
+                        placeholder="비밀번호 입력"
+                        required
+                      />
+                    </FormGroup>
+                  </FormColumn>
+                  <FormColumn>
+                    <FormGroup>
+                      <Label>비밀번호 확인 *</Label>
+                      <Input
+                        type="password"
+                        name="confirmPassword"
+                        value={user.confirmPassword || ""}
+                        onChange={onChange}
+                        placeholder="비밀번호 확인"
+                        required
+                      />
+                    </FormGroup>
+                  </FormColumn>
+                </FormGrid>
 
-            <FormGroup>
-              <Label>권한 *</Label>
-              <RadioGroup>
-                <RadioLabel>
-                  <RadioInput
-                    type="radio"
-                    name="role"
-                    value="COMPANY_CHEF"
-                    checked={user.role === "COMPANY_CHEF"}
-                    onChange={onChange}
-                  />
-                  최고 관리자
-                </RadioLabel>
-                <RadioLabel>
-                  <RadioInput
-                    type="radio"
-                    name="role"
-                    value="COMPANY_ADMIN"
-                    checked={user.role === "COMPANY_ADMIN"}
-                    onChange={onChange}
-                  />
-                  관리자
-                </RadioLabel>
-                <RadioLabel>
-                  <RadioInput
-                    type="radio"
-                    name="role"
-                    value="MEMBER"
-                    checked={user.role === "MEMBER"}
-                    onChange={onChange}
-                  />
-                  일반 사용자
-                </RadioLabel>
-              </RadioGroup>
-            </FormGroup>
+                <FormGroup>
+                  <Label>권한 *</Label>
+                  <RadioGroup>
+                    <RadioLabel>
+                      <RadioInput
+                        type="radio"
+                        name="role"
+                        value="COMPANY_CHEF"
+                        checked={user.role === "COMPANY_CHEF"}
+                        onChange={onChange}
+                      />
+                      최고 관리자
+                    </RadioLabel>
+                    <RadioLabel>
+                      <RadioInput
+                        type="radio"
+                        name="role"
+                        value="COMPANY_ADMIN"
+                        checked={user.role === "COMPANY_ADMIN"}
+                        onChange={onChange}
+                      />
+                      관리자
+                    </RadioLabel>
+                    <RadioLabel>
+                      <RadioInput
+                        type="radio"
+                        name="role"
+                        value="MEMBER"
+                        checked={user.role === "MEMBER"}
+                        onChange={onChange}
+                      />
+                      일반 사용자
+                    </RadioLabel>
+                  </RadioGroup>
+                </FormGroup>
+
+              </>
+            )}
 
             <FormGroup>
               <Label>메모</Label>
               <TextArea
-                name="memo"
-                value={user.memo || ""}
-                onChange={onChange}
-                placeholder="추가 정보 입력"
-                rows={3}
+                  name="memo"
+                  value={user.memo || ""}
+                  onChange={onChange}
+                  placeholder="추가 정보 입력"
+                  rows={3}
               />
             </FormGroup>
 
