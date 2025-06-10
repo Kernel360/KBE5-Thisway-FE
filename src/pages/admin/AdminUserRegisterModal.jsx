@@ -13,10 +13,11 @@ const AdminUserRegisterModal = ({
   setError
 }) => {
   const [formData, setFormData] = useState({
+    id: '',
     name: '',
     email: '',
     phone: '',
-    role: 'MEMBER',
+    role: 'COMPANY_CHEF',
     password: '',
     confirmPassword: '',
     companyId: '',
@@ -29,6 +30,7 @@ const AdminUserRegisterModal = ({
     if (initialData) {
       setFormData({
         ...initialData,
+        id: initialData.id || '',
         password: '',
         confirmPassword: '',
         companyName: initialData.companyName || '',
@@ -37,10 +39,11 @@ const AdminUserRegisterModal = ({
       });
     } else {
       setFormData({
+        id: '',
         name: '',
         email: '',
         phone: '',
-        role: 'MEMBER',
+        role: 'COMPANY_CHEF',
         password: '',
         confirmPassword: '',
         companyId: '',
@@ -68,7 +71,7 @@ const AdminUserRegisterModal = ({
       return;
     }
 
-    if (!formData.companyId) {
+    if (type === 'create' && !formData.companyId) {
       setError("업체를 선택해주세요.");
       return;
     }
@@ -83,6 +86,11 @@ const AdminUserRegisterModal = ({
       return;
     }
 
+    if (type === 'create' && !formData.role) {
+      setError("권한을 선택해주세요.");
+      return;
+    }
+
     try {
       const submitData = {
         companyId: parseInt(formData.companyId, 10),
@@ -93,7 +101,6 @@ const AdminUserRegisterModal = ({
         phone: formData.phone,
         memo: formData.memo || ''
       };
-
       await onSubmit(submitData, type);
     } catch (error) {
       console.error('Form submission error:', error);
@@ -158,40 +165,38 @@ const AdminUserRegisterModal = ({
             />
           </FormGroup>
 
-          <FormGroup>
-            <Label>소속 업체</Label>
-            <CompanySelectContainer>
-              <CompanyInput
-                type="text"
-                value={formData.companyName}
-                placeholder="업체를 선택하세요"
-                readOnly
-              />
-              <CompanySelectButton
-                type="button"
-                onClick={() => setCompanySearchOpen(true)}
-              >
-                업체 선택
-              </CompanySelectButton>
-            </CompanySelectContainer>
-          </FormGroup>
-
-          <FormGroup>
-            <Label>권한</Label>
-            <Select
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-            >
-              <option value="MEMBER">일반 사용자</option>
-              <option value="COMPANY_CHEF">업체 최고 관리자</option>
-              <option value="COMPANY_ADMIN">업체 관리자</option>
-              <option value="ADMIN">시스템 관리자</option>
-            </Select>
-          </FormGroup>
-
           {type === 'create' && (
             <>
+              <FormGroup>
+                <Label>소속 업체</Label>
+                <CompanySelectContainer>
+                  <CompanyInput
+                    type="text"
+                    value={formData.companyName}
+                    placeholder="업체를 선택하세요"
+                    readOnly
+                  />
+                  <CompanySelectButton
+                    type="button"
+                    onClick={() => setCompanySearchOpen(true)}
+                  >
+                    업체 선택
+                  </CompanySelectButton>
+                </CompanySelectContainer>
+              </FormGroup>
+
+              <FormGroup>
+                <Label>권한</Label>
+                <Select
+                  name="role"
+                  value={formData.role}
+                  onChange={handleChange}
+                >
+                  <option value="COMPANY_CHEF">업체 최고 관리자</option>
+                  <option value="ADMIN">시스템 관리자</option>
+                </Select>
+              </FormGroup>
+
               <FormGroup>
                 <Label>비밀번호 *</Label>
                 <Input

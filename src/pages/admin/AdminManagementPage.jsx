@@ -43,7 +43,7 @@ const AdminUserManagementPage = () => {
 
   const fetchUsers = async (page = 1) => {
     try {
-      const response = await authApi.get(`/members?page=${page - 1}&size=${itemsPerPage}`);
+      const response = await authApi.get(`/admin/members?page=${page - 1}&size=${itemsPerPage}`);
       if (response.data) {
         setUsers(response.data.members);
         setTotalElements(response.data.pageInfo.totalElements);
@@ -56,7 +56,7 @@ const AdminUserManagementPage = () => {
 
   const fetchCompanies = async (page = 1) => {
     try {
-      const response = await authApi.get(`/companies?page=${page - 1}&size=${itemsPerPage}`);
+      const response = await authApi.get(`/admin/companies?page=${page - 1}&size=${itemsPerPage}`);
       if (response.data) {
         setCompanies(response.data.companies);
         setTotalElements(response.data.pageInfo.totalElements);
@@ -88,14 +88,14 @@ const AdminUserManagementPage = () => {
     if (itemToDelete) {
       try {
         if (managementType === "user") {
-          await authApi.delete(`/members/${itemToDelete}`);
+          await authApi.delete(`/admin/members/${itemToDelete}`);
           if (users.length === 1 && currentPage > 1) {
             setCurrentPage(1);
           } else {
             fetchUsers(currentPage);
           }
         } else {
-          await authApi.delete(`/companies/${itemToDelete}`);
+          await authApi.delete(`/admin/companies/${itemToDelete}`);
           if (companies.length === 1 && currentPage > 1) {
             setCurrentPage(1);
           } else {
@@ -144,9 +144,11 @@ const AdminUserManagementPage = () => {
         }
 
         if (type === "create") {
-          await authApi.post("/members", formData);
+          await authApi.post("/admin/members", formData);
+        } else if (type === "edit" && selectedItem?.id) {
+          await authApi.put(`/admin/members/${selectedItem.id}`, formData);
         } else {
-          await authApi.patch(`/members/${formData.id}`, formData);
+          throw new Error("사용자 ID가 없습니다.");
         }
         fetchUsers(currentPage);
       } else {
@@ -157,9 +159,9 @@ const AdminUserManagementPage = () => {
         }
 
         if (type === "create") {
-          await authApi.post("/companies", formData);
-        } else {
-          await authApi.patch(`/companies/${formData.id}`, formData);
+          await authApi.post("/admin/companies", formData);
+        } else if (type === "edit" && selectedItem?.id) {
+          await authApi.put(`/admin/companies/${selectedItem.id}`, formData);
         }
         fetchCompanies(currentPage);
       }
@@ -261,7 +263,7 @@ const AdminUserManagementPage = () => {
                     <TableCell>{item.name}</TableCell>
                     <TableCell>{item.email}</TableCell>
                       <TableCell>{item.phone.replace(/(\d{3})(\d{3,4})(\d{4})/, '$1-$2-$3')}</TableCell>
-                      <TableCell>{item.companyId}</TableCell>
+                      <TableCell>{item.companyName}</TableCell>
                       <TableCell>
                         <RoleBadge role={item.role}>
                           {getRoleDisplayName(item.role)}

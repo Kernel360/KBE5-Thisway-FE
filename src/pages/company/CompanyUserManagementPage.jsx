@@ -7,38 +7,10 @@ import SearchInput from "../../components/SearchInput";
 import Button from "../../components/Button";
 import Pagination from "../../components/Pagination";
 
-//더미 데이터
-// const DUMMY_USERS = [
-//   {
-//     id: 1,
-//     name: "김관리",
-//     email: "company_chef@thisway.com",
-//     phone: "010-1234-5678",
-//     memo: "관리자 계정",
-//     role: "COMPANY_CHEF",
-//   },
-//   {
-//     id: 2,
-//     name: "이사원",
-//     email: "member1@thisway.com",
-//     phone: "010-2345-6789",
-//     memo: "일반 사용자",
-//     role: "MEMBER",
-//   },
-//   {
-//     id: 3,
-//     name: "박직원",
-//     email: "company_admin@thisway.com",
-//     phone: "010-3456-7890",
-//     memo: "",
-//     role: "COMPANY_ADMIN",
-//   },
-// ];
-
 const getRoleDisplayName = (role) => {
   switch (role) {
     case 'COMPANY_CHEF':
-      return '최고관리자';
+      return '총 관리자';
     case 'COMPANY_ADMIN':
       return '관리자';
     case 'MEMBER':
@@ -80,7 +52,7 @@ const CompanyUserManagementPage = () => {
 
   const fetchSummary = async () => {
     try {
-      const response = await authApi.get("/members/summary");
+      const response = await authApi.get("/company-chef/members/summary");
       if (response.data) {
         setSummary(response.data);
       }
@@ -91,7 +63,7 @@ const CompanyUserManagementPage = () => {
 
   const fetchUsers = async (page = 1) => {
     try {
-      const response = await authApi.get(`/members?page=${page - 1}&size=${itemsPerPage}`);
+      const response = await authApi.get(`/company-chef/members?page=${page - 1}&size=${itemsPerPage}`);
       if (response.data) {
         setUsers(response.data.members);
         setTotalElements(response.data.pageInfo.totalElements);
@@ -183,26 +155,14 @@ const CompanyUserManagementPage = () => {
 
   const handleSubmitEdit = async () => {
     try {
-      if (editingUser.password && editingUser.password !== editingUser.confirmPassword) {
-        setError("비밀번호가 일치하지 않습니다.");
-        return;
-      }
-
-      const companyId = getCompanyId();
       const submitData = {
-        companyId: companyId,
-        role: editingUser.role,
         name: editingUser.name,
         email: editingUser.email,
         phone: editingUser.phone,
         memo: editingUser.memo || ""
       };
 
-      if (editingUser.password) {
-        submitData.password = editingUser.password;
-      }
-
-      await authApi.put(`/members/${editingUser.id}`, submitData);
+      await authApi.put(`/company-chef/members/${editingUser.id}`, submitData);
       fetchUsers(currentPage);
       handleCloseEditModal();
     } catch (error) {
