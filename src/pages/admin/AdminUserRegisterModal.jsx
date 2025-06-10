@@ -101,7 +101,6 @@ const AdminUserRegisterModal = ({
         phone: formData.phone,
         memo: formData.memo || ''
       };
-      console.log(submitData);
       await onSubmit(submitData, type);
     } catch (error) {
       console.error('Form submission error:', error);

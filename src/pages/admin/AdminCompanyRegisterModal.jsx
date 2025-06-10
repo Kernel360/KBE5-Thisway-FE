@@ -159,17 +159,21 @@ const AdminCompanyRegisterModal = ({
             />
           </FormGroup>
 
-          <FormGroup>
-            <Label>GPS 갱신 주기 (초)</Label>
-            <Input
-              type="number"
-              name="gpsCycle"
-              value={formData.gpsCycle}
-              onChange={handleChange}
-              min="1"
-              required
-            />
-          </FormGroup>
+          {type === 'create' && (
+            <>
+              <FormGroup>
+                <Label>GPS 갱신 주기 (초)</Label>
+                <Input
+                  type="number"
+                  name="gpsCycle"
+                  value={formData.gpsCycle}
+                  onChange={handleChange}
+                  min="1"
+                  required
+                />
+              </FormGroup>
+            </>
+          )}
 
           <FormGroup>
             <Label>메모</Label>

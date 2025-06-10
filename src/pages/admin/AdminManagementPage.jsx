@@ -56,7 +56,7 @@ const AdminUserManagementPage = () => {
 
   const fetchCompanies = async (page = 1) => {
     try {
-      const response = await authApi.get(`/companies?page=${page - 1}&size=${itemsPerPage}`);
+      const response = await authApi.get(`/admin/companies?page=${page - 1}&size=${itemsPerPage}`);
       if (response.data) {
         setCompanies(response.data.companies);
         setTotalElements(response.data.pageInfo.totalElements);
@@ -95,7 +95,7 @@ const AdminUserManagementPage = () => {
             fetchUsers(currentPage);
           }
         } else {
-          await authApi.delete(`/companies/${itemToDelete}`);
+          await authApi.delete(`/admin/companies/${itemToDelete}`);
           if (companies.length === 1 && currentPage > 1) {
             setCurrentPage(1);
           } else {
@@ -144,24 +144,9 @@ const AdminUserManagementPage = () => {
         }
 
         if (type === "create") {
-          const createData = {
-            companyId: formData.companyId,
-            role: formData.role,
-            name: formData.name,
-            email: formData.email,
-            password: formData.password,
-            phone: formData.phone,
-            memo: formData.memo || ""
-          };
-          await authApi.post("/admin/members", createData);
+          await authApi.post("/admin/members", formData);
         } else if (type === "edit" && selectedItem?.id) {
-          const updateData = {
-            name: formData.name,
-            email: formData.email,
-            phone: formData.phone,
-            memo: formData.memo || ""
-          };
-          await authApi.put(`/admin/members/${selectedItem.id}`, updateData);
+          await authApi.put(`/admin/members/${selectedItem.id}`, formData);
         } else {
           throw new Error("사용자 ID가 없습니다.");
         }
@@ -174,9 +159,9 @@ const AdminUserManagementPage = () => {
         }
 
         if (type === "create") {
-          await authApi.post("/companies", formData);
-        } else {
-          await authApi.patch(`/companies/${formData.id}`, formData);
+          await authApi.post("/admin/companies", formData);
+        } else if (type === "edit" && selectedItem?.id) {
+          await authApi.put(`/admin/companies/${selectedItem.id}`, formData);
         }
         fetchCompanies(currentPage);
       }
