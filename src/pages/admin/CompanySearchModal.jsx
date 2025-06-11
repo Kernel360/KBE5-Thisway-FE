@@ -19,7 +19,7 @@ const CompanySearchModal = ({ isOpen, onClose, onSelect }) => {
   const fetchCompanies = async () => {
     try {
       setLoading(true);
-      const response = await authApi.get('/companies');
+      const response = await authApi.get('/admin/companies');
       setCompanies(response.data.companies);
     } catch (error) {
       console.error('Error fetching companies:', error);
