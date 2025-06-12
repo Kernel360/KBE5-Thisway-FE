@@ -140,9 +140,9 @@ const CompanyUserRegisterModal = ({
                         checked={user.role === "COMPANY_CHEF"}
                         onChange={onChange}
                       />
-                      최고 관리자
+                      관리자
                     </RadioLabel>
-                    <RadioLabel>
+                    {/* <RadioLabel>
                       <RadioInput
                         type="radio"
                         name="role"
@@ -151,7 +151,7 @@ const CompanyUserRegisterModal = ({
                         onChange={onChange}
                       />
                       관리자
-                    </RadioLabel>
+                    </RadioLabel> */}
                     <RadioLabel>
                       <RadioInput
                         type="radio"

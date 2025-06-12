@@ -5,7 +5,7 @@ import { authApi } from "../../utils/api";
 import Button from "../../components/Button";
 import SearchInput from "../../components/SearchInput";
 import Pagination from "../../components/Pagination";
-import CarRegistrationModal from "./CarRegistrationModal";
+import CompanyCarRegistrationModal from "./CompanyCarRegistrationModal";
 import { ROUTES } from "../../routes";
 
 const CompanyCarManagementPage = () => {
@@ -62,9 +62,7 @@ const CompanyCarManagementPage = () => {
   const handleVehicleSubmit = async (vehicleData) => {
     try {
       const submitData = {
-        manufacturer: vehicleData.manufacturer,
-        modelYear: parseInt(vehicleData.year, 10),
-        model: vehicleData.modelName,
+        modelId: vehicleData.modelId,
         carNumber: vehicleData.vehicleNumber,
         color: vehicleData.color
       };
@@ -225,8 +223,8 @@ const CompanyCarManagementPage = () => {
         />
       )}
 
-      <CarRegistrationModal
-        open={isModalOpen}
+      <CompanyCarRegistrationModal
+        isOpen={isModalOpen}
         onClose={handleModalClose}
         onSubmit={handleVehicleSubmit}
         error={error}

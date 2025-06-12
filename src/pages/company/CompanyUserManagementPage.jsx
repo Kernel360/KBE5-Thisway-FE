@@ -10,7 +10,7 @@ import Pagination from "../../components/Pagination";
 const getRoleDisplayName = (role) => {
   switch (role) {
     case 'COMPANY_CHEF':
-      return '총 관리자';
+      // return '총 관리자';
     case 'COMPANY_ADMIN':
       return '관리자';
     case 'MEMBER':
@@ -128,10 +128,10 @@ const CompanyUserManagementPage = () => {
 
   const handleSubmitAdd = async () => {
     try {
-      if (newUser.password !== newUser.confirmPassword) {
+    if (newUser.password !== newUser.confirmPassword) {
         setError("비밀번호가 일치하지 않습니다.");
         return;
-      }
+    }
 
       const submitData = {
         role: newUser.role,
@@ -187,7 +187,7 @@ const CompanyUserManagementPage = () => {
         )
       );
 
-      handleCloseEditModal();
+    handleCloseEditModal();
     } catch (error) {
       console.error("Error updating user:", error);
       setError(error.response?.data?.message || "사용자 수정 중 오류가 발생했습니다.");
@@ -253,13 +253,13 @@ const CompanyUserManagementPage = () => {
         </HeaderLeft>
         <HeaderRight>
           <SearchInput
-            placeholder="사용자 검색..."
+              placeholder="사용자 검색..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-          />
+            />
           <Button onClick={handleOpenAddModal} startIcon="+">
-            사용자 등록
-          </Button>
+              사용자 등록
+            </Button>
         </HeaderRight>
       </Header>
 
@@ -281,8 +281,8 @@ const CompanyUserManagementPage = () => {
       </StatsGrid>
 
       <TableContainer>
-        <Table>
-          <TableHead>
+            <Table>
+              <TableHead>
             <TableRow>
               <TableHeaderCell width="60px">번호</TableHeaderCell>
               <TableHeaderCell width="120px">이름</TableHeaderCell>
@@ -290,9 +290,9 @@ const CompanyUserManagementPage = () => {
               <TableHeaderCell width="140px">연락처</TableHeaderCell>
               <TableHeaderCell width="100px">권한</TableHeaderCell>
               <TableHeaderCell width="100px">관리</TableHeaderCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
+                </TableRow>
+              </TableHead>
+              <TableBody>
             {filteredUsers.length === 0 ? (
               <TableRow>
                 <EmptyCell colSpan={6}>등록된 사용자가 없습니다.</EmptyCell>
@@ -301,15 +301,15 @@ const CompanyUserManagementPage = () => {
               filteredUsers.map((user, index) => (
                 <TableRow key={user.id}>
                   <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell>
-                  <TableCell>{user.name}</TableCell>
-                  <TableCell>{user.email}</TableCell>
+                    <TableCell>{user.name}</TableCell>
+                    <TableCell>{user.email}</TableCell>
                   <TableCell>{user.phone.replace(/(\d{3})(\d{3,4})(\d{4})/, '$1-$2-$3')}</TableCell>
-                  <TableCell>
+                    <TableCell>
                     <RoleBadge role={user.role}>
                       {getRoleDisplayName(user.role)}
                     </RoleBadge>
-                  </TableCell>
-                  <TableCell>
+                    </TableCell>
+                    <TableCell>
                     <ButtonGroup>
                       <ActionButton edit onClick={() => handleOpenEditModal(user)}>
                         ✏️
@@ -318,13 +318,13 @@ const CompanyUserManagementPage = () => {
                         🗑️
                       </ActionButton>
                     </ButtonGroup>
-                  </TableCell>
-                </TableRow>
+                    </TableCell>
+                  </TableRow>
               ))
             )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              </TableBody>
+            </Table>
+          </TableContainer>
 
       {filteredUsers.length > 0 && (
         <Pagination
@@ -336,9 +336,9 @@ const CompanyUserManagementPage = () => {
 
       <CompanyUserRegisterModal
         isOpen={openAddModal}
-        onClose={handleCloseAddModal}
+          onClose={handleCloseAddModal}
         user={newUser}
-        onChange={handleInputChange}
+                    onChange={handleInputChange}
         onSubmit={handleSubmitAdd}
         mode="register"
         error={error}
@@ -347,14 +347,14 @@ const CompanyUserManagementPage = () => {
 
       <CompanyUserRegisterModal
         isOpen={openEditModal}
-        onClose={handleCloseEditModal}
+          onClose={handleCloseEditModal}
         user={editingUser || {}}
-        onChange={handleInputChange}
+                    onChange={handleInputChange}
         onSubmit={handleSubmitEdit}
         mode="edit"
         error={error}
         setError={setError}
-      />
+                  />
 
       {deleteDialogOpen && (
         <>
@@ -436,7 +436,7 @@ const RoleBadge = styled.span`
   background-color: ${({ role, theme }) => {
     switch (role) {
       case 'COMPANY_CHEF':
-        return theme.palette.success.main;
+        // return theme.palette.success.main;
       case 'COMPANY_ADMIN':
         return theme.palette.secondary.main;
       case 'MEMBER':
@@ -448,7 +448,7 @@ const RoleBadge = styled.span`
   color: ${({ role, theme }) => {
     switch (role) {
       case 'COMPANY_CHEF':
-        return theme.palette.success.contrastText;
+        // return theme.palette.success.contrastText;
       case 'COMPANY_ADMIN':
         return theme.palette.secondary.contrastText;
       case 'MEMBER':
