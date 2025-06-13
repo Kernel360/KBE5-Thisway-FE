@@ -248,8 +248,7 @@ const CompanyUserManagementPage = () => {
     <Container>
       <Header>
         <HeaderLeft>
-          <PageTitle>사용자 관리</PageTitle>
-          <SubTitle>ABC 렌트카의 사용자를 관리합니다.</SubTitle>
+          <PageTitle>구성원 관리</PageTitle>
         </HeaderLeft>
         <HeaderRight>
           <SearchInput

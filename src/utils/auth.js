@@ -33,6 +33,13 @@ export function getCompanyId() {
   return payload.companyId;
 }
 
+export function getCompanyName() {
+  const token = getToken();
+  const payload = parseJwt(token);
+  if (!payload) return null;
+  return payload.companyName;
+}
+
 export function isTokenExpired(token) {
   if (!token) return true;
   const payload = parseJwt(token);
