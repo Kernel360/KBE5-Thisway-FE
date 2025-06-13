@@ -45,7 +45,7 @@ function Sidebar() {
     { label: "차량 관리", path: "/company/car-management" },
     // 사용자 관리는 COMPANY_CHEF만 볼 수 있음
     ...(userRole === "COMPANY_CHEF"
-      ? [{ label: "사용자 관리", path: "/company/user-management" }]
+      ? [{ label: "구성원 관리", path: "/company/user-management" }]
       : []),
     { label: "운행 기록", path: "/company/trip-history" },
     { label: "통계", path: "/company/statistics" },
