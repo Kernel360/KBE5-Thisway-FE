@@ -79,7 +79,11 @@ function Sidebar() {
               <NavLink
                 as={Link}
                 to={item.path}
-                $active={location.pathname === item.path}
+                $active={
+                  location.pathname === item.path ||
+                  (item.path === "/company/car-management" && location.pathname.startsWith("/company/car-detail")) ||
+                  (item.path === "/company/trip-history" && location.pathname === "/company/trip-detail")
+                }
               >
                 {item.label}
               </NavLink>

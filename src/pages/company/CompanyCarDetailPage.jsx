@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { authApi } from "../../utils/api";
 import { formatDate, formatTime } from "../../utils/dateUtils";
 import { getAddressFromCoords } from "../../utils/mapUtils";
+import { ROUTES } from "../../routes";
 
 const CompanyCarDetailPage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [vehicleData, setVehicleData] = useState(null);
@@ -65,6 +67,14 @@ const CompanyCarDetailPage = () => {
     ? tripLogBriefInfos.filter(trip => trip.startTime.includes(searchDate))
     : tripLogBriefInfos;
 
+  const displayTrips = [...filteredTrips].reverse();
+
+  const handleTripClick = (trip) => {
+    navigate(ROUTES.trip.detail, { 
+      state: { tripData: trip }
+    });
+  };
+
   return (
     <Container>
       <Header>
@@ -97,7 +107,7 @@ const CompanyCarDetailPage = () => {
               </InfoItem>
               <InfoItem>
                 <Label>누적 주행거리</Label>
-                <Value>{vehicle.mileage.toLocaleString()}km</Value>
+                <Value>{(vehicle.mileage / 1000).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}km</Value>
               </InfoItem>
               <InfoItem>
                 <Label>상태</Label>
@@ -152,11 +162,15 @@ const CompanyCarDetailPage = () => {
               />
             </SearchContainer>
             <HistoryList>
-              {filteredTrips.length === 0 ? (
+              {displayTrips.length === 0 ? (
                 <EmptyText>운행 기록이 없습니다.</EmptyText>
               ) : (
-                filteredTrips.map((trip, index) => (
-                  <HistoryItem key={index}>
+                displayTrips.map((trip, index) => (
+                  <HistoryItem 
+                    key={index}
+                    onClick={() => handleTripClick(trip)}
+                    style={{ cursor: 'pointer' }}
+                  >
                     <HistoryDate>{formatDate(trip.startTime)}</HistoryDate>
                     <HistoryDetails>
                       <div>{formatTime(trip.startTime)} ~ {formatTime(trip.endTime)}</div>
@@ -323,6 +337,10 @@ const HistoryItem = styled.div`
 
   &:last-child {
     border-bottom: none;
+  }
+
+  &:hover {
+      background-color: ${({ theme }) => theme.palette.action.hover};
   }
 `;
 

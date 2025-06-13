@@ -198,13 +198,13 @@ const CompanyCarManagementPage = () => {
                   </TableCell>
                   <TableCell>
                     <ButtonGroup>
-                      <ActionButton 
+                      {/* <ActionButton 
                         edit 
                         className="action-button"
                         onClick={(e) => handleEdit(e, vehicle)}
                       >
                         ✏️
-                      </ActionButton>
+                      </ActionButton> */}
                       <ActionButton 
                         delete 
                         className="action-button"
@@ -296,7 +296,11 @@ const TableBody = styled.tbody``;
 
 const TableRow = styled.tr.attrs(() => ({
   className: 'table-row'
-}))``;
+}))`
+  &:hover {
+      background-color: ${({ theme }) => theme.palette.action.hover};
+  }
+`;
 
 const TableHeaderCell = styled.th.attrs(() => ({
   className: 'table-header-cell'
