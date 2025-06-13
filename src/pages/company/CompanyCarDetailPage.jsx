@@ -65,6 +65,8 @@ const CompanyCarDetailPage = () => {
     ? tripLogBriefInfos.filter(trip => trip.startTime.includes(searchDate))
     : tripLogBriefInfos;
 
+  const displayTrips = [...filteredTrips].reverse();
+
   return (
     <Container>
       <Header>
@@ -97,7 +99,7 @@ const CompanyCarDetailPage = () => {
               </InfoItem>
               <InfoItem>
                 <Label>누적 주행거리</Label>
-                <Value>{vehicle.mileage.toLocaleString()}km</Value>
+                <Value>{(vehicle.mileage / 1000).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}km</Value>
               </InfoItem>
               <InfoItem>
                 <Label>상태</Label>
@@ -152,10 +154,10 @@ const CompanyCarDetailPage = () => {
               />
             </SearchContainer>
             <HistoryList>
-              {filteredTrips.length === 0 ? (
+              {displayTrips.length === 0 ? (
                 <EmptyText>운행 기록이 없습니다.</EmptyText>
               ) : (
-                filteredTrips.map((trip, index) => (
+                displayTrips.map((trip, index) => (
                   <HistoryItem key={index}>
                     <HistoryDate>{formatDate(trip.startTime)}</HistoryDate>
                     <HistoryDetails>

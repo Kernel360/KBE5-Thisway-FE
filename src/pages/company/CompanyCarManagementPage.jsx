@@ -198,13 +198,13 @@ const CompanyCarManagementPage = () => {
                   </TableCell>
                   <TableCell>
                     <ButtonGroup>
-                      <ActionButton 
+                      {/* <ActionButton 
                         edit 
                         className="action-button"
                         onClick={(e) => handleEdit(e, vehicle)}
                       >
                         ✏️
-                      </ActionButton>
+                      </ActionButton> */}
                       <ActionButton 
                         delete 
                         className="action-button"
