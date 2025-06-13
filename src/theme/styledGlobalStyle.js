@@ -79,10 +79,6 @@ const StyledGlobalStyle = createGlobalStyle`
     &:not(:last-child) {
       border-bottom: 1px solid ${({ theme }) => theme.palette.grey[200]};
     }
-    
-    &:hover {
-      background-color: ${({ theme }) => theme.palette.action.hover};
-    }
   }
   
   .table-header-cell {

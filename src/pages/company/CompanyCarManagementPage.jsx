@@ -296,7 +296,11 @@ const TableBody = styled.tbody``;
 
 const TableRow = styled.tr.attrs(() => ({
   className: 'table-row'
-}))``;
+}))`
+  &:hover {
+      background-color: ${({ theme }) => theme.palette.action.hover};
+  }
+`;
 
 const TableHeaderCell = styled.th.attrs(() => ({
   className: 'table-header-cell'
