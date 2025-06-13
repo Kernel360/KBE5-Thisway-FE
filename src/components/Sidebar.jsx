@@ -1,16 +1,17 @@
 import styled from "styled-components";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
 import defaultProfile from "../assets/default-profile.png";
 import useUserStore from "@/store/userStore";
+import React, { useRef, useState } from "react";
 
 // 역할 한글 변환 함수
 const getRoleLabel = (role) => {
   switch (role) {
     case "ADMIN":
-      return "최고 관리자";
+      return "시스템 관리자";
     case "COMPANY_CHEF":
-      return "업체 최고 관리자";
+      return "업체 관리자";
     case "COMPANY_ADMIN":
       return "업체 관리자";
     case "MEMBER":
@@ -22,6 +23,7 @@ const getRoleLabel = (role) => {
 
 function Sidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const user = useUserStore((state) => state.user);
   const userRole = user?.roles?.includes("ADMIN")
     ? "ADMIN"
@@ -32,6 +34,27 @@ function Sidebar() {
         : user?.roles?.includes("MEMBER")
           ? "MEMBER"
           : null;
+
+  // 드롭다운 상태
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const profileRef = useRef(null);
+
+  // 바깥 클릭 시 드롭다운 닫기
+  React.useEffect(() => {
+    function handleClickOutside(event) {
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    }
+    if (dropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [dropdownOpen]);
 
   // 권한별 메뉴 정의
   const adminMenu = [
@@ -91,8 +114,8 @@ function Sidebar() {
           ))}
         </NavList>
       </Nav>
-      <MemberInfo>
-        <MemberProfile>
+      <MemberInfo ref={profileRef}>
+        <MemberProfile onClick={() => setDropdownOpen((v) => !v)} style={{ cursor: 'pointer', position: 'relative' }}>
           <ProfileImage>
             <img src={defaultProfile} alt="Member Profile" />
           </ProfileImage>
@@ -103,6 +126,13 @@ function Sidebar() {
             <MemberEmail>{user?.email || "이메일 정보 없음"}</MemberEmail>
           </ProfileText>
         </MemberProfile>
+        {dropdownOpen && (
+          <DropdownMenu>
+            <DropdownItem onClick={() => { setDropdownOpen(false); navigate('/logout'); }}>
+              로그아웃
+            </DropdownItem>
+          </DropdownMenu>
+        )}
       </MemberInfo>
     </SidebarContainer>
   );
@@ -178,6 +208,7 @@ const MemberInfo = styled.div`
   border-top: 1px solid #eee;
   padding-top: 20px;
   margin-top: 20px;
+  position: relative;
 `;
 
 const MemberProfile = styled.div`
@@ -216,4 +247,33 @@ const MemberEmail = styled.span`
   color: ${({ theme }) => theme.palette.grey[400]};
   font-size: 13px;
   font-weight: 400;
+`;
+
+const DropdownMenu = styled.div`
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  margin-bottom: 8px;
+  background: ${({ theme }) => theme.palette.background.paper};
+  border: 1px solid #eee;
+  border-radius: 8px 8px 0 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  z-index: 10;
+  padding: 0;
+`;
+
+const DropdownItem = styled.div`
+  padding: 10px 0;
+  text-align: center;
+  color: ${({ theme }) => theme.palette.text.disabled};
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 0 0 8px 8px;
+  transition: background 0.2s, color 0.2s;
+  &:hover {
+    background: ${({ theme }) => theme.palette.secondary.main};
+    color: ${({ theme }) => theme.palette.secondary.contrastText};
+  }
 `;
