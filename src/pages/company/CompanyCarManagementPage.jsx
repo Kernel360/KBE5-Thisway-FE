@@ -5,7 +5,7 @@ import { authApi } from "../../utils/api";
 import Button from "../../components/Button";
 import SearchInput from "../../components/SearchInput";
 import Pagination from "../../components/Pagination";
-import CarRegistrationModal from "./CarRegistrationModal";
+import CompanyCarRegistrationModal from "./CompanyCarRegistrationModal";
 import { ROUTES } from "../../routes";
 
 const CompanyCarManagementPage = () => {
@@ -62,10 +62,8 @@ const CompanyCarManagementPage = () => {
   const handleVehicleSubmit = async (vehicleData) => {
     try {
       const submitData = {
-        manufacturer: vehicleData.manufacturer,
-        modelYear: parseInt(vehicleData.year, 10),
-        model: vehicleData.modelName,
-        carNumber: vehicleData.vehicleNumber,
+        vehicleModelId: vehicleData.vehicleModelId,
+        carNumber: vehicleData.carNumber,
         color: vehicleData.color
       };
 
@@ -169,6 +167,7 @@ const CompanyCarManagementPage = () => {
               <TableHeaderCell>모델</TableHeaderCell>
               <TableHeaderCell>연식</TableHeaderCell>
               <TableHeaderCell>색상</TableHeaderCell>
+              <TableHeaderCell>상태</TableHeaderCell>
               <TableHeaderCell>관리</TableHeaderCell>
             </TableRow>
           </TableHead>
@@ -192,6 +191,11 @@ const CompanyCarManagementPage = () => {
                   <TableCell>{vehicle.model}</TableCell>
                   <TableCell>{vehicle.modelYear}년</TableCell>
                   <TableCell>{vehicle.color}</TableCell>
+                  <TableCell>
+                    <StatusBadge status={vehicle.powerOn ? "운행중" : "정차중"}>
+                      {vehicle.powerOn ? "운행중" : "정차중"}
+                    </StatusBadge>
+                  </TableCell>
                   <TableCell>
                     <ButtonGroup>
                       <ActionButton 
@@ -225,8 +229,8 @@ const CompanyCarManagementPage = () => {
         />
       )}
 
-      <CarRegistrationModal
-        open={isModalOpen}
+      <CompanyCarRegistrationModal
+        isOpen={isModalOpen}
         onClose={handleModalClose}
         onSubmit={handleVehicleSubmit}
         error={error}

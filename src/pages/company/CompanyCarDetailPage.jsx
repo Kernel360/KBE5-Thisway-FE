@@ -1,61 +1,76 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import styled from "styled-components";
+import { authApi } from "../../utils/api";
+import { formatDate, formatTime } from "../../utils/dateUtils";
+import { getAddressFromCoords } from "../../utils/mapUtils";
 
 const CompanyCarDetailPage = () => {
   const { id } = useParams();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [vehicleData, setVehicleData] = useState(null);
   const [searchDate, setSearchDate] = useState("");
+  const [currentAddress, setCurrentAddress] = useState("");
+  const [tripAddresses, setTripAddresses] = useState({});
 
-  // 실제로는 URL 파라미터나 props로 받아올 carId를 사용하여 데이터를 가져올 예정
-  const carInfo = {
-    id: id,
-    carNumber: "서울 가 1234",
-    manufacturer: "현대 / 아반떼",
-    color: "흰색",
-    year: "2023년",
-    vehicleId: "VH-2023-A001",
-    company: "ABC 렌트카",
-    status: "운행중",
-    currentInfo: {
-      startTime: "2025-05-01 08:30:15",
-      operationTime: "01:45:22",
-      distance: "32.5 km",
-      currentSpeed: "65 km/h",
-      location: "서울시 강남구 테헤란로",
-    },
+  const fetchVehicleData = async () => {
+    try {
+      setLoading(true);
+      const response = await authApi.get(`/trip-log/${id}`);
+      setVehicleData(response.data);
+
+      // 현재 운행 중인 경우 주소 가져오기
+      if (response.data.currentDrivingInfo) {
+        const { latitude, longitude } = response.data.currentDrivingInfo;
+        try {
+          const address = await getAddressFromCoords(latitude, longitude);
+          setCurrentAddress(address);
+        } catch (error) {
+          console.error("Error fetching current address:", error);
+        }
+      }
+
+      // 운행 이력의 주소 가져오기
+      const addresses = {};
+      for (const trip of response.data.tripLogBriefInfos) {
+        try {
+          const address = await getAddressFromCoords(trip.latitude, trip.longitude);
+          addresses[`${trip.startTime}`] = address;
+        } catch (error) {
+          console.error("Error fetching trip address:", error);
+        }
+      }
+      setTripAddresses(addresses);
+
+    } catch (error) {
+      console.error("Error fetching vehicle data:", error);
+      setError("차량 정보를 불러오는데 실패했습니다.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const recentOperations = [
-    {
-      date: "2025-05-01",
-      time: "08:30 ~ 현재",
-      location: "서울시 강남구",
-      distance: "32.5 km",
-    },
-    {
-      date: "2025-04-30",
-      time: "13:15 ~ 15:40",
-      location: "서울시 송파구",
-      distance: "45.2 km",
-    },
-    {
-      date: "2025-04-29",
-      time: "09:20 ~ 11:05",
-      location: "서울시 마포구",
-      distance: "28.7 km",
-    },
-  ];
+  useEffect(() => {
+    fetchVehicleData();
+  }, [id]);
 
-  const filteredOperations = searchDate
-    ? recentOperations.filter((op) => op.date.includes(searchDate))
-    : recentOperations;
+  if (loading) return <LoadingMessage>로딩 중...</LoadingMessage>;
+  if (error) return <ErrorMessage>{error}</ErrorMessage>;
+  if (!vehicleData) return <ErrorMessage>차량 정보를 찾을 수 없습니다.</ErrorMessage>;
+
+  const { vehicleResponse: vehicle, currentDrivingInfo, tripLogBriefInfos } = vehicleData;
+
+  const filteredTrips = searchDate
+    ? tripLogBriefInfos.filter(trip => trip.startTime.includes(searchDate))
+    : tripLogBriefInfos;
 
   return (
     <Container>
       <Header>
         <HeaderLeft>
           <PageTitle>
-            차량 상세 정보 <CarNumber>{carInfo.carNumber}</CarNumber>
+            차량 상세 정보 <CarNumber>{vehicle.carNumber}</CarNumber>
           </PageTitle>
         </HeaderLeft>
       </Header>
@@ -66,62 +81,65 @@ const CompanyCarDetailPage = () => {
             <InfoList>
               <InfoItem>
                 <Label>차량번호</Label>
-                <Value>{carInfo.carNumber}</Value>
+                <Value>{vehicle.carNumber}</Value>
               </InfoItem>
               <InfoItem>
                 <Label>제조사/모델</Label>
-                <Value>{carInfo.manufacturer}</Value>
+                <Value>{vehicle.manufacturer} / {vehicle.model}</Value>
               </InfoItem>
               <InfoItem>
                 <Label>색상</Label>
-                <Value>{carInfo.color}</Value>
+                <Value>{vehicle.color}</Value>
               </InfoItem>
               <InfoItem>
                 <Label>연식</Label>
-                <Value>{carInfo.year}</Value>
+                <Value>{vehicle.modelYear}년</Value>
               </InfoItem>
               <InfoItem>
-                <Label>단말기 ID</Label>
-                <Value>{carInfo.vehicleId}</Value>
-              </InfoItem>
-              <InfoItem>
-                <Label>소속 업체</Label>
-                <Value>{carInfo.company}</Value>
+                <Label>누적 주행거리</Label>
+                <Value>{vehicle.mileage.toLocaleString()}km</Value>
               </InfoItem>
               <InfoItem>
                 <Label>상태</Label>
                 <Value>
-                  <StatusBadge>{carInfo.status}</StatusBadge>
+                  <StatusBadge status={vehicle.powerOn ? "운행중" : "정차중"}>
+                    {vehicle.powerOn ? "운행중" : "정차중"}
+                  </StatusBadge>
                 </Value>
               </InfoItem>
             </InfoList>
           </Section>
 
-          <Section>
-            <SectionTitle>현재 운행 정보</SectionTitle>
-            <InfoList>
-              <InfoItem>
-                <Label>시작 시간</Label>
-                <Value>{carInfo.currentInfo.startTime}</Value>
-              </InfoItem>
-              <InfoItem>
-                <Label>운행 시간</Label>
-                <Value>{carInfo.currentInfo.operationTime}</Value>
-              </InfoItem>
-              <InfoItem>
-                <Label>이동 거리</Label>
-                <Value>{carInfo.currentInfo.distance}</Value>
-              </InfoItem>
-              <InfoItem>
-                <Label>현재 속도</Label>
-                <Value>{carInfo.currentInfo.currentSpeed}</Value>
-              </InfoItem>
-              <InfoItem>
-                <Label>현재 위치</Label>
-                <Value>{carInfo.currentInfo.location}</Value>
-              </InfoItem>
-            </InfoList>
-          </Section>
+          {currentDrivingInfo ? (
+            <Section>
+              <SectionTitle>현재 운행 정보</SectionTitle>
+              <InfoList>
+                <InfoItem>
+                  <Label>시작 시간</Label>
+                  <Value>{formatDate(currentDrivingInfo.startTime)} {formatTime(currentDrivingInfo.startTime)}</Value>
+                </InfoItem>
+                <InfoItem>
+                  <Label>이동 거리</Label>
+                  <Value>{(currentDrivingInfo.tripMeter / 1000).toFixed(1)}km</Value>
+                </InfoItem>
+                <InfoItem>
+                  <Label>현재 속도</Label>
+                  <Value>{currentDrivingInfo.speed}km/h</Value>
+                </InfoItem>
+                <InfoItem>
+                  <Label>현재 위치</Label>
+                  <Value>
+                    {currentAddress || "주소를 찾을 수 없습니다"}
+                  </Value>
+                </InfoItem>
+              </InfoList>
+            </Section>
+          ) : (
+            <Section>
+              <SectionTitle>현재 운행 정보</SectionTitle>
+              <EmptyText>현재 운행중이지 않습니다.</EmptyText>
+            </Section>
+          )}
 
           <Section>
             <SectionTitle>최근 운행 이력</SectionTitle>
@@ -134,16 +152,22 @@ const CompanyCarDetailPage = () => {
               />
             </SearchContainer>
             <HistoryList>
-              {filteredOperations.map((operation, index) => (
-                <HistoryItem key={index}>
-                  <HistoryDate>{operation.date}</HistoryDate>
-                  <HistoryDetails>
-                    <div>{operation.time}</div>
-                    <div>{operation.location}</div>
-                  </HistoryDetails>
-                  <HistoryDistance>{operation.distance}</HistoryDistance>
-                </HistoryItem>
-              ))}
+              {filteredTrips.length === 0 ? (
+                <EmptyText>운행 기록이 없습니다.</EmptyText>
+              ) : (
+                filteredTrips.map((trip, index) => (
+                  <HistoryItem key={index}>
+                    <HistoryDate>{formatDate(trip.startTime)}</HistoryDate>
+                    <HistoryDetails>
+                      <div>{formatTime(trip.startTime)} ~ {formatTime(trip.endTime)}</div>
+                      <div>
+                        {tripAddresses[trip.startTime] || "주소를 찾을 수 없습니다"}
+                      </div>
+                    </HistoryDetails>
+                    <HistoryDistance>{(trip.tripMeter / 1000).toFixed(1)}km</HistoryDistance>
+                  </HistoryItem>
+                ))
+              )}
             </HistoryList>
           </Section>
         </LeftColumn>
@@ -252,8 +276,10 @@ const Value = styled.span`
 `;
 
 const StatusBadge = styled.span`
-  background-color: ${({ theme }) => theme.palette.success.main};
-  color: ${({ theme }) => theme.palette.success.contrastText};
+  background-color: ${({ status, theme }) => 
+    status === "운행중" ? theme.palette.success.main : theme.palette.grey[200]};
+  color: ${({ status, theme }) => 
+    status === "운행중" ? theme.palette.success.contrastText : theme.palette.text.disabled};
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 13px;
@@ -320,6 +346,38 @@ const HistoryDistance = styled.div`
   text-align: right;
   color: ${({ theme }) => theme.palette.text.primary};
   font-size: 14px;
+`;
+
+const LoadingMessage = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  font-size: 16px;
+  color: ${({ theme }) => theme.palette.text.secondary};
+`;
+
+const ErrorMessage = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  font-size: 16px;
+  color: ${({ theme }) => theme.palette.error.main};
+`;
+
+const EmptyText = styled.div`
+  text-align: center;
+  padding: 20px;
+  color: ${({ theme }) => theme.palette.text.secondary};
+  font-size: 14px;
+`;
+
+const LocationDetail = styled.span`
+  display: block;
+  font-size: 12px;
+  color: ${({ theme }) => theme.palette.text.disabled};
+  margin-top: 2px;
 `;
 
 export default CompanyCarDetailPage;
