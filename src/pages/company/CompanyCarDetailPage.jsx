@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { authApi } from "../../utils/api";
 import { formatDate, formatTime } from "../../utils/dateUtils";
 import { getAddressFromCoords } from "../../utils/mapUtils";
+import { ROUTES } from "../../routes";
 
 const CompanyCarDetailPage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [vehicleData, setVehicleData] = useState(null);
@@ -66,6 +68,12 @@ const CompanyCarDetailPage = () => {
     : tripLogBriefInfos;
 
   const displayTrips = [...filteredTrips].reverse();
+
+  const handleTripClick = (trip) => {
+    navigate(ROUTES.trip.detail, { 
+      state: { tripData: trip }
+    });
+  };
 
   return (
     <Container>
@@ -158,7 +166,11 @@ const CompanyCarDetailPage = () => {
                 <EmptyText>운행 기록이 없습니다.</EmptyText>
               ) : (
                 displayTrips.map((trip, index) => (
-                  <HistoryItem key={index}>
+                  <HistoryItem 
+                    key={index}
+                    onClick={() => handleTripClick(trip)}
+                    style={{ cursor: 'pointer' }}
+                  >
                     <HistoryDate>{formatDate(trip.startTime)}</HistoryDate>
                     <HistoryDetails>
                       <div>{formatTime(trip.startTime)} ~ {formatTime(trip.endTime)}</div>
