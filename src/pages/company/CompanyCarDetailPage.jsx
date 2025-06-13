@@ -338,6 +338,10 @@ const HistoryItem = styled.div`
   &:last-child {
     border-bottom: none;
   }
+
+  &:hover {
+      background-color: ${({ theme }) => theme.palette.action.hover};
+  }
 `;
 
 const HistoryDate = styled.div`
