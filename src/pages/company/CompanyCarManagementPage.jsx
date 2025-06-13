@@ -62,8 +62,8 @@ const CompanyCarManagementPage = () => {
   const handleVehicleSubmit = async (vehicleData) => {
     try {
       const submitData = {
-        modelId: vehicleData.modelId,
-        carNumber: vehicleData.vehicleNumber,
+        vehicleModelId: vehicleData.vehicleModelId,
+        carNumber: vehicleData.carNumber,
         color: vehicleData.color
       };
 

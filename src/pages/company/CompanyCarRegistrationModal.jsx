@@ -42,8 +42,8 @@ const CompanyCarRegistrationModal = ({
     }
 
     const carData = {
-      modelId: selectedModel.id,
-      vehicleNumber,
+      vehicleModelId: selectedModel.id,
+      carNumber: vehicleNumber,
       color,
     };
 
