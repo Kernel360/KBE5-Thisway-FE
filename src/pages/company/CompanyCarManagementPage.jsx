@@ -167,6 +167,7 @@ const CompanyCarManagementPage = () => {
               <TableHeaderCell>모델</TableHeaderCell>
               <TableHeaderCell>연식</TableHeaderCell>
               <TableHeaderCell>색상</TableHeaderCell>
+              <TableHeaderCell>상태</TableHeaderCell>
               <TableHeaderCell>관리</TableHeaderCell>
             </TableRow>
           </TableHead>
@@ -190,6 +191,11 @@ const CompanyCarManagementPage = () => {
                   <TableCell>{vehicle.model}</TableCell>
                   <TableCell>{vehicle.modelYear}년</TableCell>
                   <TableCell>{vehicle.color}</TableCell>
+                  <TableCell>
+                    <StatusBadge status={vehicle.powerOn ? "운행중" : "정차중"}>
+                      {vehicle.powerOn ? "운행중" : "정차중"}
+                    </StatusBadge>
+                  </TableCell>
                   <TableCell>
                     <ButtonGroup>
                       <ActionButton 
