@@ -30,32 +30,45 @@ const loadKakaoMapScript = () => {
     });
   };
   
+function waitForKakaoMapsService(timeout = 2000) {
+  return new Promise((resolve, reject) => {
+    const start = Date.now();
+    function check() {
+      if (window.kakao && window.kakao.maps && window.kakao.maps.services && window.kakao.maps.services.Geocoder) {
+        resolve();
+      } else if (Date.now() - start > timeout) {
+        reject(new Error('카카오맵 서비스 로딩 타임아웃'));
+      } else {
+        setTimeout(check, 50);
+      }
+    }
+    check();
+  });
+}
 
 export const getAddressFromCoords = async (latitude, longitude) => {
   try {
     await loadKakaoMapScript();
-    
+    await waitForKakaoMapsService();
     return new Promise((resolve, reject) => {
       const geocoder = new window.kakao.maps.services.Geocoder();
       const coords = new window.kakao.maps.LatLng(latitude, longitude);
-
       geocoder.coord2Address(
         coords.getLng(),
-        coords.getLat(), 
+        coords.getLat(),
         (result, status) => {
           if (status === window.kakao.maps.services.Status.OK) {
             const address = result[0];
             if (address.road_address) {
-              // 도로명 주소가 있는 경우
               resolve(address.road_address.address_name);
             } else {
-              // 지번 주소만 있는 경우
               resolve(address.address.address_name);
             }
           } else {
             reject(new Error('주소를 찾을 수 없습니다.'));
           }
-      });
+        }
+      );
     });
   } catch (error) {
     console.error('카카오 맵 API 로드 실패:', error);

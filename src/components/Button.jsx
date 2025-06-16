@@ -43,7 +43,7 @@ const getVariantStyles = ({ variant, color, theme }) => {
     case 'contained':
       return css`
         background-color: ${baseColor.main};
-        color: ${theme.palette.common.white};
+        color: ${baseColor.contrastText};
         &:hover {
           background-color: ${baseColor.dark};
         }
@@ -60,7 +60,7 @@ const getVariantStyles = ({ variant, color, theme }) => {
     case 'text':
       return css`
         background-color: transparent;
-        color: ${baseColor.main};
+        color: ${baseColor.contrastText};
         &:hover {
           background-color: ${baseColor.lighter};
         }
