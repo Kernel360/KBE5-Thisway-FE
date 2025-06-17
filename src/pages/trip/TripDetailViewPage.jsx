@@ -257,8 +257,8 @@ const RouteSection = styled.section`
   border-radius: 10px;
   padding: 18px 18px 18px 18px;
   min-width: 600px;
-  min-height: 1100px;
-  height: 1000px;
+  min-height: 850px;
+  height: 800px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.06);
   display: flex;
   flex-direction: column;
@@ -272,8 +272,8 @@ const MapPlaceholder = styled.div`
   flex: 1;
   background: #f5f6f8;
   border-radius: 8px;
-  min-height: 1000px;
-  height: 1000px;
+  min-height: 750px;
+  height: 750px;
   position: relative;
   overflow: hidden;
 `;
