@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import { authApi } from "../../utils/api";
-import { formatDate, formatTime } from "../../utils/dateUtils";
-import { getAddressFromCoords } from "../../utils/mapUtils";
-import { ROUTES } from "../../routes";
+import { authApi } from "@/utils/api";
+import { formatDate, formatTime } from "@/utils/dateUtils";
+import { getAddressFromCoords } from "@/utils/mapUtils";
+import { ROUTES } from "@/routes";
+
+import KakaoMap from "@/components/KakaoMap";
 
 const CompanyCarDetailPage = () => {
   const { id } = useParams();
@@ -15,6 +17,7 @@ const CompanyCarDetailPage = () => {
   const [searchDate, setSearchDate] = useState("");
   const [currentAddress, setCurrentAddress] = useState("");
   const [tripAddresses, setTripAddresses] = useState({});
+  const [currentGpsLog, setCurrentGpsLog] = useState([]);
 
   const fetchVehicleData = async () => {
     try {
@@ -37,14 +40,16 @@ const CompanyCarDetailPage = () => {
       const addresses = {};
       for (const trip of response.data.tripLogBriefInfos) {
         try {
-          const address = await getAddressFromCoords(trip.latitude, trip.longitude);
+          const address = await getAddressFromCoords(
+            trip.latitude,
+            trip.longitude,
+          );
           addresses[`${trip.startTime}`] = address;
         } catch (error) {
           console.error("Error fetching trip address:", error);
         }
       }
       setTripAddresses(addresses);
-
     } catch (error) {
       console.error("Error fetching vehicle data:", error);
       setError("차량 정보를 불러오는데 실패했습니다.");
@@ -57,21 +62,71 @@ const CompanyCarDetailPage = () => {
     fetchVehicleData();
   }, [id]);
 
+  // 실시간 운행 정보 (현재 운행 정보, 현재 위치, GPS 로그)를 가져와 업데이트하는 함수
+  const fetchRealtimeDrivingData = async () => {
+    try {
+      // 1. 최신 차량 데이터 (주로 currentDrivingInfo 업데이트 위함) 가져오기
+      const vehicleResp = await authApi.get(`/trip-log/${id}`);
+      // vehicleData의 currentDrivingInfo 부분만 업데이트
+      setVehicleData((prevData) => ({
+        ...prevData,
+        currentDrivingInfo: vehicleResp.data.currentDrivingInfo,
+      }));
+
+      // 2. 최신 currentDrivingInfo 기반으로 현재 주소 업데이트
+      if (vehicleResp.data.currentDrivingInfo) {
+        const { latitude, longitude } = vehicleResp.data.currentDrivingInfo;
+        try {
+          const address = await getAddressFromCoords(latitude, longitude);
+          setCurrentAddress(address);
+        } catch (error) {
+          console.error("폴링 중 현재 주소 조회 실패:", error);
+        }
+      }
+
+      // 3. 최신 currentDrivingInfo의 startTime을 사용하여 GPS 로그 가져오기
+      if (vehicleResp.data.currentDrivingInfo?.startTime) {
+        const { startTime } = vehicleResp.data.currentDrivingInfo;
+        const formattedStartTime = new Date(startTime).toISOString();
+        const gpsLogResp = await authApi.get(`/trip-log/current/${id}`, {
+          params: { time: formattedStartTime },
+        });
+        setCurrentGpsLog(gpsLogResp.data.currentGpsLog);
+      }
+    } catch (e) {
+      console.error("실시간 운행 정보 업데이트 실패", e);
+    }
+  };
+
+  // 폴링 useEffect: 1분마다 실시간 데이터 업데이트
+  useEffect(() => {
+    // 컴포넌트 마운트 시 또는 id 변경 시 즉시 한 번 호출
+    fetchRealtimeDrivingData();
+    // 1분(60,000ms)마다 폴링
+    const intervalId = setInterval(fetchRealtimeDrivingData, 60000);
+    return () => clearInterval(intervalId); // 컴포넌트 언마운트 시 인터벌 정리
+  }, [id]); // id가 변경될 때마다 useEffect 재실행
+
   if (loading) return <LoadingMessage>로딩 중...</LoadingMessage>;
   if (error) return <ErrorMessage>{error}</ErrorMessage>;
-  if (!vehicleData) return <ErrorMessage>차량 정보를 찾을 수 없습니다.</ErrorMessage>;
+  if (!vehicleData)
+    return <ErrorMessage>차량 정보를 찾을 수 없습니다.</ErrorMessage>;
 
-  const { vehicleResponse: vehicle, currentDrivingInfo, tripLogBriefInfos } = vehicleData;
+  const {
+    vehicleResponse: vehicle,
+    currentDrivingInfo,
+    tripLogBriefInfos,
+  } = vehicleData;
 
   const filteredTrips = searchDate
-    ? tripLogBriefInfos.filter(trip => trip.startTime.includes(searchDate))
+    ? tripLogBriefInfos.filter((trip) => trip.startTime.includes(searchDate))
     : tripLogBriefInfos;
 
   const displayTrips = [...filteredTrips].reverse();
 
   const handleTripClick = (trip) => {
-    navigate(ROUTES.trip.detail, { 
-      state: { tripData: trip }
+    navigate(ROUTES.trip.detail, {
+      state: { tripData: trip },
     });
   };
 
@@ -95,7 +150,9 @@ const CompanyCarDetailPage = () => {
               </InfoItem>
               <InfoItem>
                 <Label>제조사/모델</Label>
-                <Value>{vehicle.manufacturer} / {vehicle.model}</Value>
+                <Value>
+                  {vehicle.manufacturer} / {vehicle.model}
+                </Value>
               </InfoItem>
               <InfoItem>
                 <Label>색상</Label>
@@ -107,7 +164,13 @@ const CompanyCarDetailPage = () => {
               </InfoItem>
               <InfoItem>
                 <Label>누적 주행거리</Label>
-                <Value>{(vehicle.mileage / 1000).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}km</Value>
+                <Value>
+                  {(vehicle.mileage / 1000).toLocaleString(undefined, {
+                    minimumFractionDigits: 1,
+                    maximumFractionDigits: 1,
+                  })}
+                  km
+                </Value>
               </InfoItem>
               <InfoItem>
                 <Label>상태</Label>
@@ -126,11 +189,16 @@ const CompanyCarDetailPage = () => {
               <InfoList>
                 <InfoItem>
                   <Label>시작 시간</Label>
-                  <Value>{formatDate(currentDrivingInfo.startTime)} {formatTime(currentDrivingInfo.startTime)}</Value>
+                  <Value>
+                    {formatDate(currentDrivingInfo.startTime)}{" "}
+                    {formatTime(currentDrivingInfo.startTime)}
+                  </Value>
                 </InfoItem>
                 <InfoItem>
                   <Label>이동 거리</Label>
-                  <Value>{(currentDrivingInfo.tripMeter / 1000).toFixed(1)}km</Value>
+                  <Value>
+                    {(currentDrivingInfo.tripMeter / 1000).toFixed(1)}km
+                  </Value>
                 </InfoItem>
                 <InfoItem>
                   <Label>현재 속도</Label>
@@ -138,9 +206,7 @@ const CompanyCarDetailPage = () => {
                 </InfoItem>
                 <InfoItem>
                   <Label>현재 위치</Label>
-                  <Value>
-                    {currentAddress || "주소를 찾을 수 없습니다"}
-                  </Value>
+                  <Value>{currentAddress || "주소를 찾을 수 없습니다"}</Value>
                 </InfoItem>
               </InfoList>
             </Section>
@@ -166,19 +232,25 @@ const CompanyCarDetailPage = () => {
                 <EmptyText>운행 기록이 없습니다.</EmptyText>
               ) : (
                 displayTrips.map((trip, index) => (
-                  <HistoryItem 
+                  <HistoryItem
                     key={index}
                     onClick={() => handleTripClick(trip)}
-                    style={{ cursor: 'pointer' }}
+                    style={{ cursor: "pointer" }}
                   >
                     <HistoryDate>{formatDate(trip.startTime)}</HistoryDate>
                     <HistoryDetails>
-                      <div>{formatTime(trip.startTime)} ~ {formatTime(trip.endTime)}</div>
                       <div>
-                        {tripAddresses[trip.startTime] || "주소를 찾을 수 없습니다"}
+                        {formatTime(trip.startTime)} ~{" "}
+                        {formatTime(trip.endTime)}
+                      </div>
+                      <div>
+                        {tripAddresses[trip.startTime] ||
+                          "주소를 찾을 수 없습니다"}
                       </div>
                     </HistoryDetails>
-                    <HistoryDistance>{(trip.tripMeter / 1000).toFixed(1)}km</HistoryDistance>
+                    <HistoryDistance>
+                      {(trip.tripMeter / 1000).toFixed(1)}km
+                    </HistoryDistance>
                   </HistoryItem>
                 ))
               )}
@@ -189,20 +261,35 @@ const CompanyCarDetailPage = () => {
         <RightColumn>
           <Section style={{ height: "100%" }}>
             <SectionTitle>실시간 위치 및 이동 경로</SectionTitle>
-            <MapContainer>
-              {/* 지도 컴포넌트가 들어갈 자리 */}
-              <div
-                style={{
-                  height: "100%",
-                  minHeight: "700px",
-                  background: "#f5f6f8",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                지도가 표시될 영역
-              </div>
+            <MapContainer
+              style={{
+                height: "100%",
+                minHeight: "700px",
+                background: "#f5f6f8",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <KakaoMap
+                center={
+                  currentGpsLog.length > 0
+                    ? {
+                        lat: currentGpsLog[currentGpsLog.length - 1].lat,
+                        lng: currentGpsLog[currentGpsLog.length - 1].lng,
+                      }
+                    : { lat: 33.450701, lng: 126.570667 } // 기본값: 제주도청
+                }
+                path={
+                  currentGpsLog.length > 0
+                    ? currentGpsLog.map((log) => ({
+                        lat: log.lat,
+                        lng: log.lng,
+                      }))
+                    : []
+                }
+              />
+              {/* </div> */}
             </MapContainer>
           </Section>
         </RightColumn>
@@ -212,15 +299,15 @@ const CompanyCarDetailPage = () => {
 };
 
 const Container = styled.div.attrs(() => ({
-  className: 'page-container'
+  className: "page-container",
 }))``;
 
 const Header = styled.div.attrs(() => ({
-  className: 'page-header-wrapper'
+  className: "page-header-wrapper",
 }))``;
 
 const HeaderLeft = styled.div.attrs(() => ({
-  className: 'page-header'
+  className: "page-header",
 }))``;
 
 const ContentWrapper = styled.div`
@@ -290,10 +377,12 @@ const Value = styled.span`
 `;
 
 const StatusBadge = styled.span`
-  background-color: ${({ status, theme }) => 
+  background-color: ${({ status, theme }) =>
     status === "운행중" ? theme.palette.success.main : theme.palette.grey[200]};
-  color: ${({ status, theme }) => 
-    status === "운행중" ? theme.palette.success.contrastText : theme.palette.text.disabled};
+  color: ${({ status, theme }) =>
+    status === "운행중"
+      ? theme.palette.success.contrastText
+      : theme.palette.text.disabled};
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 13px;
@@ -340,7 +429,7 @@ const HistoryItem = styled.div`
   }
 
   &:hover {
-      background-color: ${({ theme }) => theme.palette.action.hover};
+    background-color: ${({ theme }) => theme.palette.action.hover};
   }
 `;
 
