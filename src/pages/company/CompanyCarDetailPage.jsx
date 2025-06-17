@@ -70,9 +70,9 @@ const CompanyCarDetailPage = () => {
   const displayTrips = [...filteredTrips].reverse();
 
   const handleTripClick = (trip) => {
-    navigate(ROUTES.trip.detail, { 
-      state: { tripData: trip }
-    });
+    navigate(
+      `/company/trip-detail?vehicleId=${trip.vehicleId}&startTime=${encodeURIComponent(trip.startTime)}&endTime=${encodeURIComponent(trip.endTime)}`
+    );
   };
 
   return (
