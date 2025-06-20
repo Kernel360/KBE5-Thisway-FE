@@ -147,6 +147,11 @@ const SidebarContainer = styled.aside`
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 100;
 `;
 
 const LogoSection = styled.div`

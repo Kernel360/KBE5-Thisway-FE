@@ -80,7 +80,7 @@ const CompanyCarRegistrationModal = ({
 
           {error && <ErrorMessage>{error}</ErrorMessage>}
 
-          <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit}>
             <FormGroup>
               <Label>차량 모델 *</Label>
               <ModelSelectContainer>
@@ -103,43 +103,43 @@ const CompanyCarRegistrationModal = ({
               <Label>차량번호 *</Label>
               <Input
                 type="text"
-                value={vehicleNumber}
-                onChange={(e) => {
-                  setVehicleNumber(e.target.value);
-                  setError && setError('');
-                }}
-                placeholder="12가 3456"
-                required
-              />
+              value={vehicleNumber}
+              onChange={(e) => {
+                setVehicleNumber(e.target.value);
+                setError && setError('');
+              }}
+              placeholder="12가 3456"
+              required
+            />
             </FormGroup>
 
             <FormGroup>
               <Label>색상 *</Label>
               <Input
                 type="text"
-                value={color}
-                onChange={(e) => {
-                  setColor(e.target.value);
-                  setError && setError('');
-                }}
-                placeholder="흰색, 검정색, 회색 등"
-                required
-              />
+              value={color}
+              onChange={(e) => {
+                setColor(e.target.value);
+                setError && setError('');
+              }}
+              placeholder="흰색, 검정색, 회색 등"
+              required
+            />
             </FormGroup>
 
             <ButtonGroup>
-              <Button
-                onClick={onClose}
+            <Button
+              onClick={onClose}
                 type="button"
                 variant="outlined"
-              >
-                취소
-              </Button>
+            >
+              취소
+            </Button>
               <Button type="submit">
-                {submitText}
-              </Button>
+              {submitText}
+            </Button>
             </ButtonGroup>
-          </form>
+        </form>
         </ModalContent>
       </ModalOverlay>
 

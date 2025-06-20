@@ -83,8 +83,10 @@ const TripHistoryPage = () => {
   return (
     <div className="page-container">
       <div className="page-header-wrapper">
-        <div className="page-header">운행 기록</div>
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+        <div className="page-header">
+          <h1 className="page-header">운행 기록</h1>
+        </div>
+        <div className="page-header-actions">
           <form style={{ display: "flex", gap: 12 }} onSubmit={handleSearch}>
             <DateInput
               type="date"

@@ -180,6 +180,24 @@ const StyledGlobalStyle = createGlobalStyle`
     justify-content: flex-end;
     gap: 8px;
   }
+
+  /* Stat Styles */
+  .stats-grid {
+    display: grid;
+    gap: 16px;
+  }
+  
+ .stats-card {
+    background-color: ${({ theme }) => theme.palette.background.paper};
+    border-radius: 8px;
+    padding: 20px;
+  }
+  
+  .stat-title {
+    font-size: 14px;
+    color: ${({ theme }) => theme.palette.text.secondary};
+    margin-bottom: 8px;
+  }
 `;
 
 export default StyledGlobalStyle;
