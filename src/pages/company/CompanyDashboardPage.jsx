@@ -4,6 +4,21 @@ import { authApi } from "@/utils/api";
 import DashboardKakaoMap from "@/components/DashboardKakaoMap";
 import { useNavigate } from "react-router-dom";
 import Button from "@/components/Button";
+import carIcon from "@/assets/white-car.png";
+
+const SecondaryButton = styled(Button)`
+  ${({ color, theme }) =>
+    color === "secondary" &&
+    css`
+      background-color: ${theme.palette.secondary.main} !important;
+      color: ${theme.palette.secondary.contrastText} !important;
+      border: 1px solid ${theme.palette.primary.main} !important;
+      &:hover {
+        background-color: ${theme.palette.primary.main} !important;
+        color: #fff !important;
+      }
+    `}
+`;
 
 const CompanyDashboardPage = () => {
   const [dashboard, setDashboard] = useState({
@@ -75,20 +90,6 @@ const CompanyDashboardPage = () => {
       : { lat: 33.450701, lng: 126.570667 };
   const mapPath = runningVehiclePositions.map(v => ({ lat: v.lat, lng: v.lng, angle: v.angle }));
 
-  const SecondaryButton = styled(Button)`
-    ${({ color, theme }) =>
-      color === "secondary" &&
-      css`
-        background-color: ${theme.palette.secondary.main} !important;
-        color: ${theme.palette.secondary.contrastText} !important;
-        border: 1px solid ${theme.palette.primary.main} !important;
-        &:hover {
-          background-color: ${theme.palette.primary.main} !important;
-          color: #fff !important;
-        }
-      `}
-  `;
-
   return (
     <Container>
       <Header>
@@ -121,7 +122,14 @@ const CompanyDashboardPage = () => {
           <DashboardKakaoMap center={mapCenter} path={mapPath} />
         </MapArea>
         <ListArea>
-          <ListTitle>운행 중인 차량</ListTitle>
+          <ListTitle>운행 중인 차량
+            <SelectBox>
+              <Select>
+                <option>전체</option>
+                <option>운행중</option>
+              </Select>
+            </SelectBox>
+          </ListTitle>
           {listLoading ? (
             <div>로딩 중...</div>
           ) : listError ? (
@@ -130,25 +138,36 @@ const CompanyDashboardPage = () => {
             <div>운행 중인 차량이 없습니다.</div>
           ) : (
             <RunningCarList>
-              {runningVehicles.map((v) => (
-                <RunningCarBlock
-                  key={v.vehicleId}
-                  onClick={() => setSelectedVehicle(v)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <CarNumber>{v.carNumber}</CarNumber>
-                  <StatusBadge>운행중</StatusBadge>
-                  <SecondaryButton
-                    size="small"
-                    color="secondary"
-                    style={{ marginLeft: '12px' }}
-                    onClick={e => {
-                      e.stopPropagation();
-                      navigate(`/company/car-detail/${v.vehicleId}`);
-                    }}
-                  >상세</SecondaryButton>
-                </RunningCarBlock>
-              ))}
+              {runningVehicles.map((v) => {
+                const isSelected = selectedVehicle && selectedVehicle.vehicleId === v.vehicleId;
+                return (
+                  <RunningCarBlock
+                    key={v.vehicleId}
+                    onClick={() => setSelectedVehicle(v)}
+                    $selected={isSelected}
+                  >
+                    <CarInfo>
+                      <CarIconBox>
+                        <img src={carIcon} alt="car" />
+                      </CarIconBox>
+                      <CarTextBox>
+                        <CarNumber>{v.carNumber}</CarNumber>
+                      </CarTextBox>
+                    </CarInfo>
+                    <RightBox>
+                      <StatusBadge status={v.powerOn ? "운행중" : "정차중"}>
+                        {v.powerOn ? "운행중" : "정차중"}
+                      </StatusBadge>
+                      <DetailButton
+                        onClick={e => {
+                          e.stopPropagation();
+                          navigate(`/company/car-detail/${v.vehicleId}`);
+                        }}
+                      >상세보기</DetailButton>
+                    </RightBox>
+                  </RunningCarBlock>
+                );
+              })}
             </RunningCarList>
           )}
         </ListArea>
@@ -175,7 +194,6 @@ const PageTitle = styled.h1.attrs(() => ({
 
 const CardRow = styled.div`
   width: 100%;
-  margin-top: 32px;
   margin-bottom: 32px;
 `;
 
@@ -188,7 +206,7 @@ const MapArea = styled.div`
   min-width: 500px;
   min-height: 400px;
   background: #e5e7eb;
-  border-radius: 12px;
+  border-radius: 8px;
   flex: 2;
   display: flex;
   align-items: center;
@@ -197,41 +215,55 @@ const MapArea = styled.div`
 
 const ListArea = styled.div`
   min-width: 320px;
-  background: #f8fafc;
-  border-radius: 12px;
-  padding: 24px;
+  background: ${({ theme }) => theme.palette.background.paper};
+  border-radius: 8px;
+  padding: 20px;
   flex: 1;
 `;
 
-const StatsGrid = styled.div`
-  display: grid;
+const StatsGrid = styled.div.attrs(() => ({
+  className: "stats-grid",
+}))`
   grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+  margin-bottom: 24px;
 `;
 
-const StatsCard = styled.div`
-  background-color: ${({ theme }) => theme.palette.background.paper};
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 1px 3px ${({ theme }) => theme.palette.action.hover};
+const StatsCard = styled.div.attrs(() => ({
+  className: "stats-card",
+}))`
+    box-shadow: 0 1px 3px ${({ theme }) => theme.palette.action.hover};
 `;
 
-const StatsTitle = styled.div`
-  color: ${({ theme }) => theme.palette.text.secondary};
-  font-size: 14px;
-  margin-bottom: 8px;
-`;
+const StatsTitle = styled.h3.attrs(() => ({
+  className: "stat-title",
+}))``;
 
 const StatsValue = styled.div`
   font-size: 20px;
   font-weight: 700;
-  color: ${({ theme }) => theme.palette.text.primary};
+  color: ${({ theme, color }) => theme.palette.text.primary};
 `;
 
-const ListTitle = styled.h2`
+const ListTitle = styled.div`
   font-size: 18px;
   font-weight: 700;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+const SelectBox = styled.div`
+  margin-left: auto;
+`;
+
+const Select = styled.select`
+  border: 1px solid ${({ theme }) => theme.palette.grey[300]};
+  border-radius: 8px;
+  padding: 6px 18px 6px 10px;
+  font-size: 15px;
+  color: ${({ theme }) => theme.palette.text.secondary};
+  background: ${({ theme }) => theme.palette.background.paper};
 `;
 
 const RunningCarList = styled.div`
@@ -241,27 +273,83 @@ const RunningCarList = styled.div`
 `;
 
 const RunningCarBlock = styled.div`
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
-  padding: 16px 18px;
+  background: ${({ $selected, theme }) => $selected ? theme.palette.secondary.main : theme.palette.grey[100]};
+  border-radius: 4px;
+  box-shadow: none;
+  padding: 18px 16px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 16px;
+  cursor: pointer;
+  transition: background 0.2s, border 0.2s;
+  border: 1px solid ${({ $selected, theme }) => $selected ? theme.palette.primary.main : 'transparent'};
+  &:hover {
+    background: ${({ theme }) => theme.palette.action.hover};
+  }
+`;
+
+const CarInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 5px;
+`;
+
+const CarIconBox = styled.div`
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  background: ${({ theme }) => theme.palette.primary.main};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 6px;
+  img {
+    width: 20px;
+    height: 20px;
+  }
+`;
+
+const CarTextBox = styled.div`
+  display: flex;
+  flex-direction: column;
 `;
 
 const CarNumber = styled.div`
-  font-size: 1.08rem;
+  font-size: 17px;
   font-weight: 700;
+  color: ${({ theme }) => theme.palette.text.primary};
 `;
 
-const StatusBadge = styled.div`
-  background: #22c55e;
+const StatusBadge = styled.span.attrs(() => ({
+  className: 'badge'
+}))`
+  background-color: ${({ status, theme }) => 
+    status === "운행중" ? theme.palette.success.main : theme.palette.grey[200]};
+  color: ${({ status, theme }) => 
+    status === "운행중" ? theme.palette.success.contrastText : theme.palette.text.disabled};
+`;
+
+const DetailButton = styled.button`
+  margin-left: 5px;
+  padding: 6px 14px;
+  background: ${({ theme }) => theme.palette.primary.main};
   color: #fff;
-  font-size: 0.98rem;
-  font-weight: 600;
-  border-radius: 8px;
-  padding: 4px 14px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  &:hover {
+    background: ${({ theme }) => theme.palette.primary.dark};
+  }
+`;
+
+const RightBox = styled.div`
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 `;
 
 export default CompanyDashboardPage;
