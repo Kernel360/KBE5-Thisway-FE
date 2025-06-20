@@ -395,30 +395,22 @@ const PageTitle = styled.h1.attrs(() => ({
   className: "page-header",
 }))``;
 
-const SubTitle = styled.p`
-  color: ${({ theme }) => theme.palette.text.primary};
-  font-size: 14px;
-`;
-
-const StatsGrid = styled.div`
-  display: grid;
+const StatsGrid = styled.div.attrs(() => ({
+  className: "stats-grid",
+}))`
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
   margin-bottom: 24px;
 `;
 
-const StatsCard = styled.div`
-  background-color: ${({ theme }) => theme.palette.background.paper};
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 1px 3px ${({ theme }) => theme.palette.action.hover};
+const StatsCard = styled.div.attrs(() => ({
+  className: "stats-card",
+}))`
+    box-shadow: 0 1px 3px ${({ theme }) => theme.palette.action.hover};
 `;
 
-const StatsTitle = styled.div`
-  color: ${({ theme }) => theme.palette.text.secondary};
-  font-size: 14px;
-  margin-bottom: 8px;
-`;
+const StatsTitle = styled.h3.attrs(() => ({
+  className: "stat-title",
+}))``;
 
 const StatsValue = styled.div`
   font-size: 20px;

@@ -17,6 +17,11 @@ const palette = {
     secondary: "#000000", // 블랙 텍스트 색상 (페이지 main명 등)
     disabled: "#64748B", // 선택되지 않은 텍스트 색상 (회색)
   },
+  textColor: {
+    red: "#EF4444",
+    yellow: "#F59E0B",
+    green: "#10B981"
+  },
   success: {
     main: "#DCFCE7", // active 상태 및 성공 상태의 연두색 배경
     contrastText: "#16A34A", // 녹색 텍스트
@@ -24,6 +29,12 @@ const palette = {
   error: {
     main: "#FBDFDF", // 오류 상태의 빨간색 배경
     contrastText: "#EF4444", // 빨간색 텍스트
+  },
+  increase: {
+    contrastText: "#10B981"
+  },
+  decrease: {
+    contrastText: "#EF4444"
   },
   grey: {
     100: "#F8FAFC", // 기본 연한 회색 색상 (버튼, 상태 등의 배경 색상)
