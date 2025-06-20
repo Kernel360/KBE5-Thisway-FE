@@ -105,11 +105,11 @@ const CompanyDashboardPage = () => {
           </StatsCard>
           <StatsCard>
             <StatsTitle>운행 중</StatsTitle>
-            <StatsValue style={{ color: '#22c55e' }}>{powerOnVehicles}대</StatsValue>
+            <StatsValue status="운행중">{powerOnVehicles}대</StatsValue>
           </StatsCard>
           <StatsCard>
             <StatsTitle>미운행</StatsTitle>
-            <StatsValue style={{ color: '#ef4444' }}>{powerOffVehicles}대</StatsValue>
+            <StatsValue status="미운행">{powerOffVehicles}대</StatsValue>
           </StatsCard>
           <StatsCard>
             <StatsTitle>운행률</StatsTitle>
@@ -241,7 +241,10 @@ const StatsTitle = styled.h3.attrs(() => ({
 const StatsValue = styled.div`
   font-size: 20px;
   font-weight: 700;
-  color: ${({ theme, color }) => theme.palette.text.primary};
+  color: ${({ status, theme }) =>
+    status === '운행중' ? theme.palette.textColor.green :
+    status === '미운행' ? theme.palette.textColor.red :
+    theme.palette.text.primary};
 `;
 
 const ListTitle = styled.div`
