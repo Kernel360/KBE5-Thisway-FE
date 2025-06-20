@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
-import styled from "styled-components";
+import styled, { css } from "styled-components";
 import { authApi } from "@/utils/api";
+import DashboardKakaoMap from "@/components/DashboardKakaoMap";
+import { useNavigate } from "react-router-dom";
+import Button from "@/components/Button";
 
 const CompanyDashboardPage = () => {
   const [dashboard, setDashboard] = useState({
@@ -8,8 +11,13 @@ const CompanyDashboardPage = () => {
     powerOnVehicles: 0,
     powerOffVehicles: 0,
   });
+  const [vehicleList, setVehicleList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [listLoading, setListLoading] = useState(true);
+  const [listError, setListError] = useState(null);
+  const [selectedVehicle, setSelectedVehicle] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -23,7 +31,31 @@ const CompanyDashboardPage = () => {
         setLoading(false);
       }
     };
+
+    const fetchVehicleList = async () => {
+      try {
+        setListLoading(true);
+        const res = await authApi.get("/vehicles/track");
+        setVehicleList(res.data.vehicles || []);
+      } catch (err) {
+        setListError("차량 목록을 불러오지 못했습니다.");
+      } finally {
+        setListLoading(false);
+      }
+    };
+
+    // 최초 1회 즉시 호출
     fetchDashboard();
+    fetchVehicleList();
+
+    // 1분마다 폴링
+    const intervalId = setInterval(() => {
+      fetchDashboard();
+      fetchVehicleList();
+    }, 10000);
+
+    // 언마운트 시 인터벌 정리
+    return () => clearInterval(intervalId);
   }, []);
 
   const { totalVehicles, powerOnVehicles, powerOffVehicles } = dashboard;
@@ -31,6 +63,31 @@ const CompanyDashboardPage = () => {
 
   if (loading) return <div>로딩 중...</div>;
   if (error) return <div>{error}</div>;
+
+  const runningVehicles = vehicleList.filter(v => v.powerOn);
+  const runningVehiclePositions = runningVehicles.filter(v => v.lat !== null && v.lng !== null);
+
+  // center: 선택된 차량이 있으면 해당 위치, 없으면 첫 차량, 없으면 기본값
+  const mapCenter = selectedVehicle && selectedVehicle.lat !== null && selectedVehicle.lng !== null
+    ? { lat: selectedVehicle.lat, lng: selectedVehicle.lng }
+    : runningVehiclePositions.length > 0
+      ? { lat: runningVehiclePositions[0].lat, lng: runningVehiclePositions[0].lng }
+      : { lat: 33.450701, lng: 126.570667 };
+  const mapPath = runningVehiclePositions.map(v => ({ lat: v.lat, lng: v.lng, angle: v.angle }));
+
+  const SecondaryButton = styled(Button)`
+    ${({ color, theme }) =>
+      color === "secondary" &&
+      css`
+        background-color: ${theme.palette.secondary.main} !important;
+        color: ${theme.palette.secondary.contrastText} !important;
+        border: 1px solid ${theme.palette.primary.main} !important;
+        &:hover {
+          background-color: ${theme.palette.primary.main} !important;
+          color: #fff !important;
+        }
+      `}
+  `;
 
   return (
     <Container>
@@ -60,8 +117,41 @@ const CompanyDashboardPage = () => {
         </StatsGrid>
       </CardRow>
       <ContentRow>
-        <MapArea>지도 영역</MapArea>
-        <ListArea>운행 중 차량 리스트</ListArea>
+        <MapArea onClick={() => setSelectedVehicle(null)}>
+          <DashboardKakaoMap center={mapCenter} path={mapPath} />
+        </MapArea>
+        <ListArea>
+          <ListTitle>운행 중인 차량</ListTitle>
+          {listLoading ? (
+            <div>로딩 중...</div>
+          ) : listError ? (
+            <div>{listError}</div>
+          ) : runningVehicles.length === 0 ? (
+            <div>운행 중인 차량이 없습니다.</div>
+          ) : (
+            <RunningCarList>
+              {runningVehicles.map((v) => (
+                <RunningCarBlock
+                  key={v.vehicleId}
+                  onClick={() => setSelectedVehicle(v)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <CarNumber>{v.carNumber}</CarNumber>
+                  <StatusBadge>운행중</StatusBadge>
+                  <SecondaryButton
+                    size="small"
+                    color="secondary"
+                    style={{ marginLeft: '12px' }}
+                    onClick={e => {
+                      e.stopPropagation();
+                      navigate(`/company/car-detail/${v.vehicleId}`);
+                    }}
+                  >상세</SecondaryButton>
+                </RunningCarBlock>
+              ))}
+            </RunningCarList>
+          )}
+        </ListArea>
       </ContentRow>
     </Container>
   );
@@ -136,6 +226,42 @@ const StatsValue = styled.div`
   font-size: 20px;
   font-weight: 700;
   color: ${({ theme }) => theme.palette.text.primary};
+`;
+
+const ListTitle = styled.h2`
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 16px;
+`;
+
+const RunningCarList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+`;
+
+const RunningCarBlock = styled.div`
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+const CarNumber = styled.div`
+  font-size: 1.08rem;
+  font-weight: 700;
+`;
+
+const StatusBadge = styled.div`
+  background: #22c55e;
+  color: #fff;
+  font-size: 0.98rem;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 4px 14px;
 `;
 
 export default CompanyDashboardPage;
