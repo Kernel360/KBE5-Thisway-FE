@@ -32,6 +32,7 @@ const CompanyDashboardPage = () => {
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState(null);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
+  const [mapCenter, setMapCenter] = useState({ lat: 33.450701, lng: 126.570667 });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -63,7 +64,7 @@ const CompanyDashboardPage = () => {
     fetchDashboard();
     fetchVehicleList();
 
-    // 1분마다 폴링
+    // 10초마다 폴링
     const intervalId = setInterval(() => {
       fetchDashboard();
       fetchVehicleList();
@@ -73,22 +74,53 @@ const CompanyDashboardPage = () => {
     return () => clearInterval(intervalId);
   }, []);
 
-  const { totalVehicles, powerOnVehicles, powerOffVehicles } = dashboard;
-  const rate = totalVehicles > 0 ? Math.round((powerOnVehicles / totalVehicles) * 100) : 0;
-
-  if (loading) return <div>로딩 중...</div>;
-  if (error) return <div>{error}</div>;
-
   const runningVehicles = vehicleList.filter(v => v.powerOn);
   const runningVehiclePositions = runningVehicles.filter(v => v.lat !== null && v.lng !== null);
 
-  // center: 선택된 차량이 있으면 해당 위치, 없으면 첫 차량, 없으면 기본값
-  const mapCenter = selectedVehicle && selectedVehicle.lat !== null && selectedVehicle.lng !== null
-    ? { lat: selectedVehicle.lat, lng: selectedVehicle.lng }
-    : runningVehiclePositions.length > 0
-      ? { lat: runningVehiclePositions[0].lat, lng: runningVehiclePositions[0].lng }
-      : { lat: 33.450701, lng: 126.570667 };
+  useEffect(() => {
+    // 선택된 차량이 있으면 해당 위치로 지도 중심 변경
+    if (selectedVehicle && selectedVehicle.lat !== null && selectedVehicle.lng !== null) {
+      setMapCenter({ lat: selectedVehicle.lat, lng: selectedVehicle.lng });
+    } else {
+      // 페이지 첫 로딩 시, 그리고 지도 중심이 기본값일 때만
+      // 운행중인 첫번째 차량 위치로 설정
+      if (
+        mapCenter.lat === 33.450701 &&
+        mapCenter.lng === 126.570667 &&
+        runningVehiclePositions.length > 0
+      ) {
+        setMapCenter({
+          lat: runningVehiclePositions[0].lat,
+          lng: runningVehiclePositions[0].lng,
+        });
+      }
+    }
+  }, [selectedVehicle, runningVehiclePositions]);
+
+  // 선택된 차량이 폴링으로 업데이트된 경우, 해당 차량의 최신 위치로 지도 중심 업데이트
+  useEffect(() => {
+    if (selectedVehicle && runningVehiclePositions.length > 0) {
+      const updatedSelectedVehicle = runningVehiclePositions.find(
+        v => v.vehicleId === selectedVehicle.vehicleId
+      );
+      if (updatedSelectedVehicle && updatedSelectedVehicle.lat !== null && updatedSelectedVehicle.lng !== null) {
+        setMapCenter({ lat: updatedSelectedVehicle.lat, lng: updatedSelectedVehicle.lng });
+        // 선택된 차량 정보도 최신 정보로 업데이트
+        setSelectedVehicle(updatedSelectedVehicle);
+      }
+    }
+  }, [runningVehiclePositions]);
+
+  const { totalVehicles, powerOnVehicles, powerOffVehicles } = dashboard;
+  const rate = totalVehicles > 0 ? Math.round((powerOnVehicles / totalVehicles) * 100) : 0;
+
+  if (error) return <div>{error}</div>;
+
   const mapPath = runningVehiclePositions.map(v => ({ lat: v.lat, lng: v.lng, angle: v.angle }));
+
+  const handleCenterChanged = (newCenter) => {
+    setMapCenter(newCenter);
+  };
 
   return (
     <Container>
@@ -119,7 +151,7 @@ const CompanyDashboardPage = () => {
       </CardRow>
       <ContentRow>
         <MapArea onClick={() => setSelectedVehicle(null)}>
-          <DashboardKakaoMap center={mapCenter} path={mapPath} />
+          <DashboardKakaoMap center={mapCenter} path={mapPath} onCenterChanged={handleCenterChanged} />
         </MapArea>
         <ListArea>
           <ListTitle>운행 중인 차량
@@ -130,9 +162,7 @@ const CompanyDashboardPage = () => {
               </Select>
             </SelectBox>
           </ListTitle>
-          {listLoading ? (
-            <div>로딩 중...</div>
-          ) : listError ? (
+          {listError ? (
             <div>{listError}</div>
           ) : runningVehicles.length === 0 ? (
             <div>운행 중인 차량이 없습니다.</div>
