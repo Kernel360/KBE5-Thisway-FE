@@ -314,19 +314,19 @@ const CompanyCarDetailPage = () => {
                         }))
                       : []
                   }
+                  markerImage={{
+                    url: currentMinimalImg,
+                    size: { width: 48, height: 48 },
+                  }}
                 />
               ) : (
                 vehicle.lat && vehicle.lng ? (
                   <KakaoMap
                     center={{ lat: vehicle.lat, lng: vehicle.lng }}
-                    markers={[
-                      {
-                        lat: vehicle.lat,
-                        lng: vehicle.lng,
-                        image: '/assets/Current Minimal.png',
-                        imageSize: { width: 48, height: 48 },
-                      },
-                    ]}
+                    markerImage={{
+                      url: currentMinimalImg,
+                      size: { width: 48, height: 48 },
+                    }}
                   />
                 ) : (
                   <div style={{textAlign: 'center', color: '#888', fontSize: 16, padding: 40}}>

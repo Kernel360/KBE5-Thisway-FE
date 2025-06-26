@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from "react";
 import PropTypes from "prop-types";
 import { loadKakaoMapScript } from "@/utils/mapUtils";
 
-const KakaoMap = ({ center, path = [] }) => {
+const KakaoMap = ({ center, path = [], markerImage }) => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersRef = useRef([]);
@@ -27,11 +27,18 @@ const KakaoMap = ({ center, path = [] }) => {
         markersRef.current.forEach((m) => m.setMap(null));
         markersRef.current = [];
 
-        // Add center marker
-        const marker = new kakao.maps.Marker({
+        // Add center marker (with custom image if provided)
+        let markerOptions = {
           map,
           position: options.center,
-        });
+        };
+        if (markerImage && markerImage.url) {
+          markerOptions.image = new kakao.maps.MarkerImage(
+            markerImage.url,
+            new kakao.maps.Size(markerImage.size?.width || 48, markerImage.size?.height || 48)
+          );
+        }
+        const marker = new kakao.maps.Marker(markerOptions);
         markersRef.current.push(marker);
 
         // Draw polyline if path exists
@@ -60,7 +67,7 @@ const KakaoMap = ({ center, path = [] }) => {
         polylineRef.current = null;
       }
     };
-  }, [center, path]);
+  }, [center, path, markerImage]);
 
   return (
     <div
@@ -81,6 +88,10 @@ KakaoMap.propTypes = {
       lng: PropTypes.number.isRequired,
     }),
   ),
+  markerImage: PropTypes.shape({
+    url: PropTypes.string,
+    size: PropTypes.shape({ width: PropTypes.number, height: PropTypes.number })
+  })
 };
 
 export default KakaoMap;
