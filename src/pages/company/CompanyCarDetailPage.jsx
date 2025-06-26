@@ -43,7 +43,12 @@ const CompanyCarDetailPage = () => {
     try {
       setLoading(true);
       const response = await authApi.get(`/trip-log/${id}`);
-      setVehicleData(response.data);
+      //setVehicleData(response.data);
+      setVehicleData(prev => {
+        if (JSON.stringify(prev) === JSON.stringify(response.data)) return prev;
+        return response.data;
+      });
+  
       // 현재 운행 중인 경우 주소 가져오기
       if (response.data.currentDrivingInfo) {
         const { latitude, longitude } = response.data.currentDrivingInfo;
@@ -123,14 +128,18 @@ const CompanyCarDetailPage = () => {
     }
   };
 
+  const isDriving = !!vehicleData?.currentDrivingInfo;
   // 폴링 useEffect: 1분마다 실시간 데이터 업데이트
   useEffect(() => {
+    if (!isDriving) {
+      return;
+    }
     lastOccurredTimeRef.current = null; // id가 바뀌면 초기화
     fetchRealtimeDrivingData();
     // 1분(60,000ms)마다 폴링
     const intervalId = setInterval(fetchRealtimeDrivingData, 60000);
     return () => clearInterval(intervalId); // 컴포넌트 언마운트 시 인터벌 정리
-  }, [id]); // id가 변경될 때마다 useEffect 재실행
+  }, [id, isDriving]); // id가 변경될 때마다 useEffect 재실행
 
   if (loading) return <LoadingMessage>로딩 중...</LoadingMessage>;
   if (error) return <ErrorMessage>{error}</ErrorMessage>;
