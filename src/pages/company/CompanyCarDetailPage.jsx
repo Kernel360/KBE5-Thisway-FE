@@ -1,12 +1,32 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { authApi } from "@/utils/api";
 import { formatDate, formatTime } from "@/utils/dateUtils";
-import { getAddressFromCoords } from "@/utils/mapUtils";
 import { ROUTES } from "@/routes";
+import { getAddressFromCoords } from "@/utils/mapUtils";
 
 import KakaoMap from "@/components/KakaoMap";
+import currentMinimalImg from "@/assets/Current Minimal.png";
+
+// 지도 컨테이너 리사이즈 시 relayout 적용
+function MapContainerWithRelayout({ children }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.kakao && window.kakao.maps && ref.current) {
+        const mapDiv = ref.current.querySelector('div');
+        if (mapDiv && mapDiv.__kakaoMap__) {
+          mapDiv.__kakaoMap__.relayout();
+        }
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    handleResize();
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  return <MapContainer ref={ref}>{children}</MapContainer>;
+}
 
 const CompanyCarDetailPage = () => {
   const { id } = useParams();
@@ -15,16 +35,14 @@ const CompanyCarDetailPage = () => {
   const [error, setError] = useState("");
   const [vehicleData, setVehicleData] = useState(null);
   const [searchDate, setSearchDate] = useState("");
-  const [currentAddress, setCurrentAddress] = useState("");
-  const [tripAddresses, setTripAddresses] = useState({});
   const [currentGpsLog, setCurrentGpsLog] = useState([]);
+  const [currentAddress, setCurrentAddress] = useState("");
 
   const fetchVehicleData = async () => {
     try {
       setLoading(true);
       const response = await authApi.get(`/trip-log/${id}`);
       setVehicleData(response.data);
-
       // 현재 운행 중인 경우 주소 가져오기
       if (response.data.currentDrivingInfo) {
         const { latitude, longitude } = response.data.currentDrivingInfo;
@@ -35,21 +53,6 @@ const CompanyCarDetailPage = () => {
           console.error("Error fetching current address:", error);
         }
       }
-
-      // 운행 이력의 주소 가져오기
-      const addresses = {};
-      for (const trip of response.data.tripLogBriefInfos) {
-        try {
-          const address = await getAddressFromCoords(
-            trip.latitude,
-            trip.longitude,
-          );
-          addresses[`${trip.startTime}`] = address;
-        } catch (error) {
-          console.error("Error fetching trip address:", error);
-        }
-      }
-      setTripAddresses(addresses);
     } catch (error) {
       console.error("Error fetching vehicle data:", error);
       setError("차량 정보를 불러오는데 실패했습니다.");
@@ -73,6 +76,16 @@ const CompanyCarDetailPage = () => {
         currentDrivingInfo: vehicleResp.data.currentDrivingInfo,
       }));
 
+      // 3. 최신 currentDrivingInfo의 startTime을 사용하여 GPS 로그 가져오기
+      if (vehicleResp.data.currentDrivingInfo?.startTime) {
+        const { startTime } = vehicleResp.data.currentDrivingInfo;
+        const formattedStartTime = new Date(startTime).toISOString();
+        const gpsLogResp = await authApi.get(`/trip-log/current/${id}`, {
+          params: { time: formattedStartTime },
+        });
+        setCurrentGpsLog(gpsLogResp.data.currentGpsLog);
+      }
+
       // 2. 최신 currentDrivingInfo 기반으로 현재 주소 업데이트
       if (vehicleResp.data.currentDrivingInfo) {
         const { latitude, longitude } = vehicleResp.data.currentDrivingInfo;
@@ -82,16 +95,6 @@ const CompanyCarDetailPage = () => {
         } catch (error) {
           console.error("폴링 중 현재 주소 조회 실패:", error);
         }
-      }
-
-      // 3. 최신 currentDrivingInfo의 startTime을 사용하여 GPS 로그 가져오기
-      if (vehicleResp.data.currentDrivingInfo?.startTime) {
-        const { startTime } = vehicleResp.data.currentDrivingInfo;
-        const formattedStartTime = new Date(startTime).toISOString();
-        const gpsLogResp = await authApi.get(`/trip-log/current/${id}`, {
-          params: { time: formattedStartTime },
-        });
-        setCurrentGpsLog(gpsLogResp.data.currentGpsLog);
       }
     } catch (e) {
       console.error("실시간 운행 정보 업데이트 실패", e);
@@ -122,12 +125,10 @@ const CompanyCarDetailPage = () => {
     ? tripLogBriefInfos.filter((trip) => trip.startTime.includes(searchDate))
     : tripLogBriefInfos;
 
-  const displayTrips = [...filteredTrips].reverse();
+  const displayTrips = [...filteredTrips];
 
   const handleTripClick = (trip) => {
-    navigate(ROUTES.trip.detail, {
-      state: { tripData: trip },
-    });
+    navigate(`/company/trip-detail?id=${trip.Id}`);
   };
 
   return (
@@ -175,8 +176,8 @@ const CompanyCarDetailPage = () => {
               <InfoItem>
                 <Label>상태</Label>
                 <Value>
-                  <StatusBadge status={vehicle.powerOn ? "운행중" : "정차중"}>
-                    {vehicle.powerOn ? "운행중" : "정차중"}
+                  <StatusBadge status={vehicle.powerOn ? "운행중" : "미운행"}>
+                    {vehicle.powerOn ? "운행중" : "미운행"}
                   </StatusBadge>
                 </Value>
               </InfoItem>
@@ -243,10 +244,7 @@ const CompanyCarDetailPage = () => {
                         {formatTime(trip.startTime)} ~{" "}
                         {formatTime(trip.endTime)}
                       </div>
-                      <div>
-                        {tripAddresses[trip.startTime] ||
-                          "주소를 찾을 수 없습니다"}
-                      </div>
+                      <div>{trip.address || "주소를 찾을 수 없습니다"}</div>
                     </HistoryDetails>
                     <HistoryDistance>
                       {(trip.tripMeter / 1000).toFixed(1)}km
@@ -261,35 +259,45 @@ const CompanyCarDetailPage = () => {
         <RightColumn>
           <Section style={{ height: "100%" }}>
             <SectionTitle>실시간 위치 및 이동 경로</SectionTitle>
-            <MapContainer
-              style={{
-                height: "100%",
-                minHeight: "700px",
-                background: "#f5f6f8",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <KakaoMap
-                center={
-                  currentGpsLog.length > 0
-                    ? {
-                        lat: currentGpsLog[currentGpsLog.length - 1].lat,
-                        lng: currentGpsLog[currentGpsLog.length - 1].lng,
-                      }
-                    : { lat: 33.450701, lng: 126.570667 } // 기본값: 제주도청
-                }
-                path={
-                  currentGpsLog.length > 0
-                    ? currentGpsLog.map((log) => ({
-                        lat: log.lat,
-                        lng: log.lng,
-                      }))
-                    : []
-                }
-              />
-              {/* </div> */}
+            <MapContainer>
+              {vehicle.powerOn ? (
+                <KakaoMap
+                  center={
+                    currentGpsLog.length > 0
+                      ? {
+                          lat: currentGpsLog[currentGpsLog.length - 1].lat,
+                          lng: currentGpsLog[currentGpsLog.length - 1].lng,
+                        }
+                      : { lat: 33.450701, lng: 126.570667 }
+                  }
+                  path={
+                    currentGpsLog.length > 0
+                      ? currentGpsLog.map((log) => ({
+                          lat: log.lat,
+                          lng: log.lng,
+                        }))
+                      : []
+                  }
+                />
+              ) : (
+                vehicle.lat && vehicle.lng ? (
+                  <KakaoMap
+                    center={{ lat: vehicle.lat, lng: vehicle.lng }}
+                    markers={[
+                      {
+                        lat: vehicle.lat,
+                        lng: vehicle.lng,
+                        image: '/assets/Current Minimal.png',
+                        imageSize: { width: 48, height: 48 },
+                      },
+                    ]}
+                  />
+                ) : (
+                  <div style={{textAlign: 'center', color: '#888', fontSize: 16, padding: 40}}>
+                    위치 정보 없음
+                  </div>
+                )
+              )}
             </MapContainer>
           </Section>
         </RightColumn>

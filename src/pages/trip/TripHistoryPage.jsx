@@ -19,24 +19,42 @@ const TripHistoryPage = () => {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
+  // API에서 페이지네이션 처리
+  const fetchTrips = async (page = 1, car = carSearch, from = dateFrom, to = dateTo) => {
+    setLoading(true);
+    setError("");
+    try {
+      // 쿼리 파라미터 구성 (필요시 추가)
+      const params = {
+        page: page - 1, // API는 0-base, 프론트는 1-base
+        size: PAGE_SIZE,
+      };
+      if (car) params.carNumber = car;
+      if (from) params.dateFrom = from;
+      if (to) params.dateTo = to;
+      const res = await authApi.get("/trip-log", { params });
+      setTrips(res.data.tripLogs);
+      setTotalPages(res.data.totalPages || 1);
+      setTotalElements(res.data.totalElements || 0);
+      setCurrentPage((res.data.currentPage || 0) + 1); // 0-base -> 1-base
+      setPageSize(res.data.size || PAGE_SIZE);
+    } catch (err) {
+      setError("운행 기록을 불러오지 못했습니다.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchTrips = async () => {
-      setLoading(true);
-      setError("");
-      try {
-        const res = await authApi.get("/trip-log");
-        setTrips(res.data);
-      } catch (err) {
-        setError("운행 기록을 불러오지 못했습니다.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchTrips();
+    fetchTrips(1);
+    // eslint-disable-next-line
   }, []);
 
   // 검색 버튼 클릭 시만 필터 적용
@@ -45,39 +63,18 @@ const TripHistoryPage = () => {
     setCarSearch(carSearchInput);
     setDateFrom(dateFromInput);
     setDateTo(dateToInput);
-    setCurrentPage(1);
+    fetchTrips(1, carSearchInput, dateFromInput, dateToInput);
   };
 
-  // 날짜/차량번호 필터
-  const filteredTrips = trips.filter((trip) => {
-    let match = true;
-    if (carSearch) {
-      match = match && trip.carNumber.includes(carSearch);
-    }
-    if (dateFrom) {
-      match = match && new Date(trip.startTime) >= new Date(dateFrom);
-    }
-    if (dateTo) {
-      // dateTo의 마지막까지 포함되도록 23:59:59로 보정
-      const to = new Date(dateTo);
-      to.setHours(23, 59, 59, 999);
-      match = match && new Date(trip.startTime) <= to;
-    }
-    return match;
-  });
-
-  // 페이지네이션
-  const totalPages = Math.ceil(filteredTrips.length / PAGE_SIZE) || 1;
-  const pagedTrips = filteredTrips.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE
-  );
+  // 페이지네이션 변경 시 API 호출
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    fetchTrips(page);
+  };
 
   // 상세보기 버튼 클릭
   const handleDetail = (trip) => {
-    navigate(
-      `/company/trip-detail?vehicleId=${trip.vehicleId}&startTime=${encodeURIComponent(trip.startTime)}&endTime=${encodeURIComponent(trip.endTime)}`
-    );
+    navigate(`/company/trip-detail?id=${trip.Id}`);
   };
 
   return (
@@ -135,14 +132,14 @@ const TripHistoryPage = () => {
               <tr>
                 <td className="empty-cell" colSpan={7}>{error}</td>
               </tr>
-            ) : pagedTrips.length === 0 ? (
+            ) : trips.length === 0 ? (
               <tr>
                 <td className="empty-cell" colSpan={7}>운행 기록이 없습니다.</td>
               </tr>
             ) : (
-              pagedTrips.map((trip, idx) => (
-                <tr className="table-row" key={trip.vehicleId + trip.startTime}>
-                  <td className="table-cell">{(currentPage - 1) * PAGE_SIZE + idx + 1}</td>
+              trips.map((trip, idx) => (
+                <tr className="table-row" key={trip.Id}>
+                  <td className="table-cell">{(currentPage - 1) * pageSize + idx + 1}</td>
                   <td className="table-cell">{trip.carNumber}</td>
                   <td className="table-cell">{formatDate(trip.startTime)} {formatTime(trip.startTime)}</td>
                   <td className="table-cell">{formatDate(trip.endTime)} {formatTime(trip.endTime)}</td>
@@ -162,7 +159,7 @@ const TripHistoryPage = () => {
       <Pagination
         currentPage={currentPage}
         totalPages={totalPages}
-        onPageChange={setCurrentPage}
+        onPageChange={handlePageChange}
       />
     </div>
   );
