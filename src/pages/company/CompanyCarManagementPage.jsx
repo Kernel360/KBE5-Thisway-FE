@@ -192,8 +192,8 @@ const CompanyCarManagementPage = () => {
                   <TableCell>{vehicle.modelYear}년</TableCell>
                   <TableCell>{vehicle.color}</TableCell>
                   <TableCell>
-                    <StatusBadge status={vehicle.powerOn ? "운행중" : "정차중"}>
-                      {vehicle.powerOn ? "운행중" : "정차중"}
+                    <StatusBadge status={vehicle.powerOn ? "운행중" : "미운행"}>
+                      {vehicle.powerOn ? "운행중" : "미운행"}
                     </StatusBadge>
                   </TableCell>
                   <TableCell>

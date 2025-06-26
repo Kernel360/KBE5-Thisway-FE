@@ -9,27 +9,21 @@ import endMarkerImg from "../../assets/end-marker.png";
 
 const TripDetailViewPage = () => {
   const [searchParams] = useSearchParams();
-  const vehicleId = searchParams.get("vehicleId");
-  const startTime = searchParams.get("startTime");
-  const endTime = searchParams.get("endTime");
+  const tripId = searchParams.get("id");
 
   const [trip, setTrip] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [startAddress, setStartAddress] = useState("");
-  const [endAddress, setEndAddress] = useState("");
-  const [addressLoading, setAddressLoading] = useState(false);
-  const [addressError, setAddressError] = useState("");
 
   useEffect(() => {
-    if (!vehicleId || !startTime || !endTime) {
+    if (!tripId) {
       setError("잘못된 접근입니다.");
       setLoading(false);
       return;
     }
     setLoading(true);
     setError("");
-    authApi.get(`/trip-log/detail/${vehicleId}?startTime=${encodeURIComponent(startTime)}&endTime=${encodeURIComponent(endTime)}`)
+    authApi.get(`/trip-log/detail/${tripId}`)
       .then(res => {
         setTrip(res.data);
       })
@@ -37,34 +31,16 @@ const TripDetailViewPage = () => {
         setError("운행 상세 정보를 불러오지 못했습니다.");
       })
       .finally(() => setLoading(false));
-  }, [vehicleId, startTime, endTime]);
-
-  useEffect(() => {
-    if (!trip) return;
-    setAddressLoading(true);
-    setAddressError("");
-    Promise.all([
-      getAddressFromCoords(trip.startLat, trip.startLng),
-      getAddressFromCoords(trip.endLat, trip.endLng),
-    ])
-      .then(([start, end]) => {
-        setStartAddress(start);
-        setEndAddress(end);
-      })
-      .catch(() => {
-        setAddressError("주소를 불러오지 못했습니다.");
-      })
-      .finally(() => setAddressLoading(false));
-  }, [trip]);
+  }, [tripId]);
 
   // KakaoMapRoute 컴포넌트 추가
-  const KakaoMapRoute = ({ gpsLogs, startLat, startLng, endLat, endLng }) => {
+  const KakaoMapRoute = ({ gpsLogs }) => {
     const mapRef = useRef(null);
     useEffect(() => {
       if (!window.kakao || !window.kakao.maps || !gpsLogs || gpsLogs.length === 0) return;
       const container = mapRef.current;
       const options = {
-        center: new window.kakao.maps.LatLng(startLat, startLng),
+        center: new window.kakao.maps.LatLng(gpsLogs[0].lat, gpsLogs[0].lng),
         level: 6,
       };
       const map = new window.kakao.maps.Map(container, options);
@@ -72,7 +48,7 @@ const TripDetailViewPage = () => {
       // 출발 마커
       new window.kakao.maps.Marker({
         map,
-        position: new window.kakao.maps.LatLng(startLat, startLng),
+        position: new window.kakao.maps.LatLng(gpsLogs[0].lat, gpsLogs[0].lng),
         title: "출발지",
         image: new window.kakao.maps.MarkerImage(
           startMarkerImg,
@@ -83,7 +59,7 @@ const TripDetailViewPage = () => {
       // 도착 마커
       new window.kakao.maps.Marker({
         map,
-        position: new window.kakao.maps.LatLng(endLat, endLng),
+        position: new window.kakao.maps.LatLng(gpsLogs[gpsLogs.length - 1].lat, gpsLogs[gpsLogs.length - 1].lng),
         title: "도착지",
         image: new window.kakao.maps.MarkerImage(
           endMarkerImg,
@@ -107,14 +83,28 @@ const TripDetailViewPage = () => {
         path.forEach(p => bounds.extend(p));
         map.setBounds(bounds);
       }
-    }, [gpsLogs, startLat, startLng, endLat, endLng]);
+
+      // 지도 리사이즈 이벤트 추가
+      const handleResize = () => {
+        if (map) {
+          map.relayout();
+        }
+      };
+      
+      window.addEventListener('resize', handleResize);
+      
+      // 컴포넌트 언마운트 시 이벤트 리스너 제거
+      return () => {
+        window.removeEventListener('resize', handleResize);
+      };
+    }, [gpsLogs]);
     return <KakaoMapContainer ref={mapRef} />;
   };
 
   const KakaoMapContainer = styled.div`
     width: 100%;
     height: 100%;
-    min-height: 1000px;
+    min-height: 600px;
     border-radius: 8px;
   `;
 
@@ -164,9 +154,9 @@ const TripDetailViewPage = () => {
             <SectionTitle>위치 정보</SectionTitle>
             <LocationInfoBox>
               <LocLabel>출발 위치</LocLabel>
-              <LocValue>{addressLoading ? "로딩 중..." : (startAddress || addressError || "-")}</LocValue>
+              <LocValue>{trip.onAddress || "-"}</LocValue>
               <LocLabel>도착 위치</LocLabel>
-              <LocValue>{addressLoading ? "로딩 중..." : (endAddress || addressError || "-")}</LocValue>
+              <LocValue>{trip.offAddress || "-"}</LocValue>
             </LocationInfoBox>
           </LocationSection>
         </LeftColumn>
@@ -177,10 +167,6 @@ const TripDetailViewPage = () => {
               {trip.gpsLogs && trip.gpsLogs.length > 1 ? (
                 <KakaoMapRoute
                   gpsLogs={trip.gpsLogs}
-                  startLat={trip.startLat}
-                  startLng={trip.startLng}
-                  endLat={trip.endLat}
-                  endLng={trip.endLng}
                 />
               ) : (
                 <MapEmpty>경로 데이터가 없습니다.</MapEmpty>
