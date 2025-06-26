@@ -37,6 +37,7 @@ const CompanyCarDetailPage = () => {
   const [searchDate, setSearchDate] = useState("");
   const [currentGpsLog, setCurrentGpsLog] = useState([]);
   const [currentAddress, setCurrentAddress] = useState("");
+  const lastOccurredTimeRef = useRef(null);
 
   const fetchVehicleData = async () => {
     try {
@@ -76,17 +77,38 @@ const CompanyCarDetailPage = () => {
         currentDrivingInfo: vehicleResp.data.currentDrivingInfo,
       }));
 
-      // 3. 최신 currentDrivingInfo의 startTime을 사용하여 GPS 로그 가져오기
-      if (vehicleResp.data.currentDrivingInfo?.startTime) {
-        const { startTime } = vehicleResp.data.currentDrivingInfo;
-        const formattedStartTime = new Date(startTime).toISOString();
+      // 2. 실시간 위치/경로 갱신
+      let timeParam = null;
+      if (lastOccurredTimeRef.current) {
+        // 이전 응답에서 받은 lastOccurredTime 사용
+        timeParam = lastOccurredTimeRef.current;
+        console.log("이후 요청 - lastOccurredTime 사용:", timeParam);
+      } else if (vehicleResp.data.currentDrivingInfo?.startTime) {
+        // 첫 요청 시에는 startTime 사용 (한국 시간으로 변환)
+        const startTimeDate = new Date(vehicleResp.data.currentDrivingInfo.startTime);
+        // 한국 시간대(KST)로 변환
+        const kstTime = new Date(startTimeDate.getTime() + (9 * 60 * 60 * 1000));
+        timeParam = kstTime.toISOString();
+        console.log("첫 요청 - startTime 사용 (KST):", timeParam);
+        console.log("원본 startTime:", vehicleResp.data.currentDrivingInfo.startTime);
+        console.log("currentDrivingInfo:", vehicleResp.data.currentDrivingInfo);
+      }
+      
+      if (timeParam) {
+        console.log("API 호출:", `/trip-log/current/${id}?time=${timeParam}`);
         const gpsLogResp = await authApi.get(`/trip-log/current/${id}`, {
-          params: { time: formattedStartTime },
+          params: { time: timeParam },
         });
+        console.log("GPS 로그 응답:", gpsLogResp.data);
         setCurrentGpsLog(gpsLogResp.data.currentGpsLog);
+        // 응답에 lastOccurredTime이 있으면 저장
+        if (gpsLogResp.data.lastOccurredTime) {
+          lastOccurredTimeRef.current = gpsLogResp.data.lastOccurredTime;
+          console.log("lastOccurredTime 저장:", gpsLogResp.data.lastOccurredTime);
+        }
       }
 
-      // 2. 최신 currentDrivingInfo 기반으로 현재 주소 업데이트
+      // 3. 최신 currentDrivingInfo 기반으로 현재 주소 업데이트
       if (vehicleResp.data.currentDrivingInfo) {
         const { latitude, longitude } = vehicleResp.data.currentDrivingInfo;
         try {
@@ -103,7 +125,7 @@ const CompanyCarDetailPage = () => {
 
   // 폴링 useEffect: 1분마다 실시간 데이터 업데이트
   useEffect(() => {
-    // 컴포넌트 마운트 시 또는 id 변경 시 즉시 한 번 호출
+    lastOccurredTimeRef.current = null; // id가 바뀌면 초기화
     fetchRealtimeDrivingData();
     // 1분(60,000ms)마다 폴링
     const intervalId = setInterval(fetchRealtimeDrivingData, 60000);
@@ -268,7 +290,12 @@ const CompanyCarDetailPage = () => {
                           lat: currentGpsLog[currentGpsLog.length - 1].lat,
                           lng: currentGpsLog[currentGpsLog.length - 1].lng,
                         }
-                      : { lat: 33.450701, lng: 126.570667 }
+                      : currentDrivingInfo
+                        ? {
+                            lat: currentDrivingInfo.latitude,
+                            lng: currentDrivingInfo.longitude,
+                          }
+                        : { lat: 33.450701, lng: 126.570667 }
                   }
                   path={
                     currentGpsLog.length > 0
