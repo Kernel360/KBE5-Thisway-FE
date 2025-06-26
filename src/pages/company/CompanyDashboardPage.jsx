@@ -97,6 +97,20 @@ const CompanyDashboardPage = () => {
     }
   }, [selectedVehicle, runningVehiclePositions]);
 
+  // 선택된 차량이 폴링으로 업데이트된 경우, 해당 차량의 최신 위치로 지도 중심 업데이트
+  useEffect(() => {
+    if (selectedVehicle && runningVehiclePositions.length > 0) {
+      const updatedSelectedVehicle = runningVehiclePositions.find(
+        v => v.vehicleId === selectedVehicle.vehicleId
+      );
+      if (updatedSelectedVehicle && updatedSelectedVehicle.lat !== null && updatedSelectedVehicle.lng !== null) {
+        setMapCenter({ lat: updatedSelectedVehicle.lat, lng: updatedSelectedVehicle.lng });
+        // 선택된 차량 정보도 최신 정보로 업데이트
+        setSelectedVehicle(updatedSelectedVehicle);
+      }
+    }
+  }, [runningVehiclePositions]);
+
   const { totalVehicles, powerOnVehicles, powerOffVehicles } = dashboard;
   const rate = totalVehicles > 0 ? Math.round((powerOnVehicles / totalVehicles) * 100) : 0;
 
