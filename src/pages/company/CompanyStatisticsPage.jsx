@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import Button from "@/components/Button";
 import { BarChart, Bar, YAxis, CartesianGrid, ResponsiveContainer, Cell } from 'recharts';
+import { statisticsService } from "@/services/statisticsService";
+import { getCompanyId } from "@/utils/auth";
 
 // Import images from assets
 import settingsIcon from "@/assets/settings.png";
@@ -15,6 +17,11 @@ import rank3Icon from "@/assets/rank_badge_3.png";
 
 const CompanyStatisticsPage = () => {
   const [activeTab, setActiveTab] = useState("daily");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [statisticsData, setStatisticsData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   
   // 오늘 날짜와 30일 전 날짜 계산
   const today = new Date();
@@ -32,11 +39,71 @@ const CompanyStatisticsPage = () => {
   const defaultStartDate = formatDate(thirtyDaysAgo);
   const defaultEndDate = formatDate(today);
 
-  // 24시간 가동률 데이터
-  const hourlyData = Array.from({ length: 24 }, (_, i) => ({
-    hour: i,
-    value: Math.random() * 30 + (i >= 7 && i < 19 ? 50 : 20), // 임시 데이터: 업무시간대는 더 높은 값
-  }));
+  // 통계 데이터 조회
+  const fetchStatistics = async (start, end) => {
+    const companyId = getCompanyId();
+    if (!companyId) {
+      setError("회사 정보를 찾을 수 없습니다. 다시 로그인해주세요.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const data = await statisticsService.getCompanyStatistics(
+        companyId,
+        start,
+        end
+      );
+      
+      setStatisticsData(data);
+    } catch (err) {
+      setError(err.message);
+      console.error("통계 데이터 조회 실패:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 날짜 범위 적용
+  const handleApplyDateRange = () => {
+    if (!startDate || !endDate) {
+      setError("시작일과 종료일을 모두 입력해주세요.");
+      return;
+    }
+    
+    if (new Date(startDate) > new Date(endDate)) {
+      setError("시작일은 종료일보다 이전이어야 합니다.");
+      return;
+    }
+    
+    fetchStatistics(startDate, endDate);
+  };
+
+  // 초기 데이터 로드
+  useEffect(() => {
+    const companyId = getCompanyId();
+    if (companyId) {
+      setStartDate(defaultStartDate);
+      setEndDate(defaultEndDate);
+      fetchStatistics(defaultStartDate, defaultEndDate);
+    } else {
+      setError("로그인이 필요합니다.");
+    }
+  }, []);
+
+  // 24시간 가동률 데이터 생성
+  const generateHourlyData = () => {
+    if (!statisticsData || !statisticsData.hours) return [];
+    
+    return Array.from({ length: 24 }, (_, i) => ({
+      hour: i,
+      value: statisticsData.hours[i] || 0,
+    }));
+  };
+
+  const hourlyData = generateHourlyData();
 
   const TICK_LABELS = [
     { label: '0', index: 0 },
@@ -46,6 +113,27 @@ const CompanyStatisticsPage = () => {
     { label: '24', index: 24 },
   ];
   const BAR_COUNT = 24;
+
+  // 시간대 포맷팅
+  const formatHour = (hour) => {
+    if (hour >= 0 && hour < 12) {
+      return `오전 ${hour}시`;
+    } else if (hour === 12) {
+      return `오후 ${hour}시`;
+    } else {
+      return `오후 ${hour}시`;
+    }
+  };
+
+  if (loading) {
+    return (
+      <Container>
+        <div style={{ textAlign: 'center', padding: '50px' }}>
+          통계 데이터를 불러오는 중...
+        </div>
+      </Container>
+    );
+  }
 
   return (
     <Container>
@@ -64,12 +152,31 @@ const CompanyStatisticsPage = () => {
         <SectionTitle>날짜 범위</SectionTitle>
         <FilterContent>
           <DateInputGroup>
-            <DateInput type="date" defaultValue={defaultStartDate} />
+            <DateInput 
+              type="date" 
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
             <span>~</span>
-            <DateInput type="date" defaultValue={defaultEndDate} />
-            <StyledButton variant="primary" size="small">적용</StyledButton>
+            <DateInput 
+              type="date" 
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+            <StyledButton 
+              variant="primary" 
+              size="small"
+              onClick={handleApplyDateRange}
+            >
+              적용
+            </StyledButton>
           </DateInputGroup>
         </FilterContent>
+        {error && (
+          <ErrorMessage>
+            {error}
+          </ErrorMessage>
+        )}
       </Section>
 
       <ContentWrapper>
@@ -78,25 +185,33 @@ const CompanyStatisticsPage = () => {
             <StatCard>
               <StatIcon src={carIcon} alt="총 시동 횟수" />
               <StatTitle>총 시동 횟수</StatTitle>
-              <StatValue>1,247</StatValue>
+              <StatValue>
+                {statisticsData ? statisticsData.powerOnCount?.toLocaleString() : '-'}
+              </StatValue>
               <StatChange increase>+12.5%</StatChange>
             </StatCard>
             <StatCard>
               <StatIcon src={calendarIcon} alt="평균 일일 시동" />
               <StatTitle>평균 일일 시동</StatTitle>
-              <StatValue>40.2</StatValue>
+              <StatValue>
+                {statisticsData ? statisticsData.averageDailyPowerCount?.toFixed(1) : '-'}
+              </StatValue>
               <StatChange decrease>-3.2%</StatChange>
             </StatCard>
             <StatCard>
               <StatIcon src={clockIcon} alt="총 가동 시간" />
               <StatTitle>총 운행 시간</StatTitle>
-              <StatValue>18.5h</StatValue>
+              <StatValue>
+                {statisticsData ? `${statisticsData.totalDrivingTime}h` : '-'}
+              </StatValue>
               <StatChange increase>+5.8%</StatChange>
             </StatCard>
             <StatCard>
               <StatIcon src={activityIcon} alt="평균 가동률" />
               <StatTitle>평균 가동률</StatTitle>
-              <StatValue>77.1%</StatValue>
+              <StatValue>
+                {statisticsData ? `${statisticsData.averageOperationRate.toFixed(1)}%` : '-'}
+              </StatValue>
               <StatChange increase>+2.1%</StatChange>
             </StatCard>
           </StatsGrid>
@@ -144,16 +259,30 @@ const CompanyStatisticsPage = () => {
               <ListItem>
                 <TimeAnalysisInfo>
                   <TimeAnalysisLabel>최대 가동 시간대</TimeAnalysisLabel>
-                  <TimeAnalysisTime>오전 9시 - 10시</TimeAnalysisTime>
+                  <TimeAnalysisTime>
+                    {statisticsData && statisticsData.peakHour !== undefined 
+                      ? formatHour(statisticsData.peakHour) 
+                      : '-'
+                    }
+                  </TimeAnalysisTime>
                 </TimeAnalysisInfo>
-                <DynamicValue size="large" increase>95.2%</DynamicValue>
+                <DynamicValue size="large" increase>
+                  {statisticsData ? `${statisticsData.peakHourRate}%` : '-'}
+                </DynamicValue>
               </ListItem>
               <ListItem>
                 <TimeAnalysisInfo>
                   <TimeAnalysisLabel>최소 가동 시간대</TimeAnalysisLabel>
-                  <TimeAnalysisTime>새벽 3시 - 4시</TimeAnalysisTime>
+                  <TimeAnalysisTime>
+                    {statisticsData && statisticsData.lowHour !== undefined 
+                      ? formatHour(statisticsData.lowHour) 
+                      : '-'
+                    }
+                  </TimeAnalysisTime>
                 </TimeAnalysisInfo>
-                <DynamicValue size="large" decrease>22.8%</DynamicValue>
+                <DynamicValue size="large" decrease>
+                  {statisticsData ? `${statisticsData.lowHourRate}%` : '-'}
+                </DynamicValue>
               </ListItem>
             </List>
           </Section>
@@ -426,60 +555,6 @@ const DynamicValue = styled.div`
   `}
 `;
 
-// const ComparisonTabs = styled.div`
-//   display: flex;
-//   background: ${({ theme }) => theme.palette.grey[100]};
-//   border-radius: 8px;
-//   padding: 8px;
-//   margin-bottom: 20px;
-//   gap: 8px;
-//   justify-content: center;
-// `;
-
-// const ComparisonTab = styled.button`
-//   min-width: 207px;
-//   padding: 8px 16px;
-//   border: none;
-//   background: ${({ active, theme }) =>
-//     active ? theme.palette.primary.main : theme.palette.background.paper};
-//   color: ${({ active, theme }) =>
-//     active ? "white" : theme.palette.text.secondary};
-//   font-size: 14px;
-//   font-weight: ${({ active }) => (active ? "700" : "500")};
-//   border-radius: 6px;
-//   cursor: pointer;
-//   transition: all 0.2s;
-
-//   &:hover {
-//     background: ${({ active, theme }) =>
-//       active ? theme.palette.primary.main : theme.palette.grey[100]};
-//   }
-// `;
-
-// const ComparisonLabel = styled.h3`
-//   font-size: 14px;
-//   color: ${({ theme }) => theme.palette.grey[400]};
-// `;
-
-// const ComparisonValue = styled.div`
-//   display: flex;
-//   align-items: center;
-//   gap: 0.5rem;
-//   font-weight: bold;
-// `;
-
-// const ComparisonChange = styled.span`
-//   color: ${({ increase, theme }) =>
-//     increase ? theme.palette.increase.contrastText : theme.palette.decrease.contrastText};
-//   font-size: 13px;
-// `;
-
-const TimeAnalysisList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-`;
-
 const TimeAnalysisInfo = styled.div``;
 
 const TimeAnalysisLabel = styled.div`
@@ -505,7 +580,6 @@ const ChartContainer = styled.div`
   border: 1px solid ${({ theme }) => theme.palette.grey[200]};
 `;
 
-// 한 줄 전체(타이틀+가이드) 감싸는 래퍼
 const ChartHeader = styled.div`
   display: flex;
   align-items: center;
@@ -514,21 +588,18 @@ const ChartHeader = styled.div`
   margin-bottom: 18px;
 `;
 
-// 타이틀
 const ChartTitle = styled.div`
   font-size: 14px;
   font-weight: 500;
   color: ${({ theme }) => theme.palette.text.primary};
 `;
 
-// 범례(가이드) 영역
 const ChartLegend = styled.div`
   display: flex;
   gap: 20px;
   margin-left: 350px;
 `;
 
-// 색상 네모
 const LegendColor = styled.span`
   display: inline-block;
   width: 13px;
@@ -539,7 +610,6 @@ const LegendColor = styled.span`
   margin-right: 4px;
 `;
 
-// 범례 텍스트
 const LegendLabel = styled.span`
   font-size: 13px;
   color: ${({ theme }) => theme.palette.text.secondary};
@@ -570,7 +640,12 @@ const XAxisLabel = styled.span`
   left: ${({ position }) => position};
 `;
 
-
 const StyledButton = styled(Button)`
   margin-left: 16px;
+`;
+
+const ErrorMessage = styled.div`
+  color: ${({ theme }) => theme.palette.error.main};
+  font-size: 0.875rem;
+  margin-top: 8px;
 `;

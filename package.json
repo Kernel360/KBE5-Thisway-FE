@@ -19,7 +19,7 @@
     "react-daumpost-hook": "^1.1.8",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.23.0",
-    "recharts": "^2.15.3",
+    "recharts": "^2.15.4",
     "styled-components": "^5.3.11",
     "zustand": "^5.0.5"
   },
