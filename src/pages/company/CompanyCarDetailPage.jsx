@@ -101,7 +101,15 @@ const CompanyCarDetailPage = () => {
           params: { time: timeParam },
         });
         console.log("GPS 로그 응답:", gpsLogResp.data);
-        setCurrentGpsLog(gpsLogResp.data.currentGpsLog);
+        setCurrentGpsLog(prev => {
+          if (!prev.length) return gpsLogResp.data.currentGpsLog;
+          const lastLat = prev[prev.length - 1].lat;
+          const lastLng = prev[prev.length - 1].lng;
+          const newLogs = gpsLogResp.data.currentGpsLog.filter(
+            log => log.lat !== lastLat || log.lng !== lastLng
+          );
+          return [...prev, ...newLogs];
+        });
         // 응답에 lastOccurredTime이 있으면 저장
         if (gpsLogResp.data.lastOccurredTime) {
           lastOccurredTimeRef.current = gpsLogResp.data.lastOccurredTime;
@@ -131,11 +139,19 @@ const CompanyCarDetailPage = () => {
       return;
     }
     lastOccurredTimeRef.current = null; // id가 바뀌면 초기화
-    fetchRealtimeDrivingData();
-    // 1분(60,000ms)마다 폴링
-    const intervalId = setInterval(fetchRealtimeDrivingData, 60000);
-    return () => clearInterval(intervalId); // 컴포넌트 언마운트 시 인터벌 정리
-  }, [id, isDriving]); // id가 변경될 때마다 useEffect 재실행
+
+    // 1분 뒤에 첫 polling 시작
+    const timeoutId = setTimeout(() => {
+      fetchRealtimeDrivingData();
+      // 이후부터는 1분마다 polling
+      const intervalId = setInterval(fetchRealtimeDrivingData, 60000);
+      // cleanup for interval
+      return () => clearInterval(intervalId);
+    }, 60000);
+
+    // cleanup for timeout
+    return () => clearTimeout(timeoutId);
+  }, [id, isDriving]);
 
   if (loading) return <LoadingMessage>로딩 중...</LoadingMessage>;
   if (error) return <ErrorMessage>{error}</ErrorMessage>;
@@ -314,16 +330,7 @@ const CompanyCarDetailPage = () => {
                     url: currentMinimalImg,
                     size: { width: 48, height: 48 },
                   }}
-                  extraMarkers={
-                    currentDrivingInfo ? [
-                      {
-                        lat: currentDrivingInfo.latitude,
-                        lng: currentDrivingInfo.longitude,
-                        image: currentMinimalImg,
-                        imageSize: { width: 48, height: 48 },
-                      }
-                    ] : []
-                  }
+                  extraMarkers={[]}
                 />
               ) : (
                 vehicle.lat && vehicle.lng ? (
