@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from "react";
 import PropTypes from "prop-types";
 import { loadKakaoMapScript } from "@/utils/mapUtils";
 
-const KakaoMap = ({ center, path = [], markerImage }) => {
+const KakaoMap = ({ center, path = [], markerImage, extraMarkers = [] }) => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersRef = useRef([]);
@@ -41,6 +41,24 @@ const KakaoMap = ({ center, path = [], markerImage }) => {
         const marker = new kakao.maps.Marker(markerOptions);
         markersRef.current.push(marker);
 
+        // Draw extra markers
+        if (extraMarkers && Array.isArray(extraMarkers)) {
+          extraMarkers.forEach((m) => {
+            const markerOpt = {
+              map,
+              position: new kakao.maps.LatLng(m.lat, m.lng),
+            };
+            if (m.image) {
+              markerOpt.image = new kakao.maps.MarkerImage(
+                m.image,
+                new kakao.maps.Size(m.imageSize?.width || 48, m.imageSize?.height || 48)
+              );
+            }
+            const extraMarker = new kakao.maps.Marker(markerOpt);
+            markersRef.current.push(extraMarker);
+          });
+        }
+
         // Draw polyline if path exists
         if (path.length > 1) {
           const linePath = path.map((p) => new kakao.maps.LatLng(p.lat, p.lng));
@@ -67,7 +85,7 @@ const KakaoMap = ({ center, path = [], markerImage }) => {
         polylineRef.current = null;
       }
     };
-  }, [center, path, markerImage]);
+  }, [center, path, markerImage, extraMarkers]);
 
   return (
     <div
@@ -91,7 +109,15 @@ KakaoMap.propTypes = {
   markerImage: PropTypes.shape({
     url: PropTypes.string,
     size: PropTypes.shape({ width: PropTypes.number, height: PropTypes.number })
-  })
+  }),
+  extraMarkers: PropTypes.arrayOf(
+    PropTypes.shape({
+      lat: PropTypes.number.isRequired,
+      lng: PropTypes.number.isRequired,
+      image: PropTypes.string,
+      imageSize: PropTypes.shape({ width: PropTypes.number, height: PropTypes.number })
+    })
+  )
 };
 
 export default KakaoMap;

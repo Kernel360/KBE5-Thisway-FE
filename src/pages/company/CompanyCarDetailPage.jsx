@@ -76,11 +76,7 @@ const CompanyCarDetailPage = () => {
     try {
       // 1. 최신 차량 데이터 (주로 currentDrivingInfo 업데이트 위함) 가져오기
       const vehicleResp = await authApi.get(`/trip-log/${id}`);
-      // vehicleData의 currentDrivingInfo 부분만 업데이트
-      setVehicleData((prevData) => ({
-        ...prevData,
-        currentDrivingInfo: vehicleResp.data.currentDrivingInfo,
-      }));
+      setVehicleData(vehicleResp.data);
 
       // 2. 실시간 위치/경로 갱신
       let timeParam = null;
@@ -291,7 +287,7 @@ const CompanyCarDetailPage = () => {
           <Section style={{ height: "100%" }}>
             <SectionTitle>실시간 위치 및 이동 경로</SectionTitle>
             <MapContainer>
-              {vehicle.powerOn ? (
+              {isDriving ? (
                 <KakaoMap
                   center={
                     currentGpsLog.length > 0
@@ -318,6 +314,16 @@ const CompanyCarDetailPage = () => {
                     url: currentMinimalImg,
                     size: { width: 48, height: 48 },
                   }}
+                  extraMarkers={
+                    currentDrivingInfo ? [
+                      {
+                        lat: currentDrivingInfo.latitude,
+                        lng: currentDrivingInfo.longitude,
+                        image: currentMinimalImg,
+                        imageSize: { width: 48, height: 48 },
+                      }
+                    ] : []
+                  }
                 />
               ) : (
                 vehicle.lat && vehicle.lng ? (
