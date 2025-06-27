@@ -5,6 +5,7 @@ import DashboardKakaoMap from "@/components/DashboardKakaoMap";
 import { useNavigate } from "react-router-dom";
 import Button from "@/components/Button";
 import carIcon from "@/assets/white-car.png";
+import Pagination from "@/components/Pagination";
 
 const SecondaryButton = styled(Button)`
   ${({ color, theme }) =>
@@ -34,6 +35,15 @@ const CompanyDashboardPage = () => {
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [mapCenter, setMapCenter] = useState({ lat: 33.450701, lng: 126.570667 });
   const navigate = useNavigate();
+  const [page, setPage] = useState(0);
+  const [size, setSize] = useState(10);
+  const [pageInfo, setPageInfo] = useState({
+    totalElements: 0,
+    numberOfElements: 0,
+    totalPages: 0,
+    currentPage: 0,
+    size: 10,
+  });
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -48,11 +58,12 @@ const CompanyDashboardPage = () => {
       }
     };
 
-    const fetchVehicleList = async () => {
+    const fetchVehicleList = async (page = 0, size = 10) => {
       try {
         setListLoading(true);
-        const res = await authApi.get("/vehicles/track");
+        const res = await authApi.get(`/vehicles/track?page=${page}&size=${size}`);
         setVehicleList(res.data.vehicles || []);
+        setPageInfo(res.data.pageInfo);
       } catch (err) {
         setListError("차량 목록을 불러오지 못했습니다.");
       } finally {
@@ -62,17 +73,17 @@ const CompanyDashboardPage = () => {
 
     // 최초 1회 즉시 호출
     fetchDashboard();
-    fetchVehicleList();
+    fetchVehicleList(page, size);
 
     // 10초마다 폴링
     const intervalId = setInterval(() => {
       fetchDashboard();
-      fetchVehicleList();
+      fetchVehicleList(page, size);
     }, 10000);
 
     // 언마운트 시 인터벌 정리
     return () => clearInterval(intervalId);
-  }, []);
+  }, [page, size]);
 
   const runningVehicles = vehicleList.filter(v => v.powerOn);
   const runningVehiclePositions = runningVehicles.filter(v => v.lat !== null && v.lng !== null);
@@ -122,6 +133,10 @@ const CompanyDashboardPage = () => {
     setMapCenter(newCenter);
   };
 
+  const handlePageChange = (newPage) => {
+    setPage(newPage - 1);
+  };
+
   return (
     <Container>
       <Header>
@@ -167,38 +182,45 @@ const CompanyDashboardPage = () => {
           ) : runningVehicles.length === 0 ? (
             <div>운행 중인 차량이 없습니다.</div>
           ) : (
-            <RunningCarList>
-              {runningVehicles.map((v) => {
-                const isSelected = selectedVehicle && selectedVehicle.vehicleId === v.vehicleId;
-                return (
-                  <RunningCarBlock
-                    key={v.vehicleId}
-                    onClick={() => setSelectedVehicle(v)}
-                    $selected={isSelected}
-                  >
-                    <CarInfo>
-                      <CarIconBox>
-                        <img src={carIcon} alt="car" />
-                      </CarIconBox>
-                      <CarTextBox>
-                        <CarNumber>{v.carNumber}</CarNumber>
-                      </CarTextBox>
-                    </CarInfo>
-                    <RightBox>
-                      <StatusBadge status={v.powerOn ? "운행중" : "정차중"}>
-                        {v.powerOn ? "운행중" : "정차중"}
-                      </StatusBadge>
-                      <DetailButton
-                        onClick={e => {
-                          e.stopPropagation();
-                          navigate(`/company/car-detail/${v.vehicleId}`);
-                        }}
-                      >상세보기</DetailButton>
-                    </RightBox>
-                  </RunningCarBlock>
-                );
-              })}
-            </RunningCarList>
+            <>
+              <RunningCarList>
+                {runningVehicles.map((v) => {
+                  const isSelected = selectedVehicle && selectedVehicle.vehicleId === v.vehicleId;
+                  return (
+                    <RunningCarBlock
+                      key={v.vehicleId}
+                      onClick={() => setSelectedVehicle(v)}
+                      $selected={isSelected}
+                    >
+                      <CarInfo>
+                        <CarIconBox>
+                          <img src={carIcon} alt="car" />
+                        </CarIconBox>
+                        <CarTextBox>
+                          <CarNumber>{v.carNumber}</CarNumber>
+                        </CarTextBox>
+                      </CarInfo>
+                      <RightBox>
+                        <StatusBadge status={v.powerOn ? "운행중" : "정차중"}>
+                          {v.powerOn ? "운행중" : "정차중"}
+                        </StatusBadge>
+                        <DetailButton
+                          onClick={e => {
+                            e.stopPropagation();
+                            navigate(`/company/car-detail/${v.vehicleId}`);
+                          }}
+                        >상세보기</DetailButton>
+                      </RightBox>
+                    </RunningCarBlock>
+                  );
+                })}
+              </RunningCarList>
+              <Pagination
+                currentPage={pageInfo.currentPage + 1}
+                totalPages={pageInfo.totalPages}
+                onPageChange={handlePageChange}
+              />
+            </>
           )}
         </ListArea>
       </ContentRow>
