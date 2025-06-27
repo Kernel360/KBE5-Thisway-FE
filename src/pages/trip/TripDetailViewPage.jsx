@@ -6,6 +6,7 @@ import { getAddressFromCoords } from "../../utils/mapUtils";
 import { authApi } from "../../utils/api";
 import startMarkerImg from "../../assets/start-marker.png";
 import endMarkerImg from "../../assets/end-marker.png";
+import { loadKakaoMapScript } from "../../utils/mapUtils";
 
 const TripDetailViewPage = () => {
   const [searchParams] = useSearchParams();
@@ -37,65 +38,74 @@ const TripDetailViewPage = () => {
   const KakaoMapRoute = ({ gpsLogs }) => {
     const mapRef = useRef(null);
     useEffect(() => {
-      if (!window.kakao || !window.kakao.maps || !gpsLogs || gpsLogs.length === 0) return;
-      const container = mapRef.current;
-      const options = {
-        center: new window.kakao.maps.LatLng(gpsLogs[0].lat, gpsLogs[0].lng),
-        level: 6,
-      };
-      const map = new window.kakao.maps.Map(container, options);
+      let isMounted = true;
+      loadKakaoMapScript()
+        .then(() => {
+          if (!isMounted) return;
+          if (!window.kakao || !window.kakao.maps || !gpsLogs || gpsLogs.length === 0) return;
+          const container = mapRef.current;
+          const options = {
+            center: new window.kakao.maps.LatLng(gpsLogs[0].lat, gpsLogs[0].lng),
+            level: 6,
+          };
+          const map = new window.kakao.maps.Map(container, options);
 
-      // 출발 마커
-      new window.kakao.maps.Marker({
-        map,
-        position: new window.kakao.maps.LatLng(gpsLogs[0].lat, gpsLogs[0].lng),
-        title: "출발지",
-        image: new window.kakao.maps.MarkerImage(
-          startMarkerImg,
-          new window.kakao.maps.Size(40, 42),
-          { offset: new window.kakao.maps.Point(20, 42) }
-        ),
-      });
-      // 도착 마커
-      new window.kakao.maps.Marker({
-        map,
-        position: new window.kakao.maps.LatLng(gpsLogs[gpsLogs.length - 1].lat, gpsLogs[gpsLogs.length - 1].lng),
-        title: "도착지",
-        image: new window.kakao.maps.MarkerImage(
-          endMarkerImg,
-          new window.kakao.maps.Size(40, 42),
-          { offset: new window.kakao.maps.Point(20, 42) }
-        ),
-      });
-      // 경로 Polyline
-      const path = gpsLogs.map(log => new window.kakao.maps.LatLng(log.lat, log.lng));
-      new window.kakao.maps.Polyline({
-        map,
-        path,
-        strokeWeight: 5,
-        strokeColor: "#3B82F6",
-        strokeOpacity: 0.9,
-        strokeStyle: "solid",
-      });
-      // 지도 영역 fitBounds
-      if (path.length > 1) {
-        const bounds = new window.kakao.maps.LatLngBounds();
-        path.forEach(p => bounds.extend(p));
-        map.setBounds(bounds);
-      }
+          // 출발 마커
+          new window.kakao.maps.Marker({
+            map,
+            position: new window.kakao.maps.LatLng(gpsLogs[0].lat, gpsLogs[0].lng),
+            title: "출발지",
+            image: new window.kakao.maps.MarkerImage(
+              startMarkerImg,
+              new window.kakao.maps.Size(40, 42),
+              { offset: new window.kakao.maps.Point(20, 42) }
+            ),
+          });
+          // 도착 마커
+          new window.kakao.maps.Marker({
+            map,
+            position: new window.kakao.maps.LatLng(gpsLogs[gpsLogs.length - 1].lat, gpsLogs[gpsLogs.length - 1].lng),
+            title: "도착지",
+            image: new window.kakao.maps.MarkerImage(
+              endMarkerImg,
+              new window.kakao.maps.Size(40, 42),
+              { offset: new window.kakao.maps.Point(20, 42) }
+            ),
+          });
+          // 경로 Polyline
+          const path = gpsLogs.map(log => new window.kakao.maps.LatLng(log.lat, log.lng));
+          new window.kakao.maps.Polyline({
+            map,
+            path,
+            strokeWeight: 5,
+            strokeColor: "#3B82F6",
+            strokeOpacity: 0.9,
+            strokeStyle: "solid",
+          });
+          // 지도 영역 fitBounds
+          if (path.length > 1) {
+            const bounds = new window.kakao.maps.LatLngBounds();
+            path.forEach(p => bounds.extend(p));
+            map.setBounds(bounds);
+          }
 
-      // 지도 리사이즈 이벤트 추가
-      const handleResize = () => {
-        if (map) {
-          map.relayout();
-        }
-      };
-      
-      window.addEventListener('resize', handleResize);
-      
-      // 컴포넌트 언마운트 시 이벤트 리스너 제거
+          // 지도 리사이즈 이벤트 추가
+          const handleResize = () => {
+            if (map) {
+              map.relayout();
+            }
+          };
+          window.addEventListener('resize', handleResize);
+          // 컴포넌트 언마운트 시 이벤트 리스너 제거
+          return () => {
+            window.removeEventListener('resize', handleResize);
+          };
+        })
+        .catch((error) => {
+          console.error("카카오맵 스크립트 로드 실패:", error);
+        });
       return () => {
-        window.removeEventListener('resize', handleResize);
+        isMounted = false;
       };
     }, [gpsLogs]);
     return <KakaoMapContainer ref={mapRef} />;
