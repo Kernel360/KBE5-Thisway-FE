@@ -1,8 +1,17 @@
 import React from 'react';
 import styled from 'styled-components';
 
+const PAGE_GROUP_SIZE = 10;
+
 const Pagination = ({ currentPage, totalPages, onPageChange }) => {
-  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+  // 현재 페이지가 속한 그룹의 시작/끝 계산
+  const currentGroup = Math.floor((currentPage - 1) / PAGE_GROUP_SIZE);
+  const groupStart = currentGroup * PAGE_GROUP_SIZE + 1;
+  const groupEnd = Math.min(groupStart + PAGE_GROUP_SIZE - 1, totalPages);
+  const pages = Array.from({ length: groupEnd - groupStart + 1 }, (_, i) => groupStart + i);
+
+  const hasPrevGroup = groupStart > 1;
+  const hasNextGroup = groupEnd < totalPages;
 
   return (
     <Container>
@@ -13,6 +22,11 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
         >
           {'<'}
         </PaginationArrow>
+        {hasPrevGroup && (
+          <PaginationArrow onClick={() => onPageChange(groupStart - 1)}>
+            ...
+          </PaginationArrow>
+        )}
         {pages.map((page) => (
           <PageButton
             key={page}
@@ -22,6 +36,11 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
             {page}
           </PageButton>
         ))}
+        {hasNextGroup && (
+          <PaginationArrow onClick={() => onPageChange(groupEnd + 1)}>
+            ...
+          </PaginationArrow>
+        )}
         <PaginationArrow 
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
