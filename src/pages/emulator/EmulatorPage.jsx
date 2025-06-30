@@ -126,16 +126,23 @@ function EmulatorPage() {
           pad(oDate.getHours()) +
           pad(oDate.getMinutes()) +
           pad(oDate.getSeconds());
-        const cList = batch.map(cols => ({
-          sec: (parseInt(cols[0], 10) - baseSec).toString(),
-          gcd: 'A',
-          lat: Math.round(Number(cols[2]) * 1000000),
-          lon: Math.round(Number(cols[1]) * 1000000),
-          ang: parseInt(cols[5], 10),
-          spd: parseInt(cols[3], 10),
-          sum: parseInt(cols[4], 10),
-          bat: Math.floor(Math.random() * 10000).toString(),
-        }));
+        const cList = batch.map(cols => {
+          // 각 데이터 포인트의 정확한 수집 시각을 계산
+          const relativeSecs = parseInt(cols[0], 10) - baseSec;
+          const pointInTime = new Date(oDate.getTime() + relativeSecs * 1000);
+
+          return {
+            sec: pad(pointInTime.getSeconds()), // 수집 시각의 '초'로 변경
+            min: pad(pointInTime.getMinutes()), // 수집 시각의 '분'을 min 필드에 추가
+            gcd: 'A',
+            lat: Math.round(Number(cols[2]) * 1000000),
+            lon: Math.round(Number(cols[1]) * 1000000),
+            ang: parseInt(cols[5], 10),
+            spd: parseInt(cols[3], 10),
+            sum: parseInt(cols[4], 10),
+            bat: Math.floor(Math.random() * 10000).toString(),
+          };
+        });
         // 마지막 gps 데이터 저장
         lastGpsDataRef.current = cList[cList.length - 1];
         const payload = {
