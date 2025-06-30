@@ -30,6 +30,7 @@ import CompanySettingsPage from "@/pages/company/CompanySettingsPage";
 import AdminStatisticsPage from "@/pages/admin/AdminStatisticsPage";
 import { ROUTES } from "@/routes";
 import MemberDummyPage from "@/pages/member/MemberDummyPage";
+import EmulatorPage from "@/pages/emulator/EmulatorPage";
 
 // TODO: NotFoundPage 컴포넌트 생성 필요
 const NotFoundPage = () => <div>404 Not Found</div>;
@@ -217,6 +218,14 @@ const routeList = [
       </MainLayout>
     ),
   },
+  {
+    path: ROUTES.emulator,
+    element: (
+      <AuthLayout>
+        <EmulatorPage />
+      </AuthLayout>
+    ),
+  },
   // 기타
   { path: ROUTES.root, element: <RedirectByRole /> },
   { path: ROUTES.logout, element: <LogoutPage /> },
@@ -245,6 +254,7 @@ function App() {
       "/password-reset",
       "/password-reset/success",
       "/password-reset/error",
+      "/emulator",
     ];
     if (publicPaths.includes(location.pathname)) return;
 

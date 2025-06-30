@@ -40,4 +40,6 @@ export const ROUTES = {
     profile: "/member/profile",
     support: "/member/support",
   },
+  // 에뮬레이터
+  emulator: "/emulator",
 };
