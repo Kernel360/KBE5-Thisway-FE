@@ -117,14 +117,27 @@ const CompanyStatisticsPage = () => {
 
   // 시간대 포맷팅
   const formatHour = (hour) => {
-    if (hour >= 0 && hour < 12) {
+    if (hour === 0) {
+      return '오전 12시';
+    } else if (hour > 0 && hour < 12) {
       return `오전 ${hour}시`;
     } else if (hour === 12) {
-      return `오후 ${hour}시`;
+      return `오후 12시`;
     } else {
-      return `오후 ${hour}시`;
+      return `오후 ${hour-12}시`;
     }
   };
+
+  // 시간대별 분석 백분율 포맷 함수
+  const formatRate = (rate) => {
+    if (typeof rate !== 'number') return '-';
+    if (rate >= 1) return rate.toFixed(1);
+    return rate.toFixed(3);
+  };
+
+  const bothRatesZero =
+    statisticsData &&
+    (Number(statisticsData.peakHourRate) === 0 && Number(statisticsData.lowHourRate) === 0);
 
   if (loading) {
     return (
@@ -221,30 +234,27 @@ const CompanyStatisticsPage = () => {
             </MapPlaceholder>
             <LocationListTitle>주요 시동 위치 (상위 3개)</LocationListTitle>
             <List gap="13px">
-              <ListItem>
-                <RankIcon src={rank1Icon} alt="1위" />
-                <LocationInfo>
-                  <SecondaryText>서울시 강남구 테헤란로 123</SecondaryText>
-                  <LocationCount>총 47회 시동</LocationCount>
-                </LocationInfo>
-                <DynamicValue rank={1}>32.1%</DynamicValue>
-              </ListItem>
-              <ListItem>
-                <RankIcon src={rank2Icon} alt="2위" />
-                <LocationInfo>
-                  <SecondaryText>서울시 서초구 서초대로 456</SecondaryText>
-                  <LocationCount>총 31회 시동</LocationCount>
-                </LocationInfo>
-                <DynamicValue rank={2}>21.2%</DynamicValue>
-              </ListItem>
-              <ListItem>
-                <RankIcon src={rank3Icon} alt="3위" />
-                <LocationInfo>
-                  <SecondaryText>서울시 종로구 종로 789</SecondaryText>
-                  <LocationCount>총 23회 시동</LocationCount>
-                </LocationInfo>
-                <DynamicValue rank={3}>15.8%</DynamicValue>
-              </ListItem>
+              {(() => {
+                const stats = statisticsData?.locationStats || [];
+                const total = stats.reduce((sum, s) => sum + s.count, 0);
+                // 3개 미만이면 빈 칸 채우기
+                const displayStats = [0, 1, 2].map(i => stats[i] || null);
+                const rankIcons = [rank1Icon, rank2Icon, rank3Icon];
+                return displayStats.map((item, idx) => (
+                  <ListItem key={idx}>
+                    <RankIcon src={rankIcons[idx]} alt={`${idx + 1}위`} />
+                    <LocationInfo>
+                      <SecondaryText>{item ? item.addr : '-'}</SecondaryText>
+                      <LocationCount>
+                        {item ? `총 ${item.count}회 시동` : '-'}
+                      </LocationCount>
+                    </LocationInfo>
+                    <DynamicValue rank={idx + 1}>
+                      {item && typeof item.rate === 'number' ? `${item.rate}%` : '-'}
+                    </DynamicValue>
+                  </ListItem>
+                ));
+              })()}
             </List>
           </Section>
         </LeftPanel>
@@ -257,28 +267,34 @@ const CompanyStatisticsPage = () => {
                 <TimeAnalysisInfo>
                   <TimeAnalysisLabel>최대 가동 시간대</TimeAnalysisLabel>
                   <TimeAnalysisTime>
-                    {statisticsData && statisticsData.peakHour !== undefined 
-                      ? formatHour(statisticsData.peakHour) 
-                      : '-'
-                    }
+                    {bothRatesZero
+                      ? '-'
+                      : (statisticsData && statisticsData.peakHour !== undefined 
+                          ? formatHour(statisticsData.peakHour) 
+                          : '-')}
                   </TimeAnalysisTime>
                 </TimeAnalysisInfo>
                 <DynamicValue size="large" increase>
-                  {statisticsData ? `${statisticsData.peakHourRate}%` : '-'}
+                  {bothRatesZero
+                    ? '-'
+                    : (statisticsData && typeof statisticsData.peakHourRate === 'number' ? `${formatRate(statisticsData.peakHourRate)}%` : '-')}
                 </DynamicValue>
               </ListItem>
               <ListItem>
                 <TimeAnalysisInfo>
                   <TimeAnalysisLabel>최소 가동 시간대</TimeAnalysisLabel>
                   <TimeAnalysisTime>
-                    {statisticsData && statisticsData.lowHour !== undefined 
-                      ? formatHour(statisticsData.lowHour) 
-                      : '-'
-                    }
+                    {bothRatesZero
+                      ? '-'
+                      : (statisticsData && statisticsData.lowHour !== undefined 
+                          ? formatHour(statisticsData.lowHour) 
+                          : '-')}
                   </TimeAnalysisTime>
                 </TimeAnalysisInfo>
                 <DynamicValue size="large" decrease>
-                  {statisticsData ? `${statisticsData.lowHourRate}%` : '-'}
+                  {bothRatesZero
+                    ? '-'
+                    : (statisticsData && typeof statisticsData.lowHourRate === 'number' ? `${formatRate(statisticsData.lowHourRate)}%` : '-')}
                 </DynamicValue>
               </ListItem>
             </List>
@@ -607,8 +623,7 @@ const LegendColor = styled.span`
   margin-right: 4px;
 `;
 
-const LegendLabel = styled.span`
-  font-size: 13px;
+const LegendLabel = styled.span`  font-size: 13px;
   color: ${({ theme }) => theme.palette.text.secondary};
 `;
 
@@ -646,3 +661,4 @@ const ErrorMessage = styled.div`
   font-size: 0.875rem;
   margin-top: 8px;
 `;
+
