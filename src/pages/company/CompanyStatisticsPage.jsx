@@ -170,12 +170,14 @@ const CompanyStatisticsPage = () => {
               type="date" 
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
+              max={defaultEndDate}
             />
             <span>~</span>
             <DateInput 
               type="date" 
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
+              max={defaultEndDate}
             />
             <StyledButton 
               variant="primary" 
@@ -657,7 +659,7 @@ const StyledButton = styled(Button)`
 `;
 
 const ErrorMessage = styled.div`
-  color: ${({ theme }) => theme.palette.error.main};
+  color: ${({ theme }) => theme.palette.error.contrastText};
   font-size: 0.875rem;
   margin-top: 8px;
 `;
