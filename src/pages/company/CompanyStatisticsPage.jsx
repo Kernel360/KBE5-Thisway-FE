@@ -4,6 +4,8 @@ import Button from "@/components/Button";
 import { BarChart, Bar, YAxis, CartesianGrid, ResponsiveContainer, Cell } from 'recharts';
 import { statisticsService } from "@/services/statisticsService";
 import { getCompanyId } from "@/utils/auth";
+import KakaoMap from "@/components/KakaoMap";
+import { getCoordsFromAddress } from "@/utils/mapUtils";
 
 // Import images from assets
 import carIcon from "@/assets/car.png";
@@ -21,6 +23,9 @@ const CompanyStatisticsPage = () => {
   const [statisticsData, setStatisticsData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [locationMarkers, setLocationMarkers] = useState([]);
+  const [locationMapLoading, setLocationMapLoading] = useState(false);
+  const [locationMapError, setLocationMapError] = useState(null);
   
   // 오늘 날짜와 30일 전 날짜 계산
   const today = new Date();
@@ -139,6 +144,38 @@ const CompanyStatisticsPage = () => {
     statisticsData &&
     (Number(statisticsData.peakHourRate) === 0 && Number(statisticsData.lowHourRate) === 0);
 
+  useEffect(() => {
+    const fetchCoords = async () => {
+      if (!statisticsData?.locationStats || statisticsData.locationStats.length === 0) {
+        setLocationMarkers([]);
+        return;
+      }
+      setLocationMapLoading(true);
+      setLocationMapError(null);
+      try {
+        const stats = statisticsData.locationStats.slice(0, 3);
+        const rankIcons = [rank1Icon, rank2Icon, rank3Icon];
+        const results = await Promise.all(
+          stats.map(async (item, idx) => {
+            try {
+              const coords = await getCoordsFromAddress(item.addr);
+              return { ...coords, addr: item.addr, image: rankIcons[idx], imageSize: { width: 30, height: 30 } };
+            } catch {
+              return null;
+            }
+          })
+        );
+        setLocationMarkers(results.filter(Boolean));
+      } catch (e) {
+        setLocationMapError("지도 좌표 변환에 실패했습니다.");
+        setLocationMarkers([]);
+      } finally {
+        setLocationMapLoading(false);
+      }
+    };
+    fetchCoords();
+  }, [statisticsData?.locationStats]);
+
   if (loading) {
     return (
       <Container>
@@ -231,8 +268,21 @@ const CompanyStatisticsPage = () => {
           <Section>
             <SectionTitle>시동 위치 통계</SectionTitle>
             <MapPlaceholder>
-              <div>지도 영역</div>
-              <small>시동 위치가 히트맵으로 표시됩니다</small>
+              <div className="map-wrapper" style={{ width: '100%', height: '100%' }}>
+                {locationMapLoading ? (
+                  <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%'}}>지도 로딩 중...</div>
+                ) : locationMarkers.length > 0 ? (
+                  <KakaoMap
+                    center={locationMarkers[0]}
+                    extraMarkers={locationMarkers}
+                    markerImage={undefined}
+                  />
+                ) : locationMapError ? (
+                  <div style={{ color: '#e53e3e', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>{locationMapError}</div>
+                ) : (
+                  <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%'}}>지도 영역</div>
+                )}
+              </div>
             </MapPlaceholder>
             <LocationListTitle>주요 시동 위치 (상위 3개)</LocationListTitle>
             <List gap="13px">
