@@ -38,6 +38,7 @@ const CompanyCarDetailPage = () => {
   const [currentGpsLog, setCurrentGpsLog] = useState([]);
   const [currentAddress, setCurrentAddress] = useState("");
   const lastOccurredTimeRef = useRef(null);
+  const pollingIntervalRef = useRef(null); // polling interval 관리용
 
   const fetchVehicleData = async () => {
     try {
@@ -100,6 +101,10 @@ const CompanyCarDetailPage = () => {
         const gpsLogResp = await authApi.get(`/trip-log/current/${id}`, {
           params: { time: timeParam },
         });
+        // null 또는 데이터 없음이면 아무것도 하지 않고 패스
+        if (!gpsLogResp.data || !gpsLogResp.data.currentGpsLog) {
+          return;
+        }
         console.log("GPS 로그 응답:", gpsLogResp.data);
         setCurrentGpsLog(prev => {
           if (!prev.length) return gpsLogResp.data.currentGpsLog;
@@ -128,6 +133,17 @@ const CompanyCarDetailPage = () => {
         }
       }
     } catch (e) {
+      // 400 에러 감지 시 polling 완전 중단
+      if (e.response && e.response.status === 400) {
+        setVehicleData((prev) => ({
+          ...prev,
+          currentDrivingInfo: null,
+        }));
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+      }
       console.error("실시간 운행 정보 업데이트 실패", e);
     }
   };
@@ -138,19 +154,22 @@ const CompanyCarDetailPage = () => {
     if (!isDriving) {
       return;
     }
-    lastOccurredTimeRef.current = null; // id가 바뀌면 초기화
+    lastOccurredTimeRef.current = null;
 
     // 1분 뒤에 첫 polling 시작
     const timeoutId = setTimeout(() => {
       fetchRealtimeDrivingData();
       // 이후부터는 1분마다 polling
-      const intervalId = setInterval(fetchRealtimeDrivingData, 60000);
-      // cleanup for interval
-      return () => clearInterval(intervalId);
-    }, 60000);
+      pollingIntervalRef.current = setInterval(fetchRealtimeDrivingData, 5500);
+    }, 5500);
 
-    // cleanup for timeout
-    return () => clearTimeout(timeoutId);
+    return () => {
+      clearTimeout(timeoutId);
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
   }, [id, isDriving]);
 
   if (loading) return <LoadingMessage>로딩 중...</LoadingMessage>;
