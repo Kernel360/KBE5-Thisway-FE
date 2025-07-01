@@ -6,7 +6,6 @@ import { statisticsService } from "@/services/statisticsService";
 import { getCompanyId } from "@/utils/auth";
 
 // Import images from assets
-import settingsIcon from "@/assets/settings.png";
 import carIcon from "@/assets/car.png";
 import calendarIcon from "@/assets/Calendar.png";
 import clockIcon from "@/assets/Clock.png";
@@ -25,7 +24,9 @@ const CompanyStatisticsPage = () => {
   
   // 오늘 날짜와 30일 전 날짜 계산
   const today = new Date();
+  const yesterday = new Date(today);
   const thirtyDaysAgo = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
   thirtyDaysAgo.setDate(today.getDate() - 30);
 
   // YYYY-MM-DD 형식으로 변환
@@ -37,7 +38,7 @@ const CompanyStatisticsPage = () => {
   };
 
   const defaultStartDate = formatDate(thirtyDaysAgo);
-  const defaultEndDate = formatDate(today);
+  const defaultEndDate = formatDate(yesterday);
 
   // 통계 데이터 조회
   const fetchStatistics = async (start, end) => {
@@ -188,7 +189,6 @@ const CompanyStatisticsPage = () => {
               <StatValue>
                 {statisticsData ? statisticsData.powerOnCount?.toLocaleString() : '-'}
               </StatValue>
-              <StatChange increase>+12.5%</StatChange>
             </StatCard>
             <StatCard>
               <StatIcon src={calendarIcon} alt="평균 일일 시동" />
@@ -196,7 +196,6 @@ const CompanyStatisticsPage = () => {
               <StatValue>
                 {statisticsData ? statisticsData.averageDailyPowerCount?.toFixed(1) : '-'}
               </StatValue>
-              <StatChange decrease>-3.2%</StatChange>
             </StatCard>
             <StatCard>
               <StatIcon src={clockIcon} alt="총 가동 시간" />
@@ -204,7 +203,6 @@ const CompanyStatisticsPage = () => {
               <StatValue>
                 {statisticsData ? `${statisticsData.totalDrivingTime}h` : '-'}
               </StatValue>
-              <StatChange increase>+5.8%</StatChange>
             </StatCard>
             <StatCard>
               <StatIcon src={activityIcon} alt="평균 가동률" />
@@ -212,7 +210,6 @@ const CompanyStatisticsPage = () => {
               <StatValue>
                 {statisticsData ? `${statisticsData.averageOperationRate.toFixed(1)}%` : '-'}
               </StatValue>
-              <StatChange increase>+2.1%</StatChange>
             </StatCard>
           </StatsGrid>
 
