@@ -160,8 +160,8 @@ const CompanyCarDetailPage = () => {
     const timeoutId = setTimeout(() => {
       fetchRealtimeDrivingData();
       // 이후부터는 1분마다 polling
-      pollingIntervalRef.current = setInterval(fetchRealtimeDrivingData, 5500);
-    }, 5500);
+      pollingIntervalRef.current = setInterval(fetchRealtimeDrivingData, 3000);
+    }, 3000);
 
     return () => {
       clearTimeout(timeoutId);

@@ -26,6 +26,7 @@ const CompanyStatisticsPage = () => {
   const [locationMarkers, setLocationMarkers] = useState([]);
   const [locationMapLoading, setLocationMapLoading] = useState(false);
   const [locationMapError, setLocationMapError] = useState(null);
+  const [mapCenter, setMapCenter] = useState(null);
   
   // 오늘 날짜와 30일 전 날짜 계산
   const today = new Date();
@@ -176,6 +177,13 @@ const CompanyStatisticsPage = () => {
     fetchCoords();
   }, [statisticsData?.locationStats]);
 
+  useEffect(() => {
+    // 마커가 바뀌면 첫 번째 마커로 center 자동 이동
+    if (locationMarkers.length > 0) {
+      setMapCenter(locationMarkers[0]);
+    }
+  }, [locationMarkers]);
+
   if (loading) {
     return (
       <Container>
@@ -271,9 +279,9 @@ const CompanyStatisticsPage = () => {
               <div className="map-wrapper" style={{ width: '100%', height: '100%' }}>
                 {locationMapLoading ? (
                   <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%'}}>지도 로딩 중...</div>
-                ) : locationMarkers.length > 0 ? (
+                ) : locationMarkers.length > 0 && mapCenter ? (
                   <KakaoMap
-                    center={locationMarkers[0]}
+                    center={mapCenter}
                     extraMarkers={locationMarkers}
                     markerImage={undefined}
                   />
@@ -293,7 +301,13 @@ const CompanyStatisticsPage = () => {
                 const displayStats = [0, 1, 2].map(i => stats[i] || null);
                 const rankIcons = [rank1Icon, rank2Icon, rank3Icon];
                 return displayStats.map((item, idx) => (
-                  <ListItem key={idx}>
+                  <ListItem
+                    key={idx}
+                    style={{ cursor: item ? 'pointer' : 'default' }}
+                    onClick={() => {
+                      if (item && locationMarkers[idx]) setMapCenter(locationMarkers[idx]);
+                    }}
+                  >
                     <RankIcon src={rankIcons[idx]} alt={`${idx + 1}위`} />
                     <LocationInfo>
                       <SecondaryText>{item ? item.addr : '-'}</SecondaryText>
