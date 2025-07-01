@@ -72,7 +72,7 @@ function Sidebar() {
       : []),
     { label: "운행 기록", path: "/company/trip-history" },
     { label: "통계", path: "/company/statistics" },
-    { label: "설정", path: "/company/settings" },
+    //{ label: "설정", path: "/company/settings" },
   ];
   const memberMenu = [
     { label: "내 대시보드", path: "/member/dashboard" },
@@ -123,7 +123,7 @@ function Sidebar() {
             <MemberLabel>
               {user ? getRoleLabel(userRole) : "로그인 필요"}
             </MemberLabel>
-            <MemberEmail>{user?.email || "이메일 정보 없음"}</MemberEmail>
+            <MemberEmail>{user?.sub  || "이메일 정보 없음"}</MemberEmail>
           </ProfileText>
         </MemberProfile>
         {dropdownOpen && (
