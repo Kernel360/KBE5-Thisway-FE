@@ -22,10 +22,15 @@ const CompanyCarManagementPage = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [error, setError] = useState("");
   const itemsPerPage = 10;
+  const [searchInput, setSearchInput] = useState("");
 
-  const fetchVehicles = async (page = 1) => {
+  const fetchVehicles = async (page = 1, carNumber = "") => {
     try {
-      const response = await authApi.get(`/vehicles?page=${page - 1}&size=${itemsPerPage}`);
+      let url = `/vehicles?page=${page - 1}&size=${itemsPerPage}`;
+      if (carNumber) {
+        url += `&carNumber=${encodeURIComponent(carNumber)}`;
+      }
+      const response = await authApi.get(url);
       if (response.data) {
         setVehicles(response.data.vehicles);
         setTotalElements(response.data.totalElements);
@@ -38,12 +43,26 @@ const CompanyCarManagementPage = () => {
   };
 
   useEffect(() => {
-    fetchVehicles(currentPage);
-  }, [currentPage]);
+    fetchVehicles(currentPage, searchTerm);
+  }, [currentPage, searchTerm]);
 
-  const handleSearch = (event) => {
-    setSearchTerm(event.target.value);
+  useEffect(() => {
+    setSearchInput(searchTerm);
+  }, [searchTerm]);
+
+  const handleInputChange = (event) => {
+    setSearchInput(event.target.value);
+  };
+
+  const handleSearch = () => {
+    setSearchTerm(searchInput);
     setCurrentPage(1);
+  };
+
+  const handleSearchInputKeyDown = (event) => {
+    if (event.key === "Enter") {
+      handleSearch();
+    }
   };
 
   const handleAddVehicle = () => {
@@ -73,7 +92,7 @@ const CompanyCarManagementPage = () => {
         await authApi.post("/vehicles", submitData);
       }
       
-      fetchVehicles(currentPage);
+      fetchVehicles(currentPage, searchTerm);
       handleModalClose();
     } catch (error) {
       console.error("Error submitting vehicle:", error);
@@ -111,7 +130,7 @@ const CompanyCarManagementPage = () => {
     if (vehicleToDelete) {
       try {
         await authApi.delete(`/vehicles/${vehicleToDelete}`);
-        fetchVehicles(currentPage);
+        fetchVehicles(currentPage, searchTerm);
         setDeleteDialogOpen(false);
         setVehicleToDelete(null);
       } catch (error) {
@@ -130,13 +149,6 @@ const CompanyCarManagementPage = () => {
     setCurrentPage(page);
   };
 
-  const filteredVehicles = vehicles.filter(
-    (vehicle) =>
-      vehicle.carNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vehicle.manufacturer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vehicle.model.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
-
   return (
     <Container>
       <Header>
@@ -146,9 +158,13 @@ const CompanyCarManagementPage = () => {
         <HeaderRight>
           <SearchInput
             placeholder="차량 검색..."
-            value={searchTerm}
-            onChange={handleSearch}
+            value={searchInput}
+            onChange={handleInputChange}
+            onKeyDown={handleSearchInputKeyDown}
           />
+          <Button onClick={handleSearch}>
+            검색
+          </Button>
           <Button onClick={handleAddVehicle} startIcon="+">
             차량 등록
           </Button>
@@ -172,14 +188,14 @@ const CompanyCarManagementPage = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredVehicles.length === 0 ? (
+            {vehicles.length === 0 ? (
               <TableRow>
                 <EmptyCell colSpan={7}>
                   등록된 차량이 없습니다. 차량을 등록해보세요.
                 </EmptyCell>
               </TableRow>
             ) : (
-              filteredVehicles.map((vehicle, index) => (
+              vehicles.map((vehicle, index) => (
                 <TableRow 
                   key={vehicle.id}
                   onClick={(e) => handleRowClick(e, vehicle.id)}
@@ -221,7 +237,7 @@ const CompanyCarManagementPage = () => {
         </Table>
       </TableContainer>
 
-      {filteredVehicles.length > 0 && (
+      {vehicles.length > 0 && (
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}

@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 
-const SearchInput = ({ placeholder = "검색...", value, onChange, width = "240px" }) => {
+const SearchInput = ({ placeholder = "검색...", value, onChange, width = "240px", onKeyDown }) => {
   return (
     <StyledInput
       type="text"
@@ -9,6 +9,7 @@ const SearchInput = ({ placeholder = "검색...", value, onChange, width = "240p
       value={value}
       onChange={onChange}
       width={width}
+      onKeyDown={onKeyDown}
     />
   );
 };
