@@ -229,6 +229,9 @@ function EmulatorPage() {
 
   return (
     <div>
+      <div style={{ marginBottom: "8px", color: "#666" }}>
+        ※ MDN 입력 범위는 <b>0000000001 ~ 0000001000</b> 입니다.
+      </div>
       <div style={{ marginBottom: "16px" }}>
         <label htmlFor="mdn-input">MDN 입력: </label>
         <input
