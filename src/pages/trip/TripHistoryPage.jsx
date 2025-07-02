@@ -28,9 +28,9 @@ const TripHistoryPage = () => {
 
   // API에서 페이지네이션 처리
   const fetchTrips = async (page = 1, car = carSearch, from = dateFrom, to = dateTo) => {
-    setLoading(true);
-    setError("");
-    try {
+      setLoading(true);
+      setError("");
+      try {
       // 쿼리 파라미터 구성 (필요시 추가)
       const params = {
         page: page - 1, // API는 0-base, 프론트는 1-base
@@ -45,12 +45,12 @@ const TripHistoryPage = () => {
       setTotalElements(res.data.totalElements || 0);
       setCurrentPage((res.data.currentPage || 0) + 1); // 0-base -> 1-base
       setPageSize(res.data.size || PAGE_SIZE);
-    } catch (err) {
-      setError("운행 기록을 불러오지 못했습니다.");
-    } finally {
-      setLoading(false);
-    }
-  };
+      } catch (err) {
+        setError("운행 기록을 불러오지 못했습니다.");
+      } finally {
+        setLoading(false);
+      }
+    };
 
   useEffect(() => {
     fetchTrips(1);

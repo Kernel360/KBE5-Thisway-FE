@@ -37,9 +37,9 @@ const KakaoMap = ({ center, path = [], markerImage, extraMarkers = [] }) => {
             markerImage.url,
             new kakao.maps.Size(markerImage.size?.width || 48, markerImage.size?.height || 48)
           );
+          const marker = new kakao.maps.Marker(markerOptions);
+          markersRef.current.push(marker);
         }
-        const marker = new kakao.maps.Marker(markerOptions);
-        markersRef.current.push(marker);
 
         // Draw extra markers
         if (extraMarkers && Array.isArray(extraMarkers)) {
@@ -90,7 +90,7 @@ const KakaoMap = ({ center, path = [], markerImage, extraMarkers = [] }) => {
   return (
     <div
       ref={mapRef}
-      style={{ width: "100%", height: "100%", minHeight: "700px" }}
+      style={{ width: "100%", height: "100%" }}
     />
   );
 };

@@ -4,9 +4,10 @@ import Button from "@/components/Button";
 import { BarChart, Bar, YAxis, CartesianGrid, ResponsiveContainer, Cell } from 'recharts';
 import { statisticsService } from "@/services/statisticsService";
 import { getCompanyId } from "@/utils/auth";
+import KakaoMap from "@/components/KakaoMap";
+import { getCoordsFromAddress } from "@/utils/mapUtils";
 
 // Import images from assets
-import settingsIcon from "@/assets/settings.png";
 import carIcon from "@/assets/car.png";
 import calendarIcon from "@/assets/Calendar.png";
 import clockIcon from "@/assets/Clock.png";
@@ -22,10 +23,16 @@ const CompanyStatisticsPage = () => {
   const [statisticsData, setStatisticsData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [locationMarkers, setLocationMarkers] = useState([]);
+  const [locationMapLoading, setLocationMapLoading] = useState(false);
+  const [locationMapError, setLocationMapError] = useState(null);
+  const [mapCenter, setMapCenter] = useState(null);
   
   // 오늘 날짜와 30일 전 날짜 계산
   const today = new Date();
+  const yesterday = new Date(today);
   const thirtyDaysAgo = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
   thirtyDaysAgo.setDate(today.getDate() - 30);
 
   // YYYY-MM-DD 형식으로 변환
@@ -37,7 +44,7 @@ const CompanyStatisticsPage = () => {
   };
 
   const defaultStartDate = formatDate(thirtyDaysAgo);
-  const defaultEndDate = formatDate(today);
+  const defaultEndDate = formatDate(yesterday);
 
   // 통계 데이터 조회
   const fetchStatistics = async (start, end) => {
@@ -116,14 +123,66 @@ const CompanyStatisticsPage = () => {
 
   // 시간대 포맷팅
   const formatHour = (hour) => {
-    if (hour >= 0 && hour < 12) {
+    if (hour === 0) {
+      return '오전 12시';
+    } else if (hour > 0 && hour < 12) {
       return `오전 ${hour}시`;
     } else if (hour === 12) {
-      return `오후 ${hour}시`;
+      return `오후 12시`;
     } else {
-      return `오후 ${hour}시`;
+      return `오후 ${hour-12}시`;
     }
   };
+
+  // 시간대별 분석 백분율 포맷 함수
+  const formatRate = (rate) => {
+    if (typeof rate !== 'number') return '-';
+    if (rate >= 1) return rate.toFixed(1);
+    return rate.toFixed(3);
+  };
+
+  const bothRatesZero =
+    statisticsData &&
+    (Number(statisticsData.peakHourRate) === 0 && Number(statisticsData.lowHourRate) === 0);
+
+  useEffect(() => {
+    const fetchCoords = async () => {
+      if (!statisticsData?.locationStats || statisticsData.locationStats.length === 0) {
+        setLocationMarkers([]);
+        return;
+      }
+      setLocationMapLoading(true);
+      setLocationMapError(null);
+      try {
+        const stats = statisticsData.locationStats.slice(0, 3);
+        const rankIcons = [rank1Icon, rank2Icon, rank3Icon];
+        const results = await Promise.all(
+          stats.map(async (item, idx) => {
+            try {
+              const coords = await getCoordsFromAddress(item.addr);
+              return { ...coords, addr: item.addr, image: rankIcons[idx], imageSize: { width: 30, height: 30 } };
+            } catch {
+              return null;
+            }
+          })
+        );
+        setLocationMarkers(results.filter(Boolean));
+      } catch (e) {
+        setLocationMapError("지도 좌표 변환에 실패했습니다.");
+        setLocationMarkers([]);
+      } finally {
+        setLocationMapLoading(false);
+      }
+    };
+    fetchCoords();
+  }, [statisticsData?.locationStats]);
+
+  useEffect(() => {
+    // 마커가 바뀌면 첫 번째 마커로 center 자동 이동
+    if (locationMarkers.length > 0) {
+      setMapCenter(locationMarkers[0]);
+    }
+  }, [locationMarkers]);
 
   if (loading) {
     return (
@@ -156,12 +215,14 @@ const CompanyStatisticsPage = () => {
               type="date" 
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
+              max={defaultEndDate}
             />
             <span>~</span>
             <DateInput 
               type="date" 
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
+              max={defaultEndDate}
             />
             <StyledButton 
               variant="primary" 
@@ -188,7 +249,6 @@ const CompanyStatisticsPage = () => {
               <StatValue>
                 {statisticsData ? statisticsData.powerOnCount?.toLocaleString() : '-'}
               </StatValue>
-              <StatChange increase>+12.5%</StatChange>
             </StatCard>
             <StatCard>
               <StatIcon src={calendarIcon} alt="평균 일일 시동" />
@@ -196,7 +256,6 @@ const CompanyStatisticsPage = () => {
               <StatValue>
                 {statisticsData ? statisticsData.averageDailyPowerCount?.toFixed(1) : '-'}
               </StatValue>
-              <StatChange decrease>-3.2%</StatChange>
             </StatCard>
             <StatCard>
               <StatIcon src={clockIcon} alt="총 가동 시간" />
@@ -204,7 +263,6 @@ const CompanyStatisticsPage = () => {
               <StatValue>
                 {statisticsData ? `${statisticsData.totalDrivingTime}h` : '-'}
               </StatValue>
-              <StatChange increase>+5.8%</StatChange>
             </StatCard>
             <StatCard>
               <StatIcon src={activityIcon} alt="평균 가동률" />
@@ -212,42 +270,57 @@ const CompanyStatisticsPage = () => {
               <StatValue>
                 {statisticsData ? `${statisticsData.averageOperationRate.toFixed(1)}%` : '-'}
               </StatValue>
-              <StatChange increase>+2.1%</StatChange>
             </StatCard>
           </StatsGrid>
 
           <Section>
             <SectionTitle>시동 위치 통계</SectionTitle>
             <MapPlaceholder>
-              <div>지도 영역</div>
-              <small>시동 위치가 히트맵으로 표시됩니다</small>
+              <div className="map-wrapper" style={{ width: '100%', height: '100%' }}>
+                {locationMapLoading ? (
+                  <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%'}}>지도 로딩 중...</div>
+                ) : locationMarkers.length > 0 && mapCenter ? (
+                  <KakaoMap
+                    center={mapCenter}
+                    extraMarkers={locationMarkers}
+                    markerImage={undefined}
+                  />
+                ) : locationMapError ? (
+                  <div style={{ color: '#e53e3e', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>{locationMapError}</div>
+                ) : (
+                  <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%'}}>지도 영역</div>
+                )}
+              </div>
             </MapPlaceholder>
             <LocationListTitle>주요 시동 위치 (상위 3개)</LocationListTitle>
             <List gap="13px">
-              <ListItem>
-                <RankIcon src={rank1Icon} alt="1위" />
-                <LocationInfo>
-                  <SecondaryText>서울시 강남구 테헤란로 123</SecondaryText>
-                  <LocationCount>총 47회 시동</LocationCount>
-                </LocationInfo>
-                <DynamicValue rank={1}>32.1%</DynamicValue>
-              </ListItem>
-              <ListItem>
-                <RankIcon src={rank2Icon} alt="2위" />
-                <LocationInfo>
-                  <SecondaryText>서울시 서초구 서초대로 456</SecondaryText>
-                  <LocationCount>총 31회 시동</LocationCount>
-                </LocationInfo>
-                <DynamicValue rank={2}>21.2%</DynamicValue>
-              </ListItem>
-              <ListItem>
-                <RankIcon src={rank3Icon} alt="3위" />
-                <LocationInfo>
-                  <SecondaryText>서울시 종로구 종로 789</SecondaryText>
-                  <LocationCount>총 23회 시동</LocationCount>
-                </LocationInfo>
-                <DynamicValue rank={3}>15.8%</DynamicValue>
-              </ListItem>
+              {(() => {
+                const stats = statisticsData?.locationStats || [];
+                const total = stats.reduce((sum, s) => sum + s.count, 0);
+                // 3개 미만이면 빈 칸 채우기
+                const displayStats = [0, 1, 2].map(i => stats[i] || null);
+                const rankIcons = [rank1Icon, rank2Icon, rank3Icon];
+                return displayStats.map((item, idx) => (
+                  <ListItem
+                    key={idx}
+                    style={{ cursor: item ? 'pointer' : 'default' }}
+                    onClick={() => {
+                      if (item && locationMarkers[idx]) setMapCenter(locationMarkers[idx]);
+                    }}
+                  >
+                    <RankIcon src={rankIcons[idx]} alt={`${idx + 1}위`} />
+                    <LocationInfo>
+                      <SecondaryText>{item ? item.addr : '-'}</SecondaryText>
+                      <LocationCount>
+                        {item ? `총 ${item.count}회 시동` : '-'}
+                      </LocationCount>
+                    </LocationInfo>
+                    <DynamicValue rank={idx + 1}>
+                      {item && typeof item.rate === 'number' ? `${item.rate}%` : '-'}
+                    </DynamicValue>
+                  </ListItem>
+                ));
+              })()}
             </List>
           </Section>
         </LeftPanel>
@@ -260,28 +333,34 @@ const CompanyStatisticsPage = () => {
                 <TimeAnalysisInfo>
                   <TimeAnalysisLabel>최대 가동 시간대</TimeAnalysisLabel>
                   <TimeAnalysisTime>
-                    {statisticsData && statisticsData.peakHour !== undefined 
-                      ? formatHour(statisticsData.peakHour) 
-                      : '-'
-                    }
+                    {bothRatesZero
+                      ? '-'
+                      : (statisticsData && statisticsData.peakHour !== undefined 
+                          ? formatHour(statisticsData.peakHour) 
+                          : '-')}
                   </TimeAnalysisTime>
                 </TimeAnalysisInfo>
                 <DynamicValue size="large" increase>
-                  {statisticsData ? `${statisticsData.peakHourRate}%` : '-'}
+                  {bothRatesZero
+                    ? '-'
+                    : (statisticsData && typeof statisticsData.peakHourRate === 'number' ? `${formatRate(statisticsData.peakHourRate)}%` : '-')}
                 </DynamicValue>
               </ListItem>
               <ListItem>
                 <TimeAnalysisInfo>
                   <TimeAnalysisLabel>최소 가동 시간대</TimeAnalysisLabel>
                   <TimeAnalysisTime>
-                    {statisticsData && statisticsData.lowHour !== undefined 
-                      ? formatHour(statisticsData.lowHour) 
-                      : '-'
-                    }
+                    {bothRatesZero
+                      ? '-'
+                      : (statisticsData && statisticsData.lowHour !== undefined 
+                          ? formatHour(statisticsData.lowHour) 
+                          : '-')}
                   </TimeAnalysisTime>
                 </TimeAnalysisInfo>
                 <DynamicValue size="large" decrease>
-                  {statisticsData ? `${statisticsData.lowHourRate}%` : '-'}
+                  {bothRatesZero
+                    ? '-'
+                    : (statisticsData && typeof statisticsData.lowHourRate === 'number' ? `${formatRate(statisticsData.lowHourRate)}%` : '-')}
                 </DynamicValue>
               </ListItem>
             </List>
@@ -610,8 +689,7 @@ const LegendColor = styled.span`
   margin-right: 4px;
 `;
 
-const LegendLabel = styled.span`
-  font-size: 13px;
+const LegendLabel = styled.span`  font-size: 13px;
   color: ${({ theme }) => theme.palette.text.secondary};
 `;
 
@@ -645,7 +723,8 @@ const StyledButton = styled(Button)`
 `;
 
 const ErrorMessage = styled.div`
-  color: ${({ theme }) => theme.palette.error.main};
+  color: ${({ theme }) => theme.palette.error.contrastText};
   font-size: 0.875rem;
   margin-top: 8px;
 `;
+

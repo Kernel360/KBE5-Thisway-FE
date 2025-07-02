@@ -80,3 +80,24 @@ export const getAddressFromCoords = async (latitude, longitude) => {
     throw error;
   }
 };
+
+export const getCoordsFromAddress = async (address) => {
+  try {
+    await loadKakaoMapScript();
+    await waitForKakaoMapsService();
+    return new Promise((resolve, reject) => {
+      const geocoder = new window.kakao.maps.services.Geocoder();
+      geocoder.addressSearch(address, (result, status) => {
+        if (status === window.kakao.maps.services.Status.OK && result.length > 0) {
+          const { y, x } = result[0];
+          resolve({ lat: parseFloat(y), lng: parseFloat(x) });
+        } else {
+          reject(new Error('좌표를 찾을 수 없습니다.'));
+        }
+      });
+    });
+  } catch (error) {
+    console.error('카카오 맵 API 로드 실패:', error);
+    throw error;
+  }
+};
