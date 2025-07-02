@@ -13,7 +13,7 @@ export const loadKakaoMapScript = () => {
     const kakaoMapKey = import.meta.env.VITE_KAKAO_MAP_KEY;
     const script = document.createElement("script");
     script.id = scriptId;
-    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${kakaoMapKey}&libraries=services&autoload=false`;
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${kakaoMapKey}&libraries=services&autoload=false&libraries=services`;
 
     const timeout = setTimeout(() => {
       reject(new Error("Kakao Maps API 로드 타임아웃"));

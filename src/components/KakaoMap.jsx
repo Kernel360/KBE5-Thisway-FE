@@ -65,8 +65,8 @@ const KakaoMap = ({ center, path = [], markerImage, extraMarkers = [] }) => {
           polylineRef.current = new kakao.maps.Polyline({
             path: linePath,
             strokeWeight: 5,
-            strokeColor: "#4960F9",
-            strokeOpacity: 0.7,
+            strokeColor: "#3B82F6",
+            strokeOpacity: 0.9,
             strokeStyle: "solid",
           });
           polylineRef.current.setMap(map);
