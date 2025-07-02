@@ -1,9 +1,12 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef } from "react";
 
 function EmulatorPage() {
-  const [mdn, setMdn] = useState('');
+  const [mdn, setMdn] = useState("");
   // gps_scenario 폴더의 파일명 규칙에 따라 배열을 동적으로 생성
-  const gpsScenarioFiles = Array.from({ length: 20 }, (_, i) => `emulator_scenario_${i + 1}.csv`);
+  const gpsScenarioFiles = Array.from(
+    { length: 20 },
+    (_, i) => `emulator_scenario_${i + 1}.csv`,
+  );
   const [selectedFile, setSelectedFile] = useState(gpsScenarioFiles[0]);
   // 주기 선택을 위한 값들
   const intervalOptions = [1, 5, 10, 20, 30, 60];
@@ -19,8 +22,8 @@ function EmulatorPage() {
 
   // CSV 파싱 함수 (헤더 무시, 데이터만 추출)
   function parseCSV(text) {
-    const lines = text.trim().split('\n');
-    const data = lines.slice(1).map(line => line.split(','));
+    const lines = text.trim().split("\n");
+    const data = lines.slice(1).map((line) => line.split(","));
     return data;
   }
 
@@ -32,15 +35,15 @@ function EmulatorPage() {
     let csvText;
     try {
       const res = await fetch(filePath);
-      if (!res.ok) throw new Error('파일을 불러올 수 없습니다.');
+      if (!res.ok) throw new Error("파일을 불러올 수 없습니다.");
       csvText = await res.text();
     } catch (e) {
-      alert('시나리오 파일을 불러오지 못했습니다.');
+      alert("시나리오 파일을 불러오지 못했습니다.");
       return;
     }
     const rows = parseCSV(csvText);
     if (rows.length === 0) {
-      alert('시나리오 파일에 데이터가 없습니다.');
+      alert("시나리오 파일에 데이터가 없습니다.");
       return;
     }
     rowsRef.current = rows;
@@ -48,7 +51,7 @@ function EmulatorPage() {
 
     // 시작 시각 저장 및 power 로그 전송
     const now = new Date();
-    const pad = n => n.toString().padStart(2, '0');
+    const pad = (n) => n.toString().padStart(2, "0");
     // power 로그 onTime: 초까지 포함
     const startTimeWithSec =
       now.getFullYear().toString() +
@@ -71,13 +74,13 @@ function EmulatorPage() {
     // power 로그 전송
     const powerPayload = {
       mdn: mdn,
-      tid: 'A001',
-      mid: '6',
-      pv: '1',
-      did: 'LTE 1.2',
+      tid: "A001",
+      mid: "6",
+      pv: "1",
+      did: "LTE 1.2",
       onTime: startTimeWithSec,
       offTime: null,
-      gcd: 'A',
+      gcd: "A",
       lat: Math.round(Number(rows[0][2]) * 1000000), // 첫 데이터의 위도
       lon: Math.round(Number(rows[0][1]) * 1000000), // 첫 데이터의 경도
       ang: parseInt(rows[0][5], 10), // 첫 데이터의 방향 int형
@@ -85,13 +88,14 @@ function EmulatorPage() {
       sum: parseInt(rows[0][4], 10), // 첫 데이터의 누적주행거리 int형
     };
     try {
-      await fetch('/api/logs/power', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/logs/power", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(powerPayload),
       });
+      if (!res.ok) throw new Error("power 로그 전송에 실패했습니다.");
     } catch (e) {
-      alert('power 로그 전송에 실패했습`니다.');
+      alert("power 로그 전송에 실패했습`니다.");
       return;
     }
 
@@ -102,7 +106,7 @@ function EmulatorPage() {
       if (idxRef.current >= rows.length) {
         // 모든 데이터 전송 후 자동으로 stop 처리
         await handleStop();
-        alert('모든 데이터를 전송했습니다!');
+        alert("모든 데이터를 전송했습니다!");
         return;
       }
       const batch = rows.slice(idxRef.current, idxRef.current + intervalVal);
@@ -115,7 +119,7 @@ function EmulatorPage() {
           Number(base.slice(6, 8)),
           Number(base.slice(8, 10)),
           Number(base.slice(10, 12)),
-          Number(base.slice(12, 14))
+          Number(base.slice(12, 14)),
         );
         const baseSec = parseInt(batch[0][0], 10) || 0;
         const oDate = new Date(baseDate.getTime() + baseSec * 1000);
@@ -126,7 +130,7 @@ function EmulatorPage() {
           pad(oDate.getHours()) +
           pad(oDate.getMinutes()) +
           pad(oDate.getSeconds());
-        const cList = batch.map(cols => {
+        const cList = batch.map((cols) => {
           // 각 데이터 포인트의 정확한 수집 시각을 계산
           const relativeSecs = parseInt(cols[0], 10) - baseSec;
           const pointInTime = new Date(oDate.getTime() + relativeSecs * 1000);
@@ -134,7 +138,7 @@ function EmulatorPage() {
           return {
             sec: pad(pointInTime.getSeconds()), // 수집 시각의 '초'로 변경
             min: pad(pointInTime.getMinutes()), // 수집 시각의 '분'을 min 필드에 추가
-            gcd: 'A',
+            gcd: "A",
             lat: Math.round(Number(cols[2]) * 1000000),
             lon: Math.round(Number(cols[1]) * 1000000),
             ang: parseInt(cols[5], 10),
@@ -147,18 +151,18 @@ function EmulatorPage() {
         lastGpsDataRef.current = cList[cList.length - 1];
         const payload = {
           mdn: mdn,
-          tid: 'A001',
-          mid: '6',
-          pv: '1',
-          did: 'LTE 1.2',
+          tid: "A001",
+          mid: "6",
+          pv: "1",
+          did: "LTE 1.2",
           oTime: oTime,
           cCnt: cList.length.toString(),
           cList: cList,
         };
         try {
-          await fetch('/api/logs/gps', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+          await fetch("/api/logs/gps", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
           });
         } catch (e) {
@@ -187,7 +191,7 @@ function EmulatorPage() {
     }
     // stop power 로그 전송
     const now = new Date();
-    const pad = n => n.toString().padStart(2, '0');
+    const pad = (n) => n.toString().padStart(2, "0");
     const offTime =
       now.getFullYear().toString() +
       pad(now.getMonth() + 1) +
@@ -199,13 +203,13 @@ function EmulatorPage() {
     if (!last) return;
     const stopPayload = {
       mdn: mdn,
-      tid: 'A001',
-      mid: '6',
-      pv: '1',
-      did: 'LTE 1.2',
+      tid: "A001",
+      mid: "6",
+      pv: "1",
+      did: "LTE 1.2",
       onTime: startTimeRef.currentWithSec,
       offTime: offTime,
-      gcd: 'A',
+      gcd: "A",
       lat: Math.round(Number(last.lat)),
       lon: Math.round(Number(last.lon)),
       ang: last.ang,
@@ -213,9 +217,9 @@ function EmulatorPage() {
       sum: last.sum,
     };
     try {
-      await fetch('/api/logs/power', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      await fetch("/api/logs/power", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(stopPayload),
       });
     } catch (e) {
@@ -225,45 +229,49 @@ function EmulatorPage() {
 
   return (
     <div>
-      <div style={{ marginBottom: '16px' }}>
+      <div style={{ marginBottom: "16px" }}>
         <label htmlFor="mdn-input">MDN 입력: </label>
         <input
           id="mdn-input"
           type="text"
           value={mdn}
-          onChange={e => setMdn(e.target.value)}
+          onChange={(e) => setMdn(e.target.value)}
           placeholder="MDN을 입력하세요"
         />
       </div>
-      <div style={{ marginBottom: '16px' }}>
+      <div style={{ marginBottom: "16px" }}>
         <label htmlFor="scenario-select">시나리오 파일 선택: </label>
         <select
           id="scenario-select"
           value={selectedFile}
-          onChange={e => setSelectedFile(e.target.value)}
+          onChange={(e) => setSelectedFile(e.target.value)}
         >
-          {gpsScenarioFiles.map(file => (
-            <option key={file} value={file}>{file}</option>
+          {gpsScenarioFiles.map((file) => (
+            <option key={file} value={file}>
+              {file}
+            </option>
           ))}
         </select>
       </div>
-      <div style={{ marginBottom: '16px' }}>
+      <div style={{ marginBottom: "16px" }}>
         <label htmlFor="interval-select">주기(초) 선택: </label>
         <select
           id="interval-select"
           value={interval}
-          onChange={e => setInterval(Number(e.target.value))}
+          onChange={(e) => setInterval(Number(e.target.value))}
         >
-          {intervalOptions.map(opt => (
-            <option key={opt} value={opt}>{opt}</option>
+          {intervalOptions.map((opt) => (
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
           ))}
         </select>
       </div>
       <button onClick={isRunning ? handleStop : handleStart}>
-        {isRunning ? 'Stop' : '시작'}
+        {isRunning ? "Stop" : "시작"}
       </button>
     </div>
   );
 }
 
-export default EmulatorPage; 
+export default EmulatorPage;
