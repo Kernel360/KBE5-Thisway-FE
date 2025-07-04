@@ -15,7 +15,9 @@ const TripDetailViewPage = () => {
   const [trip, setTrip] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [gpsLogs, setGpsLogs] = useState([]);
 
+  // 1. 운행 정보만 로딩
   useEffect(() => {
     if (!tripId) {
       setError("잘못된 접근입니다.");
@@ -27,6 +29,10 @@ const TripDetailViewPage = () => {
     authApi.get(`/trip-log/detail/${tripId}`)
       .then(res => {
         setTrip(res.data);
+        // SSE 실패 시 fallback으로 기존 gpsLogs 사용
+        if (res.data.gpsLogs && res.data.gpsLogs.length > 0) {
+          setGpsLogs(res.data.gpsLogs);
+        }
       })
       .catch(() => {
         setError("운행 상세 정보를 불러오지 못했습니다.");
@@ -34,7 +40,46 @@ const TripDetailViewPage = () => {
       .finally(() => setLoading(false));
   }, [tripId]);
 
-  // KakaoMapRoute 컴포넌트 추가
+  // 2. SSE로 gpsLogs 수신
+  useEffect(() => {
+    if (!tripId) return;
+    setGpsLogs([]); // 새 tripId 접근 시 초기화
+    const token = localStorage.getItem("token");
+    console.log("SSE 연결 시도:", `/api/trip-log/detail/stream/${tripId}`);
+    const eventSource = new EventSource(`/api/trip-log/detail/stream/${tripId}?token=${token}`);
+    
+    // SSE 연결 성공 시
+    eventSource.onopen = () => {
+      console.log("SSE 연결 성공");
+    };
+    
+    // event: trip_record_chunk_stream
+    eventSource.addEventListener('trip_record_chunk_stream', (event) => {
+      try {
+        const data = JSON.parse(event.data); // [{ lat, lng, vehicleId? }, ...]
+        console.log("SSE 데이터 수신:", data.length, "개 포인트");
+        setGpsLogs(prev => [...prev, ...data.map(({ lat, lng }) => ({ lat, lng }))]);
+      } catch (e) {
+        console.error("SSE 파싱 오류", e);
+      }
+    });
+    
+    eventSource.onerror = (err) => {
+      console.error("SSE 연결 오류", err);
+      eventSource.close();
+      // SSE 실패 시 기존 trip.gpsLogs 사용
+      if (trip && trip.gpsLogs && trip.gpsLogs.length > 0) {
+        console.log("SSE 실패, 기존 gpsLogs 사용:", trip.gpsLogs.length, "개 포인트");
+        setGpsLogs(trip.gpsLogs);
+      }
+    };
+    
+    return () => {
+      eventSource.close();
+    };
+  }, [tripId, trip]);
+
+  // KakaoMapRoute 컴포넌트: gpsLogs를 실시간으로 그림
   const KakaoMapRoute = ({ gpsLogs }) => {
     const mapRef = useRef(null);
     useEffect(() => {
@@ -42,52 +87,54 @@ const TripDetailViewPage = () => {
       loadKakaoMapScript()
         .then(() => {
           if (!isMounted) return;
-      if (!window.kakao || !window.kakao.maps || !gpsLogs || gpsLogs.length === 0) return;
-      const container = mapRef.current;
-      const options = {
+          if (!window.kakao || !window.kakao.maps || !gpsLogs || gpsLogs.length === 0) return;
+          const container = mapRef.current;
+          const options = {
             center: new window.kakao.maps.LatLng(gpsLogs[0].lat, gpsLogs[0].lng),
-        level: 6,
-      };
-      const map = new window.kakao.maps.Map(container, options);
+            level: 6,
+          };
+          const map = new window.kakao.maps.Map(container, options);
 
-      // 출발 마커
-      new window.kakao.maps.Marker({
-        map,
+          // 출발 마커
+          new window.kakao.maps.Marker({
+            map,
             position: new window.kakao.maps.LatLng(gpsLogs[0].lat, gpsLogs[0].lng),
-        title: "출발지",
-        image: new window.kakao.maps.MarkerImage(
-          startMarkerImg,
-          new window.kakao.maps.Size(40, 42),
-          { offset: new window.kakao.maps.Point(20, 42) }
-        ),
-      });
-      // 도착 마커
-      new window.kakao.maps.Marker({
-        map,
-            position: new window.kakao.maps.LatLng(gpsLogs[gpsLogs.length - 1].lat, gpsLogs[gpsLogs.length - 1].lng),
-        title: "도착지",
-        image: new window.kakao.maps.MarkerImage(
-          endMarkerImg,
-          new window.kakao.maps.Size(40, 42),
-          { offset: new window.kakao.maps.Point(20, 42) }
-        ),
-      });
-      // 경로 Polyline
-      const path = gpsLogs.map(log => new window.kakao.maps.LatLng(log.lat, log.lng));
-      new window.kakao.maps.Polyline({
-        map,
-        path,
-        strokeWeight: 5,
-        strokeColor: "#3B82F6",
-        strokeOpacity: 0.9,
-        strokeStyle: "solid",
-      });
-      // 지도 영역 fitBounds
-      if (path.length > 1) {
-        const bounds = new window.kakao.maps.LatLngBounds();
-        path.forEach(p => bounds.extend(p));
-        map.setBounds(bounds);
-      }
+            title: "출발지",
+            image: new window.kakao.maps.MarkerImage(
+              startMarkerImg,
+              new window.kakao.maps.Size(40, 42),
+              { offset: new window.kakao.maps.Point(20, 42) }
+            ),
+          });
+          // 도착 마커
+          if (gpsLogs.length > 1) {
+            new window.kakao.maps.Marker({
+              map,
+              position: new window.kakao.maps.LatLng(gpsLogs[gpsLogs.length - 1].lat, gpsLogs[gpsLogs.length - 1].lng),
+              title: "도착지",
+              image: new window.kakao.maps.MarkerImage(
+                endMarkerImg,
+                new window.kakao.maps.Size(40, 42),
+                { offset: new window.kakao.maps.Point(20, 42) }
+              ),
+            });
+          }
+          // 경로 Polyline
+          const path = gpsLogs.map(log => new window.kakao.maps.LatLng(log.lat, log.lng));
+          new window.kakao.maps.Polyline({
+            map,
+            path,
+            strokeWeight: 5,
+            strokeColor: "#3B82F6",
+            strokeOpacity: 0.9,
+            strokeStyle: "solid",
+          });
+          // 지도 영역 fitBounds
+          if (path.length > 1) {
+            const bounds = new window.kakao.maps.LatLngBounds();
+            path.forEach(p => bounds.extend(p));
+            map.setBounds(bounds);
+          }
 
           // 지도 리사이즈 이벤트 추가
           const handleResize = () => {
@@ -174,9 +221,9 @@ const TripDetailViewPage = () => {
           <RouteSection>
             <SectionTitle>이동 경로</SectionTitle>
             <MapPlaceholder>
-              {trip.gpsLogs && trip.gpsLogs.length > 1 ? (
+              {gpsLogs && gpsLogs.length > 1 ? (
                 <KakaoMapRoute
-                  gpsLogs={trip.gpsLogs}
+                  gpsLogs={gpsLogs}
                 />
               ) : (
                 <MapEmpty>경로 데이터가 없습니다.</MapEmpty>
