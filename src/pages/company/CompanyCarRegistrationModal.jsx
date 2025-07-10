@@ -3,6 +3,10 @@ import styled from 'styled-components';
 import Button from '../../components/Button';
 import CarModelSearchModal from './CarModelSearchModal';
 
+// 차량번호 유효성 검사 정규식 (백엔드와 동일)
+const CAR_NUMBER_PATTERN = /^(\d{2,3}[가-힣]{1}\s?\d{4}|[가-힣]{2}\s?[가-힣]{1}\s?\d{4}|[가-힣]{1}\s?\d{4}|[가-힣]{1}\s?\d{2}[가-힣]{1}\s?\d{4})$/;
+const INVALID_PATTERN = /[가-힣]{3,}/;
+
 const CompanyCarRegistrationModal = ({ 
   isOpen, 
   onClose, 
@@ -38,6 +42,17 @@ const CompanyCarRegistrationModal = ({
     
     if (!modelId || !selectedModel) {
       setError('차량 모델을 선택해주세요.');
+      return;
+    }
+
+    // 차량번호 유효성 검사 추가
+    const normalizedCarNumber = vehicleNumber.replace(/\s/g, "");
+    if (INVALID_PATTERN.test(normalizedCarNumber)) {
+      setError('차량번호에 한글이 3글자 이상 연속으로 올 수 없습니다.');
+      return;
+    }
+    if (!CAR_NUMBER_PATTERN.test(normalizedCarNumber)) {
+      setError('차량번호 형식이 올바르지 않습니다.\n예) 12가3456, 123가4567, 서울가1234');
       return;
     }
 
@@ -256,9 +271,10 @@ const ErrorMessage = styled.div`
   padding: 12px;
   border-radius: 4px;
   margin-bottom: 16px;
-  font-size: 14px;
+  font-size: 12px;
   display: flex;
   align-items: center;
+  white-space: pre-line;
   
   &::before {
     content: "⚠️";
@@ -266,4 +282,4 @@ const ErrorMessage = styled.div`
   }
 `;
 
-export default CompanyCarRegistrationModal; 
+export default CompanyCarRegistrationModal;
