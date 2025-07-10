@@ -201,7 +201,7 @@ const CompanyCarManagementPage = () => {
                   onClick={(e) => handleRowClick(e, vehicle.id)}
                   style={{ cursor: 'pointer' }}
                 >
-                  <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell>
+                  <TableCell>{totalElements - ((currentPage - 1) * itemsPerPage + index)}</TableCell>
                   <TableCell>{vehicle.carNumber}</TableCell>
                   <TableCell>{vehicle.manufacturer}</TableCell>
                   <TableCell>{vehicle.model}</TableCell>
