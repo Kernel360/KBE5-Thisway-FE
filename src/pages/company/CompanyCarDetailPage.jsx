@@ -72,105 +72,168 @@ const CompanyCarDetailPage = () => {
     fetchVehicleData();
   }, [id]);
 
-  // 실시간 운행 정보 (현재 운행 정보, 현재 위치, GPS 로그)를 가져와 업데이트하는 함수
-  const fetchRealtimeDrivingData = async () => {
-    try {
-      // 1. 최신 차량 데이터 (주로 currentDrivingInfo 업데이트 위함) 가져오기
-      const vehicleResp = await authApi.get(`/trip-log/${id}`);
-      setVehicleData(vehicleResp.data);
-
-      // 2. 실시간 위치/경로 갱신
-      let timeParam = null;
-      if (lastOccurredTimeRef.current) {
-        // 이전 응답에서 받은 lastOccurredTime 사용
-        timeParam = lastOccurredTimeRef.current;
-        console.log("이후 요청 - lastOccurredTime 사용:", timeParam);
-      } else if (vehicleResp.data.currentDrivingInfo?.startTime) {
-        // 첫 요청 시에는 startTime 사용 (한국 시간으로 변환)
-        const startTimeDate = new Date(vehicleResp.data.currentDrivingInfo.startTime);
-        // 한국 시간대(KST)로 변환
-        const kstTime = new Date(startTimeDate.getTime() + (9 * 60 * 60 * 1000));
-        timeParam = kstTime.toISOString();
-        console.log("첫 요청 - startTime 사용 (KST):", timeParam);
-        console.log("원본 startTime:", vehicleResp.data.currentDrivingInfo.startTime);
-        console.log("currentDrivingInfo:", vehicleResp.data.currentDrivingInfo);
-      }
-      
-      if (timeParam) {
-        console.log("API 호출:", `/trip-log/current/${id}?time=${timeParam}`);
-        const gpsLogResp = await authApi.get(`/trip-log/current/${id}`, {
-          params: { time: timeParam },
-        });
-        // null 또는 데이터 없음이면 아무것도 하지 않고 패스
-        if (!gpsLogResp.data || !gpsLogResp.data.currentGpsLog) {
-          return;
-        }
-        console.log("GPS 로그 응답:", gpsLogResp.data);
-        setCurrentGpsLog(prev => {
-          if (!prev.length) return gpsLogResp.data.currentGpsLog;
-          const lastLat = prev[prev.length - 1].lat;
-          const lastLng = prev[prev.length - 1].lng;
-          const newLogs = gpsLogResp.data.currentGpsLog.filter(
-            log => log.lat !== lastLat || log.lng !== lastLng
-          );
-          return [...prev, ...newLogs];
-        });
-        // 응답에 lastOccurredTime이 있으면 저장
-        if (gpsLogResp.data.lastOccurredTime) {
-          lastOccurredTimeRef.current = gpsLogResp.data.lastOccurredTime;
-          console.log("lastOccurredTime 저장:", gpsLogResp.data.lastOccurredTime);
-        }
-      }
-
-      // 3. 최신 currentDrivingInfo 기반으로 현재 주소 업데이트
-      if (vehicleResp.data.currentDrivingInfo) {
-        const { latitude, longitude } = vehicleResp.data.currentDrivingInfo;
-        try {
-          const address = await getAddressFromCoords(latitude, longitude);
-          setCurrentAddress(address);
-        } catch (error) {
-          console.error("폴링 중 현재 주소 조회 실패:", error);
-        }
-      }
-    } catch (e) {
-      // 400 에러 감지 시 polling 완전 중단
-      if (e.response && e.response.status === 400) {
-        setVehicleData((prev) => ({
-          ...prev,
-          currentDrivingInfo: null,
-        }));
-        if (pollingIntervalRef.current) {
-          clearInterval(pollingIntervalRef.current);
-          pollingIntervalRef.current = null;
-        }
-      }
-      console.error("실시간 운행 정보 업데이트 실패", e);
-    }
-  };
-
-  const isDriving = !!vehicleData?.currentDrivingInfo;
-  // 폴링 useEffect: 1분마다 실시간 데이터 업데이트
+  // 차량 데이터 폴링 (운행중일 때만 60초 간격)
   useEffect(() => {
-    if (!isDriving) {
-      return;
-    }
-    lastOccurredTimeRef.current = null;
+    if (!id || !vehicleData?.currentDrivingInfo) return;
+    const intervalId = setInterval(() => {
+      authApi.get(`/trip-log/${id}`).then(res => {
+        setVehicleData(prev => {
+          if (JSON.stringify(prev) === JSON.stringify(res.data)) return prev;
+          return res.data;
+        });
+      }).catch(e => {
+        console.error("/trip-log/{id} 폴링 에러", e);
+      });
+    }, 60000); // 60초
+    return () => clearInterval(intervalId);
+  }, [id, !!vehicleData?.currentDrivingInfo]);
 
-    // 1분 뒤에 첫 polling 시작
-    const timeoutId = setTimeout(() => {
-      fetchRealtimeDrivingData();
-      // 이후부터는 1분마다 polling
-      pollingIntervalRef.current = setInterval(fetchRealtimeDrivingData, 3000);
-    }, 3000);
+  // id가 바뀔 때만 GPS 로그 초기화
+  useEffect(() => {
+    setCurrentGpsLog([]);
+  }, [id]);
+
+  // 운행중에서 미운행 상태로 바뀔 때 GPS 로그 초기화
+  useEffect(() => {
+    if (!vehicleData) return;
+    // 운행중이었다가 미운행으로 바뀌는 순간 currentGpsLog를 비움
+    if (!vehicleData.currentDrivingInfo) {
+      setCurrentGpsLog([]);
+    }
+  }, [vehicleData?.currentDrivingInfo]);
+
+  // SSE로 실시간 운행 정보 및 GPS 로그 수신 (id 세팅 후에만)
+  useEffect(() => {
+    if (!id) return;
+    const token = localStorage.getItem("token");
+    const sseUrl = `/api/trip-log/current/stream/${id}?token=${token}`;
+    console.log("SSE 연결 시도:", sseUrl);
+    const eventSource = new EventSource(sseUrl);
+
+    eventSource.onopen = () => {
+      console.log("SSE 연결 성공");
+    };
+
+    eventSource.addEventListener('vehicle_detail_gps_stream', async (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log("SSE vehicle_detail_gps_stream 수신:", data);
+        
+        // GPS 경로 누적 - 새로운 좌표들을 기존 경로에 순차적으로 추가
+        if (data.coordinatesInfo && data.coordinatesInfo.length > 0) {
+          console.log("=== 새로운 GPS 데이터 수신 ===");
+          console.log("받은 coordinatesInfo:", data.coordinatesInfo);
+          
+          setCurrentGpsLog(prev => {
+            const newCoordinates = data.coordinatesInfo.map(({ lat, lng }) => ({ 
+              lat: parseFloat(lat), 
+              lng: parseFloat(lng) 
+            }));
+            
+            console.log("변환된 새 좌표들:", newCoordinates);
+            console.log("기존 누적 좌표 개수:", prev.length);
+            console.log("기존 누적 좌표들:", prev);
+            
+            const updatedLog = [...prev, ...newCoordinates];
+            console.log("업데이트 후 전체 좌표 개수:", updatedLog.length);
+            console.log("업데이트 후 전체 좌표들:", updatedLog);
+            console.log("=== GPS 데이터 누적 완료 ===");
+            
+            return updatedLog;
+          });
+        }
+        
+        // 현재 운행 정보 업데이트 및 미운행 → 운행중 상태 전환
+        setVehicleData(prev => {
+          if (!prev) return prev;
+          const wasDriving = !!prev.currentDrivingInfo;
+          const lastCoord = data.coordinatesInfo[data.coordinatesInfo.length - 1];
+          const newDrivingInfo = {
+            ...prev.currentDrivingInfo,
+            speed: data.speed,
+            angle: data.angle,
+            tripMeter: data.totalTripMeter,
+            latitude: lastCoord?.lat,
+            longitude: lastCoord?.lng,
+            startTime: prev.currentDrivingInfo?.startTime || new Date().toISOString(),
+          };
+          // 미운행 → 운행중 전환 시 vehicleResponse.powerOn도 true로 강제 세팅
+          let newVehicleResponse = prev.vehicleResponse;
+          if (!wasDriving && prev.vehicleResponse && prev.vehicleResponse.powerOn === false) {
+            newVehicleResponse = { ...prev.vehicleResponse, powerOn: true };
+            console.log('vehicleResponse.powerOn을 true로 변경');
+          }
+          return {
+            ...prev,
+            currentDrivingInfo: newDrivingInfo,
+            vehicleResponse: newVehicleResponse,
+          };
+        });
+        
+        // 현재 주소 업데이트
+        if (data.coordinatesInfo.length > 0) {
+          const { lat, lng } = data.coordinatesInfo[data.coordinatesInfo.length - 1];
+          try {
+            const address = await getAddressFromCoords(lat, lng);
+            setCurrentAddress(address);
+          } catch (error) {
+            console.error("SSE 주소 조회 실패:", error);
+          }
+        }
+      } catch (e) {
+        console.error("SSE vehicle_detail_gps_stream 파싱 오류", e);
+      }
+    });
+
+    eventSource.addEventListener('past_gps_chunk_stream', (event) => {
+      try {
+        const data = JSON.parse(event.data); // { coordinatesInfo: [{ lat, lng, ... }] }
+        console.log("SSE past_gps_chunk_stream 수신:", data);
+        if (data.coordinatesInfo && data.coordinatesInfo.length > 0) {
+          setCurrentGpsLog(prev => {
+            const newCoordinates = data.coordinatesInfo.map(({ lat, lng }) => ({
+              lat: parseFloat(lat),
+              lng: parseFloat(lng)
+            }));
+            return [...prev, ...newCoordinates];
+          });
+        }
+      } catch (e) {
+        console.error("SSE past_gps_chunk_stream 파싱 오류", e);
+      }
+    });
+
+    eventSource.onerror = (err) => {
+      console.error("SSE 연결 오류", err);
+      eventSource.close();
+    };
 
     return () => {
-      clearTimeout(timeoutId);
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-      }
+      eventSource.close();
     };
-  }, [id, isDriving]);
+  }, [id]);
+
+  // GPS 로그 상태 변화 추적 (디버깅용)
+  useEffect(() => {
+    console.log("현재 GPS 로그 개수:", currentGpsLog.length);
+    if (currentGpsLog.length > 0) {
+      console.log("최신 GPS 좌표:", currentGpsLog[currentGpsLog.length - 1]);
+    }
+  }, [currentGpsLog]);
+
+  // 경로 데이터 - 순차적으로 누적된 GPS 좌표들을 선으로 연결
+  const pathData = currentGpsLog.map((log) => ({
+    lat: log.lat,
+    lng: log.lng,
+  }));
+
+  console.log("=== 경로 데이터 생성 ===");
+  console.log("currentGpsLog 길이:", currentGpsLog.length);
+  console.log("pathData 길이:", pathData.length);
+  console.log("pathData 내용:", pathData);
+  console.log("=== 경로 데이터 생성 완료 ===");
+
+  const isDriving = !!vehicleData?.currentDrivingInfo;
 
   if (loading) return <LoadingMessage>로딩 중...</LoadingMessage>;
   if (error) return <ErrorMessage>{error}</ErrorMessage>;
@@ -337,14 +400,7 @@ const CompanyCarDetailPage = () => {
                           }
                         : { lat: 33.450701, lng: 126.570667 }
                   }
-                  path={
-                    currentGpsLog.length > 0
-                      ? currentGpsLog.map((log) => ({
-                          lat: log.lat,
-                          lng: log.lng,
-                        }))
-                      : []
-                  }
+                  path={pathData}
                   markerImage={{
                     url: currentMinimalImg,
                     size: { width: 48, height: 48 },
