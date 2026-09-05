@@ -17,7 +17,6 @@ const LoginPage = () => {
 
   useEffect(() => {
     const token = getToken();
-    console.log(token);
     if (!token) return;
 
     const role = getUserRole(token);
