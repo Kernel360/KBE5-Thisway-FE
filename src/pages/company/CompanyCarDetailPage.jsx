@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { openAuthenticatedEventStream } from "../../utils/authenticatedEventStream.mjs";
 import { useParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { authApi } from "@/utils/api";
@@ -106,9 +107,9 @@ const CompanyCarDetailPage = () => {
   useEffect(() => {
     if (!id) return;
     const token = localStorage.getItem("token");
-    const sseUrl = `/api/trip-log/current/stream/${id}?token=${token}`;
+    const sseUrl = `/api/trip-log/current/stream/${id}`;
     console.log("SSE 연결 시도:", sseUrl);
-    const eventSource = new EventSource(sseUrl);
+    const eventSource = openAuthenticatedEventStream(sseUrl, token);
 
     eventSource.onopen = () => {
       console.log("SSE 연결 성공");

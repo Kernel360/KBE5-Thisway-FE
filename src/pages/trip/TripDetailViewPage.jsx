@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
+import { openAuthenticatedEventStream } from "../../utils/authenticatedEventStream.mjs";
 import styled from "styled-components";
 import { useSearchParams } from "react-router-dom";
 import { formatDate, formatTime, formatDuration } from "../../utils/dateUtils";
@@ -46,7 +47,7 @@ const TripDetailViewPage = () => {
     setGpsLogs([]); // 새 tripId 접근 시 초기화
     const token = localStorage.getItem("token");
     console.log("SSE 연결 시도:", `/api/trip-log/detail/stream/${tripId}`);
-    const eventSource = new EventSource(`/api/trip-log/detail/stream/${tripId}?token=${token}`);
+    const eventSource = openAuthenticatedEventStream(`/api/trip-log/detail/stream/${tripId}`, token);
     
     // SSE 연결 성공 시
     eventSource.onopen = () => {
