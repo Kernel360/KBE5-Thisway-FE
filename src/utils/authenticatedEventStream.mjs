@@ -44,6 +44,7 @@ export function openAuthenticatedEventStream(url, token, fetchImpl = globalThis.
   const source = {
     onopen: null,
     onerror: null,
+    onend: null,
     addEventListener(name, callback) {
       if (!listeners.has(name)) listeners.set(name, []);
       listeners.get(name).push(callback);
@@ -64,7 +65,11 @@ export function openAuthenticatedEventStream(url, token, fetchImpl = globalThis.
         redirect: "error",
         cache: "no-store",
       });
-      if (!response.ok) throw new Error(`SSE HTTP ${response.status}`);
+      if (!response.ok) {
+        const error = new Error(`SSE HTTP ${response.status}`);
+        error.status = response.status;
+        throw error;
+      }
       if (response.headers.get("content-type")?.split(";")[0].trim() !== "text/event-stream") {
         throw new Error("Expected event stream");
       }
@@ -80,6 +85,7 @@ export function openAuthenticatedEventStream(url, token, fetchImpl = globalThis.
         const { value, done } = await reader.read();
         if (done) {
           parse(decoder.decode());
+          if (!controller.signal.aborted) source.onend?.();
           break;
         }
         parse(decoder.decode(value, { stream: true }));

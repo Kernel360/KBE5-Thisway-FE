@@ -76,3 +76,30 @@ test("close aborts the request without reporting an authentication error", async
   assert.equal(signal.aborted, true);
   assert.equal(errors, 0);
 });
+
+test("EOF reports end after events, while explicit close suppresses end", async () => {
+  const response = () => new Response("event: done\ndata: complete\n\n", {
+    headers: { "content-type": "text/event-stream" },
+  });
+  const seen = [];
+  const stream = openAuthenticatedEventStream("/api/stream", "token", async () => response());
+  stream.addEventListener("done", () => seen.push("done"));
+  stream.onend = () => seen.push("end");
+  await stream.finished;
+  assert.deepEqual(seen, ["done", "end"]);
+  const closed = openAuthenticatedEventStream("/api/stream", "token", async () => response());
+  closed.addEventListener("done", () => closed.close());
+  closed.onend = () => assert.fail("closed stream must not report EOF");
+  await closed.finished;
+});
+
+test("HTTP status is available for authentication and ownership recovery policies", async () => {
+  for (const status of [401, 403, 404, 503]) {
+    const stream = openAuthenticatedEventStream("/api/stream", "token",
+      async () => new Response("", { status }));
+    let received;
+    stream.onerror = error => { received = error.status; };
+    await stream.finished;
+    assert.equal(received, status);
+  }
+});
