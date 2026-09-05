@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { openAuthenticatedEventStream } from "../../utils/authenticatedEventStream.mjs";
 import { useParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { authApi } from "@/utils/api";
@@ -37,6 +38,8 @@ const CompanyCarDetailPage = () => {
   const [searchDate, setSearchDate] = useState("");
   const [currentGpsLog, setCurrentGpsLog] = useState([]);
   const [currentAddress, setCurrentAddress] = useState("");
+  const [streamStatus, setStreamStatus] = useState("connecting");
+  const [streamAttempt, setStreamAttempt] = useState(0);
   const lastOccurredTimeRef = useRef(null);
   const pollingIntervalRef = useRef(null); // polling interval 관리용
 
@@ -105,13 +108,16 @@ const CompanyCarDetailPage = () => {
   // SSE로 실시간 운행 정보 및 GPS 로그 수신 (id 세팅 후에만)
   useEffect(() => {
     if (!id) return;
+    let active = true;
+    setStreamStatus("connecting");
     const token = localStorage.getItem("token");
-    const sseUrl = `/api/trip-log/current/stream/${id}?token=${token}`;
+    const sseUrl = `/api/trip-log/current/stream/${id}`;
     console.log("SSE 연결 시도:", sseUrl);
-    const eventSource = new EventSource(sseUrl);
+    const eventSource = openAuthenticatedEventStream(sseUrl, token);
 
     eventSource.onopen = () => {
-      console.log("SSE 연결 성공");
+      setCurrentGpsLog([]);
+      setStreamStatus("connected");
     };
 
     eventSource.addEventListener('vehicle_detail_gps_stream', async (event) => {
@@ -175,7 +181,7 @@ const CompanyCarDetailPage = () => {
           const { lat, lng } = data.coordinatesInfo[data.coordinatesInfo.length - 1];
           try {
             const address = await getAddressFromCoords(lat, lng);
-            setCurrentAddress(address);
+            if (active) setCurrentAddress(address);
           } catch (error) {
             console.error("SSE 주소 조회 실패:", error);
           }
@@ -204,14 +210,17 @@ const CompanyCarDetailPage = () => {
     });
 
     eventSource.onerror = (err) => {
-      console.error("SSE 연결 오류", err);
+      setStreamStatus(err.status === 401 ? "unauthorized"
+        : [403, 404].includes(err.status) ? "forbidden" : "disconnected");
       eventSource.close();
     };
+    eventSource.onend = () => setStreamStatus("disconnected");
 
     return () => {
+      active = false;
       eventSource.close();
     };
-  }, [id]);
+  }, [id, streamAttempt]);
 
   // GPS 로그 상태 변화 추적 (디버깅용)
   useEffect(() => {
@@ -384,6 +393,18 @@ const CompanyCarDetailPage = () => {
         <RightColumn>
           <Section style={{ height: "100%" }}>
             <SectionTitle>실시간 위치 및 이동 경로</SectionTitle>
+            <div role="status" aria-live="polite">
+              {streamStatus === "connecting" && "실시간 위치 연결 중…"}
+              {streamStatus === "connected" && "실시간 위치 연결됨"}
+              {streamStatus === "unauthorized" && "인증이 만료되었습니다. 다시 로그인해 주세요."}
+              {streamStatus === "forbidden" && "이 차량의 실시간 위치를 조회할 수 없습니다."}
+              {streamStatus === "disconnected" && <>
+                실시간 위치 연결이 끊겼습니다. 표시된 정보는 최신이 아닐 수 있습니다.
+                <button type="button" onClick={() => setStreamAttempt(value => value + 1)}>
+                  다시 연결
+                </button>
+              </>}
+            </div>
             <MapContainer>
               {isDriving ? (
                 <KakaoMap
