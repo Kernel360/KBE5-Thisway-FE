@@ -6,7 +6,7 @@ import { statisticsService } from "@/services/statisticsService";
 import { getCompanyId } from "@/utils/auth";
 import KakaoMap from "@/components/KakaoMap";
 import { getCoordsFromAddress } from "@/utils/mapUtils";
-import { hasCurrentStatistics, formatDrivingMinutes, statisticsCoverageMessage } from '@/utils/statisticsPresentation.mjs';
+import { hasCurrentStatistics, formatDrivingMinutes, statisticsCoverageMessage, statisticsFleetBasisMessage } from '@/utils/statisticsPresentation.mjs';
 
 // Import images from assets
 import carIcon from "@/assets/car.png";
@@ -247,7 +247,8 @@ const CompanyStatisticsPage = () => {
         <p>완료 운행의 시동 ON~OFF 시간 기준입니다. 정차를 포함하며 실제 이동 시간과 다릅니다.</p>
         <p>{statisticsCoverageMessage(statisticsData)}</p>
         <p>저장된 GPS 관측: {statisticsUsable ? statisticsData.quality.gpsObservationCount.toLocaleString() : '-'}건 (수신율 아님)</p>
-        <p>계산 시점의 활성 차량 기준이며, 평균은 집계된 날짜들의 일별 평균입니다. 늦은 종료 이벤트는 재집계가 필요합니다.</p>
+        <p>{statisticsFleetBasisMessage(statisticsData)}</p>
+        <p>평균은 집계된 날짜들의 일별 평균입니다. 늦게 도착한 운행 정보가 반영되기까지 시간이 걸릴 수 있습니다.</p>
       </Section>
 
       <ContentWrapper>
@@ -670,7 +671,10 @@ const ChartContainer = styled.div`
 `;
 
 const ChartHeader = styled.div`
+  width: 100%;
   display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   align-items: center;
   justify-content: space-between;
   padding: 3px;
@@ -685,8 +689,8 @@ const ChartTitle = styled.div`
 
 const ChartLegend = styled.div`
   display: flex;
+  flex-wrap: wrap;
   gap: 20px;
-  margin-left: 350px;
 `;
 
 const LegendColor = styled.span`
@@ -699,7 +703,11 @@ const LegendColor = styled.span`
   margin-right: 4px;
 `;
 
-const LegendLabel = styled.span`  font-size: 13px;
+const LegendLabel = styled.span`
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  font-size: 13px;
   color: ${({ theme }) => theme.palette.text.secondary};
 `;
 

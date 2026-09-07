@@ -138,3 +138,17 @@ npx playwright test
 **ERD**
 
 <img width="1195" height="807" alt="image" src="https://github.com/user-attachments/assets/1fd08442-69ee-4dbe-8ba3-f6d73ca0f569" />
+
+## 브라우저 에뮬레이터 장치 인증 (CHANGE-037)
+
+Emulator 화면은 등록된 MDN, 장치 DB ID, 관리자가 발급한 장치 키를 입력해야 시작됩니다.
+키는 실행 중 메모리에서만 사용하고 종료/오류 후 지우며 localStorage/sessionStorage에 저장하지 않습니다.
+외부 접속에는 HTTPS를 사용합니다. ON/GPS/OFF 전송 오류는 표시하고 다음 전송을 중단합니다.
+네트워크 단절이나 시작/종료 중 화면 이탈 시 서버 접수 여부를 확정할 수 없으므로 운행 상태를 확인해야 합니다.
+브라우저의 key 입력은 실제 장치의 안전한 provisioning/secure storage를 대체하지 않습니다.
+
+검증: `npm test`, `npx playwright test`, `npm run build`.
+상세 설계·테스트·면접 기록은 sibling BE의
+`docs/portfolio/work-logs/2026-09-07-device-ingestion-authentication.md`에서 관리합니다.
+
+브라우저 Emulator는 각 전송에 새 `X-Request-Id`(UUID v4)와 `X-Request-Timestamp`(epoch seconds)를 붙입니다. 서버 시각 ±5분, 장치별 기본 120요청/60초, 본문 256 KiB 제한과 함께 전환해야 합니다. 요청 실패 시 화면의 오류를 확인하고 서버 운행 상태를 검토합니다.

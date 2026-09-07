@@ -14,12 +14,20 @@ test('completed-trip time, GPS observations and incomplete coverage are separate
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await openStatistics(page, { ...values, quality: { formulaVersion: 2, coveredDays: 1, requestedDays: 3,
-    excludedLegacyDays: 1, gpsObservationCount: 7, unclosedTripDays: 2 } });
+    excludedLegacyDays: 1, gpsObservationCount: 7, unclosedTripDays: 2, fleetBasis: 'INITIAL_CALCULATION_FLEET_SNAPSHOT' } });
   await expect(page.getByText('5시간 0분', { exact: true })).toBeVisible();
   await expect(page.getByText('10.4%', { exact: true })).toBeVisible();
   await expect(page.getByText(/새 기준 집계 1\/3일/)).toBeVisible();
   await expect(page.getByText(/저장된 GPS 관측: 7건/)).toBeVisible();
+  await expect(page.getByText(/최초 집계 당시 기록한 활성 차량 수/)).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test('unknown historical fleet is not labeled as a current or frozen fleet', async ({ page }) => {
+  await openStatistics(page, { ...values, quality: { formulaVersion: 2, coveredDays: 1, requestedDays: 1,
+    excludedLegacyDays: 0, gpsObservationCount: 7, unclosedTripDays: 0, fleetBasis: 'LEGACY_FLEET_SNAPSHOT_UNKNOWN' } });
+  await expect(page.getByText(/과거 통계의 기준 차량 수를 확인할 수 없습니다/)).toBeVisible();
+  await expect(page.getByText(/최초 집계 당시/)).toHaveCount(0);
 });
 
 test('legacy server numbers are not silently shown as the new formula', async ({ page }) => {

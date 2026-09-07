@@ -385,7 +385,7 @@ const ErrorMessage = styled.div`
   justify-content: center;
   height: 60vh;
   font-size: 18px;
-  color: ${({ theme }) => theme.palette.error.main};
+  color: #b91c1c;
 `;
 
 export default TripDetailViewPage;
