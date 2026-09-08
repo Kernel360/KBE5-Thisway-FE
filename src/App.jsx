@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from "react";
-import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import { Routes, Route, useLocation, useNavigate, Link, matchPath } from "react-router-dom";
 import { CssBaseline, GlobalStyles } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import StyledGlobalStyle from "@/theme/styledGlobalStyle";
@@ -53,8 +53,13 @@ class PageLoadBoundary extends React.Component {
   }
 }
 
-// TODO: NotFoundPage 컴포넌트 생성 필요
-const NotFoundPage = () => <div>404 Not Found</div>;
+const NotFoundPage = () => (
+  <main style={{ padding: "clamp(24px, 6vw, 80px)", maxWidth: 720, margin: "auto" }}>
+    <h1>페이지를 찾을 수 없습니다</h1>
+    <p style={{ margin: "16px 0" }}>주소가 올바른지 확인하거나 시작 화면으로 이동해 주세요.</p>
+    <Link to={ROUTES.root}>시작 화면으로 이동</Link>
+  </main>
+);
 
 const routeList = [
   // Auth
@@ -278,6 +283,10 @@ function App() {
       "/emulator",
     ];
     if (publicPaths.includes(location.pathname)) return;
+    // A public 404 contains no protected data and must remain recoverable.
+    const knownRoute = routeList.some(({ path }) => path !== ROUTES.notFound
+      && matchPath({ path, end: true }, location.pathname));
+    if (!knownRoute) return;
 
     if (!token || isTokenExpired(token)) {
       resetUser();

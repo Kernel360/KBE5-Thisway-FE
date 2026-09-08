@@ -1,13 +1,20 @@
 import React from "react";
+import styled from "styled-components";
 import Sidebar from "@/components/Sidebar";
 
 const MainLayout = ({ children }) => {
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <Layout>
       <Sidebar />
-      <main style={{ flex: 1 }}>{children}</main>
-    </div>
+      <main style={{ flex: 1, minWidth: 0 }}>{children}</main>
+    </Layout>
   );
 };
 
 export default MainLayout;
+
+const Layout = styled.div`
+  display: flex;
+  min-height: 100vh;
+  @media (max-width: 767px) { flex-direction: column; }
+`;
