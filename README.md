@@ -1,4 +1,21 @@
-# Thisway-BE (렌트카 및 쉐어링카 관제를 위한 차량 관제 서비스 개발 프론트)
+# Thisway-FE — 기업용 차량 운영 관리 서비스
+
+기업 담당자가 보유 차량의 위치·운행 현황과 기록·통계를 확인하는 서비스의 프론트엔드입니다. 기업 RFP 기반 팀 프로젝트였다는 설명은 참여자의 경험에 근거하며, RFP 원문은 현재 보유하지 않습니다. 예약·대여 서비스나 실제 기업 납품·운영 실적으로 표현하지 않습니다. 아래 기존 팀 소개와 이후 개인 개선 기록을 구분해서 읽어 주세요.
+
+## 개인 개선 검증 실행
+
+Node `^22.12.0 || >=24.0.0`이 필요합니다(이번 검증: Node 24.19.0 / npm 11.17.0). 버전 고정은 `package-lock.json`을 기준으로 합니다.
+
+```bash
+npm ci --ignore-scripts
+npm audit
+npm test
+npm run build
+npx playwright install chromium
+npx playwright test
+```
+
+브라우저 테스트는 격리된 API 응답과 map fixture를 사용합니다. 실제 BE·nginx SSE 검증은 인접 BE 저장소에서 `./gradlew sseBrowserTest --rerun-tasks --console=plain`으로 실행하며 Docker가 필요합니다. [의존성 보안 개선·학습 기록](docs/portfolio/dependency-security.md)에 정확한 검증 범위와 남은 한계를 기록했습니다.
 
 <p align="center"> 
   <img width="584" height="389" alt="image" src="https://github.com/user-attachments/assets/f53a27c8-1f97-4484-a2a8-7adda024b40a" />
@@ -121,3 +138,17 @@
 **ERD**
 
 <img width="1195" height="807" alt="image" src="https://github.com/user-attachments/assets/1fd08442-69ee-4dbe-8ba3-f6d73ca0f569" />
+
+## 브라우저 에뮬레이터 장치 인증 (CHANGE-037)
+
+Emulator 화면은 등록된 MDN, 장치 DB ID, 관리자가 발급한 장치 키를 입력해야 시작됩니다.
+키는 실행 중 메모리에서만 사용하고 종료/오류 후 지우며 localStorage/sessionStorage에 저장하지 않습니다.
+외부 접속에는 HTTPS를 사용합니다. ON/GPS/OFF 전송 오류는 표시하고 다음 전송을 중단합니다.
+네트워크 단절이나 시작/종료 중 화면 이탈 시 서버 접수 여부를 확정할 수 없으므로 운행 상태를 확인해야 합니다.
+브라우저의 key 입력은 실제 장치의 안전한 provisioning/secure storage를 대체하지 않습니다.
+
+검증: `npm test`, `npx playwright test`, `npm run build`.
+상세 설계·테스트·면접 기록은 sibling BE의
+`docs/portfolio/work-logs/2026-09-07-device-ingestion-authentication.md`에서 관리합니다.
+
+브라우저 Emulator는 각 전송에 새 `X-Request-Id`(UUID v4)와 `X-Request-Timestamp`(epoch seconds)를 붙입니다. 서버 시각 ±5분, 장치별 기본 120요청/60초, 본문 256 KiB 제한과 함께 전환해야 합니다. 요청 실패 시 화면의 오류를 확인하고 서버 운행 상태를 검토합니다.

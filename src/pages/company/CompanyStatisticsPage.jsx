@@ -6,6 +6,7 @@ import { statisticsService } from "@/services/statisticsService";
 import { getCompanyId } from "@/utils/auth";
 import KakaoMap from "@/components/KakaoMap";
 import { getCoordsFromAddress } from "@/utils/mapUtils";
+import { hasCurrentStatistics, formatDrivingMinutes, statisticsCoverageMessage, statisticsFleetBasisMessage } from '@/utils/statisticsPresentation.mjs';
 
 // Import images from assets
 import carIcon from "@/assets/car.png";
@@ -27,6 +28,7 @@ const CompanyStatisticsPage = () => {
   const [locationMapLoading, setLocationMapLoading] = useState(false);
   const [locationMapError, setLocationMapError] = useState(null);
   const [mapCenter, setMapCenter] = useState(null);
+  const statisticsUsable = hasCurrentStatistics(statisticsData);
   
   // 오늘 날짜와 30일 전 날짜 계산
   const today = new Date();
@@ -102,7 +104,7 @@ const CompanyStatisticsPage = () => {
 
   // 24시간 가동률 데이터 생성
   const generateHourlyData = () => {
-    if (!statisticsData || !statisticsData.hours) return [];
+    if (!statisticsUsable || !statisticsData.hours) return [];
     
     return Array.from({ length: 24 }, (_, i) => ({
       hour: i,
@@ -142,7 +144,7 @@ const CompanyStatisticsPage = () => {
   };
 
   const bothRatesZero =
-    statisticsData &&
+    !statisticsUsable ||
     (Number(statisticsData.peakHourRate) === 0 && Number(statisticsData.lowHourRate) === 0);
 
   useEffect(() => {
@@ -240,6 +242,15 @@ const CompanyStatisticsPage = () => {
         )}
       </Section>
 
+      <Section aria-label="통계 기준과 데이터 상태">
+        <SectionTitle>통계 기준·데이터 상태</SectionTitle>
+        <p>완료 운행의 시동 ON~OFF 시간 기준입니다. 정차를 포함하며 실제 이동 시간과 다릅니다.</p>
+        <p>{statisticsCoverageMessage(statisticsData)}</p>
+        <p>저장된 GPS 관측: {statisticsUsable ? statisticsData.quality.gpsObservationCount.toLocaleString() : '-'}건 (수신율 아님)</p>
+        <p>{statisticsFleetBasisMessage(statisticsData)}</p>
+        <p>평균은 집계된 날짜들의 일별 평균입니다. 늦게 도착한 운행 정보가 반영되기까지 시간이 걸릴 수 있습니다.</p>
+      </Section>
+
       <ContentWrapper>
         <LeftPanel>
           <StatsGrid>
@@ -247,34 +258,34 @@ const CompanyStatisticsPage = () => {
               <StatIcon src={carIcon} alt="총 시동 횟수" />
               <StatTitle>총 시동 횟수</StatTitle>
               <StatValue>
-                {statisticsData ? statisticsData.powerOnCount?.toLocaleString() : '-'}
+                {statisticsUsable ? statisticsData.powerOnCount?.toLocaleString() : '-'}
               </StatValue>
             </StatCard>
             <StatCard>
               <StatIcon src={calendarIcon} alt="평균 일일 시동" />
               <StatTitle>평균 일일 시동</StatTitle>
               <StatValue>
-                {statisticsData ? statisticsData.averageDailyPowerCount?.toFixed(1) : '-'}
+                {statisticsUsable ? statisticsData.averageDailyPowerCount?.toFixed(1) : '-'}
               </StatValue>
             </StatCard>
             <StatCard>
               <StatIcon src={clockIcon} alt="총 가동 시간" />
-              <StatTitle>총 운행 시간</StatTitle>
+              <StatTitle>완료 운행 가동 시간</StatTitle>
               <StatValue>
-                {statisticsData ? `${statisticsData.totalDrivingTime}h` : '-'}
+                {statisticsUsable ? formatDrivingMinutes(statisticsData.totalDrivingTime) : '-'}
               </StatValue>
             </StatCard>
             <StatCard>
               <StatIcon src={activityIcon} alt="평균 가동률" />
               <StatTitle>평균 가동률</StatTitle>
               <StatValue>
-                {statisticsData ? `${statisticsData.averageOperationRate.toFixed(1)}%` : '-'}
+                {statisticsUsable ? `${statisticsData.averageOperationRate.toFixed(1)}%` : '-'}
               </StatValue>
             </StatCard>
           </StatsGrid>
 
           <Section>
-            <SectionTitle>시동 위치 통계</SectionTitle>
+            <SectionTitle>시동 위치 통계 (조회 기간의 현재 원천 기록)</SectionTitle>
             <MapPlaceholder>
               <div className="map-wrapper" style={{ width: '100%', height: '100%' }}>
                 {locationMapLoading ? (
@@ -660,7 +671,10 @@ const ChartContainer = styled.div`
 `;
 
 const ChartHeader = styled.div`
+  width: 100%;
   display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   align-items: center;
   justify-content: space-between;
   padding: 3px;
@@ -675,8 +689,8 @@ const ChartTitle = styled.div`
 
 const ChartLegend = styled.div`
   display: flex;
+  flex-wrap: wrap;
   gap: 20px;
-  margin-left: 350px;
 `;
 
 const LegendColor = styled.span`
@@ -689,7 +703,11 @@ const LegendColor = styled.span`
   margin-right: 4px;
 `;
 
-const LegendLabel = styled.span`  font-size: 13px;
+const LegendLabel = styled.span`
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  font-size: 13px;
   color: ${({ theme }) => theme.palette.text.secondary};
 `;
 
@@ -727,4 +745,3 @@ const ErrorMessage = styled.div`
   font-size: 0.875rem;
   margin-top: 8px;
 `;
-

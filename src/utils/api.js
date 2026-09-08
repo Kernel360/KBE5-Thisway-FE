@@ -24,29 +24,6 @@ export function saveTokenFromResponse(response) {
   }
 }
 
-// 디버깅용 헬퍼 함수들 - 브라우저 콘솔에서 사용 가능
-window.checkToken = () => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    console.log('현재 토큰:', token);
-    try {
-      // JWT 토큰 디코딩 (간단한 검증)
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      console.log('토큰 내용:', payload);
-      console.log('만료 시간:', new Date(payload.exp * 1000));
-    } catch (e) {
-      console.log('토큰 디코딩 실패 - 유효하지 않은 JWT 형식일 수 있음');
-    }
-  } else {
-    console.log('토큰이 없습니다.');
-  }
-};
-
-window.clearToken = () => {
-  localStorage.removeItem("token");
-  console.log('토큰이 삭제되었습니다.');
-};
-
 // 로그인용: 토큰 필요 없음 - 프록시를 통해 상대 경로로 호출
 export const loginApi = axios.create({
   baseURL: "/api",

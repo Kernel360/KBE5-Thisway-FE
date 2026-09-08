@@ -5,6 +5,7 @@ import Button from '../../components/Button';
 import { loginApi, saveTokenFromResponse } from "../../utils/api";
 import { getToken, getUserRole } from "../../utils/auth";
 import useUserStore from "../../store/userStore";
+import { ROUTES } from "../../routes";
 import logo from "../../assets/logo.png";
 
 const LoginPage = () => {
@@ -17,14 +18,13 @@ const LoginPage = () => {
 
   useEffect(() => {
     const token = getToken();
-    console.log(token);
     if (!token) return;
 
     const role = getUserRole(token);
     if (role === "ADMIN") navigate("/admin/dashboard", { replace: true });
     else if (role === "COMPANY_ADMIN" || role === "COMPANY_CHEF")
       navigate("/company/dashboard", { replace: true });
-    else if (role === "MEMBER") navigate("/user/dashboard", { replace: true });
+    else if (role === "MEMBER") navigate(ROUTES.member.dashboard, { replace: true });
   }, [navigate]);
 
   const handleLogin = async (e) => {
@@ -65,8 +65,10 @@ const LoginPage = () => {
 
         <Form onSubmit={handleLogin}>
           <FormGroup>
-            <Label>이메일</Label>
+            <Label htmlFor="login-email">이메일</Label>
             <Input
+              id="login-email"
+              autoComplete="username"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -76,8 +78,10 @@ const LoginPage = () => {
           </FormGroup>
 
           <FormGroup>
-            <Label>비밀번호</Label>
+            <Label htmlFor="login-password">비밀번호</Label>
             <Input
+              id="login-password"
+              autoComplete="current-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -86,13 +90,13 @@ const LoginPage = () => {
             />
           </FormGroup>
 
-          {error && <ErrorMessage>{error}</ErrorMessage>}
+          {error && <ErrorMessage role="alert">{error}</ErrorMessage>}
 
           <LoginButton type="submit" disabled={loading}>
             로그인
           </LoginButton>
 
-          <ForgotPassword onClick={() => navigate('/password-reset')}>
+          <ForgotPassword type="button" onClick={() => navigate('/password-reset')}>
             비밀번호를 잊으셨나요?
           </ForgotPassword>
         </Form>

@@ -1,39 +1,65 @@
-import React from "react";
-import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import React, { lazy, Suspense } from "react";
+import { Routes, Route, useLocation, useNavigate, Link, matchPath } from "react-router-dom";
 import { CssBaseline, GlobalStyles } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import StyledGlobalStyle from "@/theme/styledGlobalStyle";
 import MainLayout from "@/layouts/MainLayout";
 import AuthLayout from "@/layouts/AuthLayout";
-import LoginPage from "@/pages/auth/LoginPage";
-import PasswordResetPage from "@/pages/auth/PasswordResetPage";
-import PasswordResetSuccessPage from "@/pages/auth/PasswordResetSuccessPage";
-import PasswordResetErrorPage from "@/pages/auth/PasswordResetErrorPage";
-import CompanyDashboardPage from "@/pages/company/CompanyDashboardPage";
-import CompanyCarManagementPage from "@/pages/company/CompanyCarManagementPage";
-import CompanyCarDetailPage from "@/pages/company/CompanyCarDetailPage";
-import CompanyUserManagementPage from "@/pages/company/CompanyUserManagementPage";
-import AdminDashboardPage from "@/pages/admin/AdminDashboardPage";
-import AdminManagementPage from "@/pages/admin/AdminManagementPage";
 import globalStyles from "@/theme/globalStyles";
-import TripDetailViewPage from "@/pages/trip/TripDetailViewPage";
-import CarRegistrationPage from "@/pages/car/CarRegistrationPage";
-import RedirectByRole from "@/pages/RedirectByRole";
 import useUserStore from "@/store/userStore";
 import { getToken } from "@/utils/auth";
 import { useEffect } from "react";
 import { isTokenExpired } from "@/utils/auth";
-import LogoutPage from "@/pages/auth/LogoutPage";
-import TripHistoryPage from "@/pages/trip/TripHistoryPage";
-import CompanyStatisticsPage from "@/pages/company/CompanyStatisticsPage";
-import CompanySettingsPage from "@/pages/company/CompanySettingsPage";
-import AdminStatisticsPage from "@/pages/admin/AdminStatisticsPage";
 import { ROUTES } from "@/routes";
-import MemberDummyPage from "@/pages/member/MemberDummyPage";
-import EmulatorPage from "@/pages/emulator/EmulatorPage";
 
-// TODO: NotFoundPage 컴포넌트 생성 필요
-const NotFoundPage = () => <div>404 Not Found</div>;
+const LoginPage = lazy(() => import("@/pages/auth/LoginPage"));
+const PasswordResetPage = lazy(() => import("@/pages/auth/PasswordResetPage"));
+const PasswordResetSuccessPage = lazy(() => import("@/pages/auth/PasswordResetSuccessPage"));
+const PasswordResetErrorPage = lazy(() => import("@/pages/auth/PasswordResetErrorPage"));
+const CompanyDashboardPage = lazy(() => import("@/pages/company/CompanyDashboardPage"));
+const CompanyCarManagementPage = lazy(() => import("@/pages/company/CompanyCarManagementPage"));
+const CompanyCarDetailPage = lazy(() => import("@/pages/company/CompanyCarDetailPage"));
+const CompanyUserManagementPage = lazy(() => import("@/pages/company/CompanyUserManagementPage"));
+const AdminDashboardPage = lazy(() => import("@/pages/admin/AdminDashboardPage"));
+const AdminManagementPage = lazy(() => import("@/pages/admin/AdminManagementPage"));
+const TripDetailViewPage = lazy(() => import("@/pages/trip/TripDetailViewPage"));
+const CarRegistrationPage = lazy(() => import("@/pages/car/CarRegistrationPage"));
+const RedirectByRole = lazy(() => import("@/pages/RedirectByRole"));
+const LogoutPage = lazy(() => import("@/pages/auth/LogoutPage"));
+const TripHistoryPage = lazy(() => import("@/pages/trip/TripHistoryPage"));
+const CompanyStatisticsPage = lazy(() => import("@/pages/company/CompanyStatisticsPage"));
+const CompanySettingsPage = lazy(() => import("@/pages/company/CompanySettingsPage"));
+const AdminStatisticsPage = lazy(() => import("@/pages/admin/AdminStatisticsPage"));
+const MemberDummyPage = lazy(() => import("@/pages/member/MemberDummyPage"));
+const EmulatorPage = lazy(() => import("@/pages/emulator/EmulatorPage"));
+
+class PageLoadBoundary extends React.Component {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  render() {
+    if (this.state.failed) {
+      return (
+        <div role="alert" style={{ padding: '2rem' }}>
+          <p>화면을 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.</p>
+          <button type="button" onClick={() => window.location.reload()}>새로고침</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+const NotFoundPage = () => (
+  <main style={{ padding: "clamp(24px, 6vw, 80px)", maxWidth: 720, margin: "auto" }}>
+    <h1>페이지를 찾을 수 없습니다</h1>
+    <p style={{ margin: "16px 0" }}>주소가 올바른지 확인하거나 시작 화면으로 이동해 주세요.</p>
+    <Link to={ROUTES.root}>시작 화면으로 이동</Link>
+  </main>
+);
 
 const routeList = [
   // Auth
@@ -257,6 +283,10 @@ function App() {
       "/emulator",
     ];
     if (publicPaths.includes(location.pathname)) return;
+    // A public 404 contains no protected data and must remain recoverable.
+    const knownRoute = routeList.some(({ path }) => path !== ROUTES.notFound
+      && matchPath({ path, end: true }, location.pathname));
+    if (!knownRoute) return;
 
     if (!token || isTokenExpired(token)) {
       resetUser();
@@ -270,11 +300,15 @@ function App() {
       <CssBaseline />
       <GlobalStyles styles={globalStyles(theme)} />
       <StyledGlobalStyle />
-      <Routes>
-        {routeList.map(({ path, element }) => (
-          <Route key={path} path={path} element={element} />
-        ))}
-      </Routes>
+      <PageLoadBoundary key={location.pathname}>
+        <Suspense fallback={<div role="status" style={{ padding: '2rem' }}>화면을 불러오는 중입니다.</div>}>
+          <Routes>
+            {routeList.map(({ path, element }) => (
+              <Route key={path} path={path} element={element} />
+            ))}
+          </Routes>
+        </Suspense>
+      </PageLoadBoundary>
     </>
   );
 }

@@ -6,6 +6,7 @@ import { authApi } from "@/utils/api";
 import { formatDate, formatTime } from "@/utils/dateUtils";
 import { ROUTES } from "@/routes";
 import { getAddressFromCoords } from "@/utils/mapUtils";
+import { formatTripDistance, liveTripDistance } from "../../utils/tripDistance.mjs";
 
 import KakaoMap from "@/components/KakaoMap";
 import currentMinimalImg from "@/assets/Current Minimal.png";
@@ -75,9 +76,9 @@ const CompanyCarDetailPage = () => {
     fetchVehicleData();
   }, [id]);
 
-  // 차량 데이터 폴링 (운행중일 때만 60초 간격)
+  // Power state comes from the server, including OFF -> ON transitions (up to 60 seconds).
   useEffect(() => {
-    if (!id || !vehicleData?.currentDrivingInfo) return;
+    if (!id) return;
     const intervalId = setInterval(() => {
       authApi.get(`/trip-log/${id}`).then(res => {
         setVehicleData(prev => {
@@ -89,7 +90,7 @@ const CompanyCarDetailPage = () => {
       });
     }, 60000); // 60초
     return () => clearInterval(intervalId);
-  }, [id, !!vehicleData?.currentDrivingInfo]);
+  }, [id]);
 
   // id가 바뀔 때만 GPS 로그 초기화
   useEffect(() => {
@@ -149,30 +150,22 @@ const CompanyCarDetailPage = () => {
           });
         }
         
-        // 현재 운행 정보 업데이트 및 미운행 → 운행중 상태 전환
+        // GPS is an odometer observation, not evidence of a new Power ON/session.
         setVehicleData(prev => {
-          if (!prev) return prev;
-          const wasDriving = !!prev.currentDrivingInfo;
+          if (!prev?.currentDrivingInfo || !prev.vehicleResponse?.powerOn) return prev;
           const lastCoord = data.coordinatesInfo[data.coordinatesInfo.length - 1];
           const newDrivingInfo = {
             ...prev.currentDrivingInfo,
             speed: data.speed,
             angle: data.angle,
-            tripMeter: data.totalTripMeter,
+            tripMeter: liveTripDistance(prev.currentDrivingInfo.startOdometer, data.totalTripMeter),
             latitude: lastCoord?.lat,
             longitude: lastCoord?.lng,
-            startTime: prev.currentDrivingInfo?.startTime || new Date().toISOString(),
+            startTime: prev.currentDrivingInfo.startTime,
           };
-          // 미운행 → 운행중 전환 시 vehicleResponse.powerOn도 true로 강제 세팅
-          let newVehicleResponse = prev.vehicleResponse;
-          if (!wasDriving && prev.vehicleResponse && prev.vehicleResponse.powerOn === false) {
-            newVehicleResponse = { ...prev.vehicleResponse, powerOn: true };
-            console.log('vehicleResponse.powerOn을 true로 변경');
-          }
           return {
             ...prev,
             currentDrivingInfo: newDrivingInfo,
-            vehicleResponse: newVehicleResponse,
           };
         });
         
@@ -332,7 +325,7 @@ const CompanyCarDetailPage = () => {
                 <InfoItem>
                   <Label>이동 거리</Label>
                   <Value>
-                    {(currentDrivingInfo.tripMeter / 1000).toFixed(1)}km
+                    {formatTripDistance(currentDrivingInfo.tripMeter)}
                   </Value>
                 </InfoItem>
                 <InfoItem>
@@ -381,7 +374,7 @@ const CompanyCarDetailPage = () => {
                       <div>{trip.address || "주소를 찾을 수 없습니다"}</div>
                     </HistoryDetails>
                     <HistoryDistance>
-                      {(trip.tripMeter / 1000).toFixed(1)}km
+                      {formatTripDistance(trip.tripMeter)}
                     </HistoryDistance>
                   </HistoryItem>
                 ))

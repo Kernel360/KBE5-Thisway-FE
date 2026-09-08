@@ -115,7 +115,7 @@ function Sidebar() {
         </NavList>
       </Nav>
       <MemberInfo ref={profileRef}>
-        <MemberProfile onClick={() => setDropdownOpen((v) => !v)} style={{ cursor: 'pointer', position: 'relative' }}>
+        <MemberProfile type="button" aria-label="계정 메뉴" aria-expanded={dropdownOpen} aria-controls="account-actions" onKeyDown={(event) => { if (event.key === "Escape") setDropdownOpen(false); }} onClick={() => setDropdownOpen((v) => !v)} style={{ cursor: 'pointer', position: 'relative' }}>
           <ProfileImage>
             <img src={defaultProfile} alt="Member Profile" />
           </ProfileImage>
@@ -127,8 +127,8 @@ function Sidebar() {
           </ProfileText>
         </MemberProfile>
         {dropdownOpen && (
-          <DropdownMenu>
-            <DropdownItem onClick={() => { setDropdownOpen(false); navigate('/logout'); }}>
+          <DropdownMenu id="account-actions" onKeyDown={(event) => { if (event.key === "Escape") { setDropdownOpen(false); profileRef.current?.querySelector("button")?.focus(); } }}>
+            <DropdownItem type="button" onClick={() => { setDropdownOpen(false); navigate('/logout'); }}>
               로그아웃
             </DropdownItem>
           </DropdownMenu>
@@ -152,6 +152,13 @@ const SidebarContainer = styled.aside`
   top: 0;
   left: 0;
   z-index: 100;
+  flex-shrink: 0;
+  @media (max-width: 767px) {
+    width: 100%;
+    height: auto;
+    position: relative;
+    padding: 12px 16px;
+  }
 `;
 
 const LogoSection = styled.div`
@@ -171,6 +178,7 @@ const LogoTitle = styled.h1`
 `;
 
 const Nav = styled.nav`
+  min-width: 0;
   margin-top: 20px;
   flex: 1;
 `;
@@ -179,10 +187,17 @@ const NavList = styled.ul`
   list-style: none;
   margin-bottom: auto;
   padding: 0;
+  @media (max-width: 767px) {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
 `;
 
 const NavItem = styled.li`
   margin-bottom: 10px;
+  flex-shrink: 0;
 `;
 
 const NavLink = styled(Link)`
@@ -210,13 +225,19 @@ const NavLink = styled(Link)`
 `;
 
 const MemberInfo = styled.div`
+  @media (max-width: 767px) { margin-top: 4px; padding-top: 8px; }
   border-top: 1px solid #eee;
   padding-top: 20px;
   margin-top: 20px;
   position: relative;
 `;
 
-const MemberProfile = styled.div`
+const MemberProfile = styled.button`
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font: inherit;
   display: flex;
   align-items: center;
 `;
@@ -268,7 +289,11 @@ const DropdownMenu = styled.div`
   padding: 0;
 `;
 
-const DropdownItem = styled.div`
+const DropdownItem = styled.button`
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
   padding: 10px 0;
   text-align: center;
   color: ${({ theme }) => theme.palette.text.disabled};

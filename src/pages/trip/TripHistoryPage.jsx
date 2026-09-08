@@ -7,6 +7,7 @@ import { formatDate, formatTime, formatDuration } from "../../utils/dateUtils";
 import { authApi } from "../../utils/api";
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "../../routes";
+import { formatTripDistance } from "../../utils/tripDistance.mjs";
 
 const PAGE_SIZE = 10;
 
@@ -144,7 +145,7 @@ const TripHistoryPage = () => {
                   <td className="table-cell">{formatDate(trip.startTime)} {formatTime(trip.startTime)}</td>
                   <td className="table-cell">{formatDate(trip.endTime)} {formatTime(trip.endTime)}</td>
                   <td className="table-cell">{formatDuration(trip.startTime, trip.endTime)}</td>
-                  <td className="table-cell">{(trip.tripMeter / 1000).toFixed(1)} km</td>
+                  <td className="table-cell">{formatTripDistance(trip.tripMeter)}</td>
                   <td className="table-cell">
                     <SecondaryButton size="small" color="secondary" onClick={() => handleDetail(trip)}>
                       상세보기
