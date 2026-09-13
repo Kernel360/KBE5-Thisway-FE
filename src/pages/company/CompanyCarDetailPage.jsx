@@ -263,9 +263,11 @@ const CompanyCarDetailPage = () => {
       <Header>
         <HeaderLeft>
           <PageTitle>
-            차량 상세 정보 <CarNumber>{vehicle.carNumber}</CarNumber>
+            차량 상세 <CarNumber>{vehicle.carNumber}</CarNumber>
           </PageTitle>
+          <PageDescription>차량 정보와 실시간 위치, 최근 완료 운행을 확인합니다.</PageDescription>
         </HeaderLeft>
+        <BackButton onClick={() => navigate("/company/car-management")}>차량 관리로 돌아가기</BackButton>
       </Header>
       <ContentWrapper>
         <LeftColumn>
@@ -349,12 +351,14 @@ const CompanyCarDetailPage = () => {
             <SectionTitle>최근 운행 이력</SectionTitle>
             <SearchContainer>
               <SearchInput
+                aria-label="최근 운행 날짜 필터"
                 type="date"
                 value={searchDate}
                 onChange={(e) => setSearchDate(e.target.value)}
                 placeholder="날짜 검색"
               />
             </SearchContainer>
+            <PageDescription>조회된 최근 기록 안에서 날짜를 찾습니다.</PageDescription>
             <HistoryList>
               {displayTrips.length === 0 ? (
                 <EmptyText>운행 기록이 없습니다.</EmptyText>
@@ -371,7 +375,9 @@ const CompanyCarDetailPage = () => {
                         {formatTime(trip.startTime)} ~{" "}
                         {formatTime(trip.endTime)}
                       </div>
-                      <div>{trip.address || "주소를 찾을 수 없습니다"}</div>
+                      <div title={!trip.address ? "운행 좌표는 기록되어 있지만 주소 변환 결과가 아직 등록되지 않았습니다." : undefined}>
+                        {trip.address || "주소 미확인"}
+                      </div>
                     </HistoryDetails>
                     <HistoryDistance>
                       {formatTripDistance(trip.tripMeter)}
@@ -458,20 +464,21 @@ const HeaderLeft = styled.div.attrs(() => ({
 
 const ContentWrapper = styled.div`
   display: grid;
-  grid-template-columns: 460px 1fr;
+  grid-template-columns: minmax(300px, 2fr) minmax(0, 3fr);
   gap: 16px;
-  height: calc(100vh - 100px);
+  align-items: start;
+  @media (max-width: 1050px) { grid-template-columns: 1fr; }
 `;
 
 const LeftColumn = styled.div`
   display: flex;
   flex-direction: column;
   gap: 16px;
-  overflow-y: auto;
+  min-width: 0;
 `;
 
 const RightColumn = styled.div`
-  height: 100%;
+  min-width: 0;
 `;
 
 const PageTitle = styled.h1.attrs(() => ({
@@ -485,9 +492,10 @@ const CarNumber = styled.span`
 
 const Section = styled.section`
   background: white;
-  border-radius: 8px;
-  padding: 16px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 14px;
+  padding: 24px;
+  border: 1px solid #E3E9EE;
+  box-shadow: 0 2px 6px rgba(21, 36, 45, 0.025);
 `;
 
 const SectionTitle = styled.h2`
@@ -511,7 +519,7 @@ const InfoItem = styled.div`
 
 const Label = styled.span`
   font-size: 13px;
-  color: ${({ theme }) => theme.palette.text.disabled};
+  color: #64748B;
   width: 100px;
   flex-shrink: 0;
 `;
@@ -537,8 +545,10 @@ const StatusBadge = styled.span`
 
 const MapContainer = styled.div`
   width: 100%;
-  height: calc(100% - 40px);
-  border-radius: 8px;
+  height: 640px;
+  margin-top: 16px;
+  @media (max-width: 600px) { height: 400px; }
+  border-radius: 14px;
   overflow: hidden;
 `;
 
@@ -551,10 +561,15 @@ const SearchInput = styled.input`
   padding: 8px;
   border: 1px solid ${({ theme }) => theme.palette.grey[300]};
   border-radius: 4px;
-  font-size: 13px;
+  font-size: 14px;
+  min-height: 44px;
+  box-sizing: border-box;
 
+  &:focus-visible {
+    outline: 3px solid #087F8C;
+    outline-offset: 2px;
+  }
   &:focus {
-    outline: none;
     border-color: ${({ theme }) => theme.palette.primary.main};
   }
 `;
@@ -564,7 +579,9 @@ const HistoryList = styled.div`
   flex-direction: column;
 `;
 
-const HistoryItem = styled.div`
+const HistoryItem = styled.button`
+  width: 100%; border: 0; background: transparent; text-align: left; font: inherit; gap: 8px;
+  &:focus-visible { outline: 3px solid #087F8C; outline-offset: 2px; }
   display: flex;
   align-items: center;
   padding: 12px 0;
@@ -580,22 +597,26 @@ const HistoryItem = styled.div`
 `;
 
 const HistoryDate = styled.div`
-  width: 100px;
-  font-size: 14px;
+  width: 90px;
+  flex-shrink: 0;
+  font-size: 13px;
   font-weight: bold;
 `;
 
 const HistoryDetails = styled.div`
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  color: ${({ theme }) => theme.palette.text.disabled};
+  color: #64748B;
   font-size: 13px;
 `;
 
 const HistoryDistance = styled.div`
-  width: 80px;
+  width: 64px;
+  flex-shrink: 0;
   text-align: right;
   color: ${({ theme }) => theme.palette.text.primary};
   font-size: 14px;
@@ -605,7 +626,7 @@ const LoadingMessage = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100vh;
+  min-height: 320px;
   font-size: 16px;
   color: ${({ theme }) => theme.palette.text.secondary};
 `;
@@ -614,7 +635,7 @@ const ErrorMessage = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100vh;
+  min-height: 320px;
   font-size: 16px;
   color: ${({ theme }) => theme.palette.error.main};
 `;
@@ -629,8 +650,11 @@ const EmptyText = styled.div`
 const LocationDetail = styled.span`
   display: block;
   font-size: 12px;
-  color: ${({ theme }) => theme.palette.text.disabled};
+  color: #64748B;
   margin-top: 2px;
 `;
 
 export default CompanyCarDetailPage;
+
+const PageDescription = styled.p`font-size: 13px; color: #64748B; line-height: 1.6; margin: 8px 0 16px;`;
+const BackButton = styled.button`padding: 12px 16px; border: 1px solid #D8E9EB; background: white; color: #066773; border-radius: 10px; cursor: pointer; &:focus-visible { outline: 3px solid #087F8C; outline-offset: 2px; }`;

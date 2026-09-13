@@ -1,309 +1,168 @@
+import React, { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import DashboardOutlined from "@mui/icons-material/DashboardOutlined";
+import DirectionsCarOutlined from "@mui/icons-material/DirectionsCarOutlined";
+import RouteOutlined from "@mui/icons-material/RouteOutlined";
+import BarChartOutlined from "@mui/icons-material/BarChartOutlined";
+import PeopleOutline from "@mui/icons-material/PeopleOutline";
+import MenuRounded from "@mui/icons-material/MenuRounded";
+import CloseRounded from "@mui/icons-material/CloseRounded";
+import ExpandMoreRounded from "@mui/icons-material/ExpandMoreRounded";
+import LogoutRounded from "@mui/icons-material/LogoutRounded";
 import logo from "../assets/logo.png";
 import defaultProfile from "../assets/default-profile.png";
 import useUserStore from "@/store/userStore";
-import React, { useRef, useState } from "react";
 
-// 역할 한글 변환 함수
-const getRoleLabel = (role) => {
-  switch (role) {
-    case "ADMIN":
-      return "시스템 관리자";
-    case "COMPANY_CHEF":
-      return "업체 관리자";
-    case "COMPANY_ADMIN":
-      return "업체 관리자";
-    case "MEMBER":
-      return "일반 사용자";
-    default:
-      return "알 수 없음";
-  }
+const roleLabels = {
+  ADMIN: "플랫폼 관리자", COMPANY_CHEF: "회사 책임자",
+  COMPANY_ADMIN: "회사 관리자", MEMBER: "일반 구성원",
 };
 
 function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const user = useUserStore((state) => state.user);
-  const userRole = user?.roles?.includes("ADMIN")
-    ? "ADMIN"
-    : user?.roles?.includes("COMPANY_CHEF")
-      ? "COMPANY_CHEF"
-      : user?.roles?.includes("COMPANY_ADMIN")
-        ? "COMPANY_ADMIN"
-        : user?.roles?.includes("MEMBER")
-          ? "MEMBER"
-          : null;
-
-  // 드롭다운 상태
+  const userRole = ["ADMIN", "COMPANY_CHEF", "COMPANY_ADMIN", "MEMBER"]
+    .find((role) => user?.roles?.includes(role));
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [navigationOpen, setNavigationOpen] = useState(false);
   const profileRef = useRef(null);
+  const accountButtonRef = useRef(null);
+  const menuButtonRef = useRef(null);
 
-  // 바깥 클릭 시 드롭다운 닫기
-  React.useEffect(() => {
-    function handleClickOutside(event) {
-      if (profileRef.current && !profileRef.current.contains(event.target)) {
-        setDropdownOpen(false);
-      }
-    }
-    if (dropdownOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+  useEffect(() => {
+    setDropdownOpen(false);
+    setNavigationOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const closeOutside = (event) => {
+      if (!profileRef.current?.contains(event.target)) setDropdownOpen(false);
     };
+    if (dropdownOpen) document.addEventListener("pointerdown", closeOutside);
+    return () => document.removeEventListener("pointerdown", closeOutside);
   }, [dropdownOpen]);
 
-  // 권한별 메뉴 정의
-  const adminMenu = [
-    { label: "대시보드", path: "/admin/dashboard" },
-    // { label: "차량 관리", path: "/admin/car-management" },
-    { label: "사용자/업체 관리", path: "/admin/manage" },
-    { label: "통계", path: "/admin/statistics" },
-  ];
   const companyMenu = [
-    { label: "대시보드", path: "/company/dashboard" },
-    { label: "차량 관리", path: "/company/car-management" },
-    // 사용자 관리는 COMPANY_CHEF만 볼 수 있음
+    { label: "운영 현황", path: "/company/dashboard", icon: DashboardOutlined },
+    { label: "차량 관리", path: "/company/car-management", icon: DirectionsCarOutlined },
+    { label: "운행 기록", path: "/company/trip-history", icon: RouteOutlined },
+    { label: "통계", path: "/company/statistics", icon: BarChartOutlined },
     ...(userRole === "COMPANY_CHEF"
-      ? [{ label: "구성원 관리", path: "/company/user-management" }]
+      ? [{ label: "구성원 관리", path: "/company/user-management", icon: PeopleOutline }]
       : []),
-    { label: "운행 기록", path: "/company/trip-history" },
-    { label: "통계", path: "/company/statistics" },
-    //{ label: "설정", path: "/company/settings" },
   ];
-  const memberMenu = [
-    { label: "내 대시보드", path: "/member/dashboard" },
-    { label: "차량 예약", path: "/member/car-reservation" },
-    { label: "내 이용 내역", path: "/member/usage-history" },
-    { label: "운행 일지", path: "/member/drive-log" },
-    { label: "내 정보 관리", path: "/member/profile" },
-    { label: "고객 센터", path: "/member/support" },
-  ];
-
-  let menuToShow = [];
-  if (userRole === "ADMIN") menuToShow = adminMenu;
-  else if (userRole === "COMPANY_ADMIN" || userRole === "COMPANY_CHEF")
-    menuToShow = companyMenu;
-  else if (userRole === "MEMBER") menuToShow = memberMenu;
+  const items = userRole === "ADMIN"
+    ? [{ label: "사용자/업체 관리", path: "/admin/manage", icon: PeopleOutline }]
+    : ["COMPANY_CHEF", "COMPANY_ADMIN"].includes(userRole) ? companyMenu : [];
+  const isActive = (path) => location.pathname === path
+    || (path === "/company/car-management" && /^\/company\/car-(detail|registration)/.test(location.pathname))
+    || (path === "/company/trip-history" && location.pathname === "/company/trip-detail");
 
   return (
     <SidebarContainer>
-      <LogoSection>
-        <LogoImage src={logo} alt="Thisway Logo" />
-        <LogoTitle> THIS WAY </LogoTitle>
-      </LogoSection>
-      <Nav>
+      <BrandRow>
+        <LogoSection>
+          <LogoImage src={logo} alt="Thisway Logo" />
+          <BrandText><LogoTitle>THIS WAY</LogoTitle><BrandSubtitle>플릿 관제 시스템</BrandSubtitle></BrandText>
+        </LogoSection>
+        <MobileToggle ref={menuButtonRef} type="button" aria-label={navigationOpen ? "업무 메뉴 닫기" : "업무 메뉴 열기"}
+          aria-expanded={navigationOpen} aria-controls="workspace-navigation" onClick={() => setNavigationOpen((value) => !value)}>
+          {navigationOpen ? <CloseRounded /> : <MenuRounded />}
+        </MobileToggle>
+      </BrandRow>
+      <Nav id="workspace-navigation" aria-label="업무 메뉴" $open={navigationOpen} onKeyDown={(event) => {
+        if (event.key === "Escape") { setNavigationOpen(false); menuButtonRef.current?.focus(); }
+      }}>
         <NavList>
-          {menuToShow.map((item) => (
-            <NavItem key={item.path}>
-              <NavLink
-                as={Link}
-                to={item.path}
-                $active={
-                  location.pathname === item.path ||
-                  (item.path === "/company/car-management" && location.pathname.startsWith("/company/car-detail")) ||
-                  (item.path === "/company/trip-history" && location.pathname === "/company/trip-detail")
-                }
-              >
-                {item.label}
+          {items.map(({ label, path, icon: Icon }) => (
+            <li key={path}>
+              <NavLink to={path} $active={isActive(path)} aria-current={isActive(path) ? "page" : undefined}>
+                <Icon aria-hidden="true" fontSize="small" /><span>{label}</span>
               </NavLink>
-            </NavItem>
+            </li>
           ))}
         </NavList>
+        {userRole === "MEMBER" && <Unavailable>일반 구성원 전용 화면은 준비 중입니다.</Unavailable>}
       </Nav>
-      <MemberInfo ref={profileRef}>
-        <MemberProfile type="button" aria-label="계정 메뉴" aria-expanded={dropdownOpen} aria-controls="account-actions" onKeyDown={(event) => { if (event.key === "Escape") setDropdownOpen(false); }} onClick={() => setDropdownOpen((v) => !v)} style={{ cursor: 'pointer', position: 'relative' }}>
-          <ProfileImage>
-            <img src={defaultProfile} alt="Member Profile" />
-          </ProfileImage>
+      <MemberInfo ref={profileRef} onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setDropdownOpen(false);
+      }} onKeyDown={(event) => {
+        if (event.key === "Escape") { setDropdownOpen(false); accountButtonRef.current?.focus(); }
+      }}>
+        <MemberProfile ref={accountButtonRef} type="button" aria-label="계정 메뉴" aria-expanded={dropdownOpen}
+          aria-controls={dropdownOpen ? "account-actions" : undefined} onClick={() => setDropdownOpen((value) => !value)}>
+          <ProfileImage src={defaultProfile} alt="" />
           <ProfileText>
-            <MemberLabel>
-              {user ? getRoleLabel(userRole) : "로그인 필요"}
-            </MemberLabel>
-            <MemberEmail>{user?.sub  || "이메일 정보 없음"}</MemberEmail>
+            <MemberLabel>{user ? roleLabels[userRole] || "권한 확인 필요" : "로그인 필요"}</MemberLabel>
+            <MemberEmail>{user?.sub || "이메일 정보 없음"}</MemberEmail>
           </ProfileText>
+          <ExpandMoreRounded aria-hidden="true" fontSize="small" />
         </MemberProfile>
-        {dropdownOpen && (
-          <DropdownMenu id="account-actions" onKeyDown={(event) => { if (event.key === "Escape") { setDropdownOpen(false); profileRef.current?.querySelector("button")?.focus(); } }}>
-            <DropdownItem type="button" onClick={() => { setDropdownOpen(false); navigate('/logout'); }}>
-              로그아웃
-            </DropdownItem>
-          </DropdownMenu>
-        )}
+        {dropdownOpen && <DropdownMenu id="account-actions">
+          <DropdownItem type="button" onClick={() => { setDropdownOpen(false); navigate("/logout"); }}>
+            <LogoutRounded aria-hidden="true" fontSize="small" />로그아웃
+          </DropdownItem>
+        </DropdownMenu>}
       </MemberInfo>
     </SidebarContainer>
   );
 }
-
 export default Sidebar;
 
 const SidebarContainer = styled.aside`
-  width: 250px;
-  background-color: ${({ theme }) => theme.palette.background.paper};
-  padding: 15px 20px 20px;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  position: sticky;
-  top: 0;
-  left: 0;
-  z-index: 100;
-  flex-shrink: 0;
-  @media (max-width: 767px) {
-    width: 100%;
-    height: auto;
-    position: relative;
-    padding: 12px 16px;
-  }
+  width: 216px; height: 100dvh; position: sticky; top: 0; z-index: 100;
+  flex-shrink: 0; display: flex; flex-direction: column;
+  padding: 0; background: #142235; border-right: 1px solid #e3e9ee;
+  @media (max-width: 767px) { width: 100%; height: auto; position: relative; padding: 0; border-right: 0; border-bottom: 1px solid #e3e9ee; }
 `;
-
-const LogoSection = styled.div`
-  display: flex;
-  align-items: center;
+const BrandRow = styled.div`
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  height: 64px; min-height: 64px; padding: 0 16px; background: white; border-bottom: 1px solid #e3e9ee;
+  @media (max-width: 767px) { padding: 0 16px; }
 `;
-
-const LogoImage = styled.img`
-  height: 40px;
-  margin-right: 16px;
+const LogoSection = styled.div`display: flex; align-items: center; gap: 12px;`;
+const LogoImage = styled.img`height: 32px; width: auto; object-fit: contain; flex-shrink: 0;`;
+const BrandText = styled.div`display: flex; flex-direction: column; gap: 3px;`;
+const LogoTitle = styled.span`color: #1e3a8a; font-size: 18px; font-weight: 700; line-height: 1.1; white-space: nowrap; letter-spacing: -.025em;`;
+const BrandSubtitle = styled.span`font-size: 11px; line-height: 1.25; color: #64748b;`;
+const MobileToggle = styled.button`
+  display: none; width: 44px; height: 44px; border: 1px solid #e3e9ee; border-radius: 10px; background: white; color: #15242d; cursor: pointer;
+  @media (max-width: 767px) { display: inline-flex; align-items: center; justify-content: center; }
 `;
-
-const LogoTitle = styled.h1`
-  color: #1e3a8a;
-  font-size: 23px;
-  font-weight: 700;
-`;
-
 const Nav = styled.nav`
-  min-width: 0;
-  margin-top: 20px;
-  flex: 1;
+  flex: 1; min-height: 0; overflow-y: auto; padding: 12px;
+  @media (max-width: 767px) { display: ${({ $open }) => $open ? "block" : "none"}; margin-top: 0; }
 `;
-
-const NavList = styled.ul`
-  list-style: none;
-  margin-bottom: auto;
-  padding: 0;
-  @media (max-width: 767px) {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    white-space: nowrap;
-  }
-`;
-
-const NavItem = styled.li`
-  margin-bottom: 10px;
-  flex-shrink: 0;
-`;
-
+const NavList = styled.ul`list-style: none; display: grid; gap: 4px; padding: 0;`;
 const NavLink = styled(Link)`
-  color: ${({ theme }) => theme.palette.text.disabled};
-  text-decoration: none;
-  display: flex;
-  align-items: center;
-  padding: 12px;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-  font-size: 15px;
-  font-weight: 500;
-  background-color: ${({ $active, theme }) =>
-    $active ? theme.palette.secondary.main : "transparent"};
-  color: ${({ $active, theme }) =>
-    $active
-      ? theme.palette.secondary.contrastText
-      : theme.palette.text.disabled};
-  font-weight: ${({ $active }) => ($active ? 700 : 500)};
-
-  &:hover {
-    background-color: ${({ theme }) => theme.palette.secondary.main};
-    color: ${({ theme }) => theme.palette.secondary.contrastText};
-  }
+  position: relative; display: flex; align-items: center; gap: 12px; min-height: 40px; padding: 10px 12px; line-height: 20px;
+  border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: ${({ $active }) => $active ? 600 : 500};
+  background: ${({ $active }) => $active ? "#2563EB" : "transparent"}; color: ${({ $active }) => $active ? "#FFFFFF" : "#CBD5E1"};
+  &::before { content: ""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 3px; border-radius: 3px; background: ${({ $active }) => $active ? "#2563eb" : "transparent"}; }
+  &:hover { background: #243650; color: #FFFFFF; }
+  @media (max-width: 767px) { min-height: 44px; }
 `;
-
-const MemberInfo = styled.div`
-  @media (max-width: 767px) { margin-top: 4px; padding-top: 8px; }
-  border-top: 1px solid #eee;
-  padding-top: 20px;
-  margin-top: 20px;
-  position: relative;
+const Unavailable = styled.p`padding: 12px; color: #657681; font-size: 13px; line-height: 1.7;`;
+const MemberInfo = styled.div`border-top: 1px solid #e3e9ee; padding: 12px; margin-top: auto; position: relative;
+  @media (max-width: 767px) { margin-top: 0; padding: 10px 16px; }
 `;
-
 const MemberProfile = styled.button`
-  width: 100%;
-  border: 0;
-  background: transparent;
-  text-align: left;
-  font: inherit;
-  display: flex;
-  align-items: center;
+  width: 100%; display: flex; align-items: center; gap: 10px; border: 0; border-radius: 10px; background: transparent;
+  padding: 6px; text-align: left; font: inherit; color: #CBD5E1; cursor: pointer; &:hover { background: #243650; }
 `;
-
-const ProfileImage = styled.div`
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  overflow: hidden;
-  margin-right: 12px;
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-`;
-
-const ProfileText = styled.div`
-  flex: 1;
-`;
-
-const MemberLabel = styled.span`
-  display: block;
-  font-weight: 700;
-  color: ${({ theme }) => theme.palette.text.primary};
-  font-size: 14px;
-  margin-bottom: 2px;
-`;
-
-const MemberEmail = styled.span`
-  display: block;
-  color: ${({ theme }) => theme.palette.grey[400]};
-  font-size: 13px;
-  font-weight: 400;
-`;
-
+const ProfileImage = styled.img`width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%; object-fit: cover;`;
+const ProfileText = styled.span`flex: 1; min-width: 0;`;
+const MemberLabel = styled.span`display: block; color: #F8FAFC; font-size: 13px; font-weight: 650; margin-bottom: 3px;`;
+const MemberEmail = styled.span`display: block; color: #CBD5E1; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;`;
 const DropdownMenu = styled.div`
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 100%;
-  margin-bottom: 8px;
-  background: ${({ theme }) => theme.palette.background.paper};
-  border: 1px solid #eee;
-  border-radius: 8px 8px 0 0;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-  z-index: 10;
-  padding: 0;
+  position: absolute; left: 12px; right: 12px; bottom: calc(100% + 8px); background: white; border: 1px solid #e3e9ee;
+  border-radius: 12px; box-shadow: 0 8px 24px rgba(21,36,45,.09); padding: 6px; z-index: 10;
+  @media (max-width: 767px) { bottom: auto; top: calc(100% + 8px); }
 `;
-
 const DropdownItem = styled.button`
-  width: 100%;
-  border: 0;
-  background: transparent;
-  font: inherit;
-  padding: 10px 0;
-  text-align: center;
-  color: ${({ theme }) => theme.palette.text.disabled};
-  font-size: 15px;
-  font-weight: 500;
-  cursor: pointer;
-  border-radius: 0 0 8px 8px;
-  transition: background 0.2s, color 0.2s;
-  &:hover {
-    background: ${({ theme }) => theme.palette.secondary.main};
-    color: ${({ theme }) => theme.palette.secondary.contrastText};
-  }
+  width: 100%; display: flex; align-items: center; gap: 10px; min-height: 44px; border: 0; background: transparent;
+  border-radius: 8px; padding: 10px 12px; font: inherit; font-size: 14px; color: #526570; cursor: pointer;
+  &:hover { background: #e5f3f3; color: #1D4ED8; }
 `;

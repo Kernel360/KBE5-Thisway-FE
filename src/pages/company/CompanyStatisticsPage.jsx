@@ -29,7 +29,7 @@ const CompanyStatisticsPage = () => {
   const [locationMapError, setLocationMapError] = useState(null);
   const [mapCenter, setMapCenter] = useState(null);
   const statisticsUsable = hasCurrentStatistics(statisticsData);
-  
+
   // 오늘 날짜와 30일 전 날짜 계산
   const today = new Date();
   const yesterday = new Date(today);
@@ -58,14 +58,14 @@ const CompanyStatisticsPage = () => {
 
     setLoading(true);
     setError(null);
-    
+
     try {
       const data = await statisticsService.getCompanyStatistics(
         companyId,
         start,
         end
       );
-      
+
       setStatisticsData(data);
     } catch (err) {
       setError(err.message);
@@ -81,12 +81,12 @@ const CompanyStatisticsPage = () => {
       setError("시작일과 종료일을 모두 입력해주세요.");
       return;
     }
-    
+
     if (new Date(startDate) > new Date(endDate)) {
       setError("시작일은 종료일보다 이전이어야 합니다.");
       return;
     }
-    
+
     fetchStatistics(startDate, endDate);
   };
 
@@ -105,7 +105,7 @@ const CompanyStatisticsPage = () => {
   // 24시간 가동률 데이터 생성
   const generateHourlyData = () => {
     if (!statisticsUsable || !statisticsData.hours) return [];
-    
+
     return Array.from({ length: 24 }, (_, i) => ({
       hour: i,
       value: statisticsData.hours[i] || 0,
@@ -200,7 +200,8 @@ const CompanyStatisticsPage = () => {
     <Container>
       <Header>
         <HeaderLeft>
-          <PageTitle>차량 운행 통계</PageTitle>
+          <PageTitle>통계</PageTitle>
+          <PageDescription>선택한 기간의 완료 운행을 집계합니다. 실시간 위치 정보와 집계 시점이 다를 수 있습니다.</PageDescription>
         </HeaderLeft>
         <HeaderRight>
           {/* <Button variant="text" size="small" style={{ padding: '4px' }}>
@@ -210,24 +211,26 @@ const CompanyStatisticsPage = () => {
       </Header>
 
       <Section>
-        <SectionTitle>날짜 범위</SectionTitle>
+        <SectionTitle>조회 기간</SectionTitle>
         <FilterContent>
           <DateInputGroup>
-            <DateInput 
-              type="date" 
+            <DateInput
+              type="date"
+              aria-label="통계 시작일"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               max={defaultEndDate}
             />
             <span>~</span>
-            <DateInput 
-              type="date" 
+            <DateInput
+              type="date"
+              aria-label="통계 종료일"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
               max={defaultEndDate}
             />
-            <StyledButton 
-              variant="primary" 
+            <StyledButton
+              variant="contained"
               size="small"
               onClick={handleApplyDateRange}
             >
@@ -299,7 +302,7 @@ const CompanyStatisticsPage = () => {
                 ) : locationMapError ? (
                   <div style={{ color: '#e53e3e', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>{locationMapError}</div>
                 ) : (
-                  <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%'}}>지도 영역</div>
+                  <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%'}}>지도에 표시할 위치 정보가 없습니다.</div>
                 )}
               </div>
             </MapPlaceholder>
@@ -315,8 +318,13 @@ const CompanyStatisticsPage = () => {
                   <ListItem
                     key={idx}
                     style={{ cursor: item ? 'pointer' : 'default' }}
+                    role={item ? "button" : undefined}
+                    tabIndex={item ? 0 : undefined}
+                    aria-label={item ? `${item.addr} 지도에서 보기` : undefined}
+                    onKeyDown={event => { if (item && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); const marker = locationMarkers.find(marker => marker.addr === item.addr); if (marker) setMapCenter(marker); } }}
                     onClick={() => {
-                      if (item && locationMarkers[idx]) setMapCenter(locationMarkers[idx]);
+                      const marker = item && locationMarkers.find(marker => marker.addr === item.addr);
+                      if (marker) setMapCenter(marker);
                     }}
                   >
                     <RankIcon src={rankIcons[idx]} alt={`${idx + 1}위`} />
@@ -346,8 +354,8 @@ const CompanyStatisticsPage = () => {
                   <TimeAnalysisTime>
                     {bothRatesZero
                       ? '-'
-                      : (statisticsData && statisticsData.peakHour !== undefined 
-                          ? formatHour(statisticsData.peakHour) 
+                      : (statisticsData && statisticsData.peakHour !== undefined
+                          ? formatHour(statisticsData.peakHour)
                           : '-')}
                   </TimeAnalysisTime>
                 </TimeAnalysisInfo>
@@ -363,8 +371,8 @@ const CompanyStatisticsPage = () => {
                   <TimeAnalysisTime>
                     {bothRatesZero
                       ? '-'
-                      : (statisticsData && statisticsData.lowHour !== undefined 
-                          ? formatHour(statisticsData.lowHour) 
+                      : (statisticsData && statisticsData.lowHour !== undefined
+                          ? formatHour(statisticsData.lowHour)
                           : '-')}
                   </TimeAnalysisTime>
                 </TimeAnalysisInfo>
@@ -395,12 +403,12 @@ const CompanyStatisticsPage = () => {
               </ChartHeader>
               <ChartBorderBox>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart 
-                    data={hourlyData} 
+                  <BarChart
+                    data={hourlyData}
                     margin={{ top: 10, right: 20, left: 20, bottom: 10 }}
                     barCategoryGap={1}
                   >
-                    <YAxis hide domain={[0, 100]} ticketCount={5}/> 
+                    <YAxis hide domain={[0, 100]} tickCount={5}/>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <Bar
                       dataKey="value"
@@ -409,7 +417,7 @@ const CompanyStatisticsPage = () => {
                       {hourlyData.map((entry, index) => (
                         <Cell
                           key={`cell-${index}`}
-                          fill={(entry.hour >= 7 && entry.hour < 19) ? '#3B82F6' : '#94A3B8'}
+                          fill={(entry.hour >= 7 && entry.hour < 19) ? '#087F8C' : '#94A3B8'}
                         />
                       ))}
                     </Bar>
@@ -460,15 +468,19 @@ const PageTitle = styled.h1.attrs(() => ({
 
 const ContentWrapper = styled.div`
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  @media (max-width: 1100px) { grid-template-columns: 1fr; }
   margin-top: 16px;
 `;
 
 const Section = styled.section`
   background: white;
-  border-radius: 8px;
-  padding: 20px;
+  min-width: 0;
+  margin-bottom: 16px;
+  p { font-size: 13px; line-height: 1.7; color: #475569; margin: 6px 0; }
+  border-radius: 14px;
+  padding: 24px;
   border: 1px solid ${({ theme }) => theme.palette.grey[200]};
 `;
 
@@ -487,7 +499,8 @@ const FilterContent = styled.div`
 const DateInputGroup = styled.div`
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 12px;
+  flex-wrap: wrap;
 
   span {
     color: ${({ theme }) => theme.palette.text.secondary};
@@ -497,13 +510,16 @@ const DateInputGroup = styled.div`
 
 const DateInput = styled.input`
   width: 160px;
-  padding: 8px;
+  max-width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 10px;
   border: 1px solid ${({ theme }) => theme.palette.grey[300]};
-  border-radius: 4px;
-  font-size: 13px;
+  border-radius: 10px;
+  font-size: 14px;
 
+  &:focus-visible { outline: 3px solid #087F8C; outline-offset: 2px; }
   &:focus {
-    outline: none;
     border-color: ${({ theme }) => theme.palette.primary};
   }
 `;
@@ -511,19 +527,20 @@ const DateInput = styled.input`
 const LeftPanel = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 24px;
 `;
 
 const RightPanel = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 24px;
 `;
 
 const StatsGrid = styled.div.attrs(() => ({
   className: "stats-grid",
 }))`
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  @media (max-width: 550px) { grid-template-columns: 1fr; }
 `;
 
 const StatCard = styled.div.attrs(() => ({
@@ -548,7 +565,8 @@ const StatTitle = styled.h3.attrs(() => ({
 }))``;
 
 const StatValue = styled.div`
-  font-size: 30px;
+  font-size: 28px;
+  font-variant-numeric: tabular-nums;
   font-weight: 700;
   margin-bottom: 8px;
   color: ${({ theme }) => theme.palette.text.primary};
@@ -557,8 +575,8 @@ const StatValue = styled.div`
 const StatChange = styled.div`
   font-size: 0.875rem;
   color: ${({ increase, theme }) =>
-    increase 
-      ? theme.palette.increase.contrastText 
+    increase
+      ? theme.palette.increase.contrastText
       : theme.palette.decrease.contrastText
     };
   display: inline-block;
@@ -567,7 +585,7 @@ const StatChange = styled.div`
 const MapPlaceholder = styled.div`
   height: 400px;
   background-color: ${({ theme }) => theme.palette.background};
-  border-radius: 8px;
+  border-radius: 14px;
   border: 1px solid ${({ theme }) => theme.palette.grey[200]};
   display: flex;
   flex-direction: column;
@@ -596,7 +614,7 @@ const ListItem = styled.div`
   justify-content: space-between;
   padding: 12px 16px;
   background-color: ${({ theme }) => theme.palette.grey[100]};
-  border-radius: 8px;
+  border-radius: 14px;
 `;
 
 const RankIcon = styled.img`
@@ -664,8 +682,8 @@ const ChartContainer = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: ${({ theme }) => theme.palette.grey[100]};
-  border-radius: 8px;
+  background: #F8FAFC;
+  border-radius: 14px;
   padding: 1rem;
   border: 1px solid ${({ theme }) => theme.palette.grey[200]};
 `;
@@ -697,7 +715,7 @@ const LegendColor = styled.span`
   display: inline-block;
   width: 13px;
   height: 13px;
-  border-radius: 4px;
+  border-radius: 10px;
   background: ${({ business, theme }) =>
     business ? theme.palette.primary.main : theme.palette.grey[300]};
   margin-right: 4px;
@@ -715,7 +733,7 @@ const ChartBorderBox = styled.div`
   width: 100%;
   height: 80%;
   border: 1px solid ${({ theme }) => theme.palette.grey[200]};
-  border-radius: 8px;
+  border-radius: 14px;
   padding: 13px 0 0 0;
   background: ${({ theme }) => theme.palette.background.paper};
   box-sizing: border-box;
@@ -737,7 +755,7 @@ const XAxisLabel = styled.span`
 `;
 
 const StyledButton = styled(Button)`
-  margin-left: 16px;
+  margin-left: 0;
 `;
 
 const ErrorMessage = styled.div`
@@ -745,3 +763,5 @@ const ErrorMessage = styled.div`
   font-size: 0.875rem;
   margin-top: 8px;
 `;
+
+const PageDescription = styled.p`font-size: 14px; color: #64748B; line-height: 1.6; margin: 8px 0 16px;`;

@@ -1,18 +1,11 @@
 import { create } from "zustand";
-
-const parseJwt = (token) => {
-  try {
-    return JSON.parse(atob(token.split(".")[1]));
-  } catch (e) {
-    return null;
-  }
-};
+import { parseJwt } from "../utils/auth";
 
 const useUserStore = create((set) => ({
   token: null,
   user: null,
   setToken: (token) =>
-    set((state) => ({
+    set(() => ({
       token,
       user: token ? parseJwt(token) : null,
     })),

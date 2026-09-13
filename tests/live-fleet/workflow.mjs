@@ -12,6 +12,7 @@ assert.equal(backend.hostname, '127.0.0.1');
 assert.equal(backend.protocol, 'http:');
 const output = path.resolve(process.env.FLEET_EVIDENCE_OUTPUT);
 await mkdir(output, { recursive: true });
+let localOrigin;
 const server = await createServer({
   configFile: false,
   root: process.cwd(),
@@ -27,7 +28,14 @@ const server = await createServer({
     { find: '@', replacement: fileURLToPath(new URL('../../src', import.meta.url)) },
   ] },
   server: { host: '127.0.0.1', port: 0, open: false,
-    proxy: { '/api': { target: backend.origin, changeOrigin: true } } },
+    proxy: { '/api': { target: backend.origin, changeOrigin: true,
+      configure(proxy) {
+        proxy.on('proxyReq', (proxyReq, request) => {
+          // Translate only this isolated browser origin to the existing development CORS origin.
+          if (localOrigin && request.headers.origin === localOrigin) proxyReq.setHeader('Origin', 'http://localhost:5173');
+        });
+      },
+    } } },
 });
 let browser;
 const responses = [];
@@ -37,6 +45,7 @@ try {
   await server.listen();
   const address = server.httpServer.address();
   const baseURL = `http://127.0.0.1:${address.port}`;
+  localOrigin = baseURL;
   browser = await chromium.launch({ headless: true });
   async function login(label, account) {
     const context = await browser.newContext({ baseURL, viewport: { width: 1440, height: 1100 }, timezoneId: 'Asia/Seoul' });
@@ -58,7 +67,7 @@ try {
     await page.getByPlaceholder('비밀번호를 입력하세요').fill(account.password);
     await page.getByRole('button', { name: '로그인', exact: true }).click();
     await expect(page).toHaveURL(/\/company\/dashboard$/);
-    await expect(page.getByRole('heading', { name: '대시보드', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '운영 현황', exact: true })).toBeVisible();
     return { context, page };
   }
   async function capture(page, name) {
@@ -77,19 +86,19 @@ try {
   await expect(a.page.getByText(fixture.b.carNumber, { exact: true })).toHaveCount(0);
   await capture(a.page, '02-company-vehicles.png');
   await vehicleRow.getByText(fixture.a.carNumber, { exact: true }).click();
-  await expect(a.page.getByRole('heading', { name: new RegExp(`차량 상세 정보.*${fixture.a.carNumber}`) })).toBeVisible();
+  await expect(a.page.getByRole('heading', { name: new RegExp(`차량 상세.*${fixture.a.carNumber}`) })).toBeVisible();
 
   await a.page.getByRole('link', { name: '운행 기록', exact: true }).click();
   await expect(a.page.getByRole('heading', { name: '운행 기록', exact: true })).toBeVisible();
   await expect(a.page.getByRole('row').filter({ hasText: fixture.a.carNumber })).toContainText('0.5 km');
-  await a.page.getByRole('button', { name: '상세보기', exact: true }).click();
+  await a.page.getByRole('button', { name: new RegExp(`${fixture.a.carNumber}.*운행 상세보기`) }).click();
   await expect(a.page.getByRole('heading', { name: new RegExp(`운행 기록 상세.*${fixture.a.carNumber}`) })).toBeVisible();
   await expect(a.page.getByText('02:00:00', { exact: true })).toBeVisible();
   await expect(a.page.getByText('0.5 km', { exact: true })).toBeVisible();
   await capture(a.page, '03-trip-detail.png');
 
   await a.page.getByRole('link', { name: '통계', exact: true }).click();
-  await expect(a.page.getByRole('heading', { name: '차량 운행 통계', exact: true })).toBeVisible();
+  await expect(a.page.getByRole('heading', { name: '통계', exact: true })).toBeVisible();
   await a.page.locator('input[type="date"]').nth(0).fill(fixture.date);
   await a.page.locator('input[type="date"]').nth(1).fill(fixture.date);
   await a.page.getByRole('button', { name: '적용', exact: true }).click();
@@ -112,18 +121,43 @@ try {
   await capture(b.page, '05-foreign-trip-denied.png');
   assert.ok(responses.some(r => r.company === 'B' && r.path === `/api/trip-log/${fixture.a.vehicleId}` && r.status === 404));
   assert.ok(responses.some(r => r.company === 'B' && r.path === `/api/trip-log/detail/${fixture.a.tripId}` && r.status === 404));
+  // Registration runs after the fixed one-vehicle statistics checks. The new vehicle is removed afterward.
+  await a.page.goto('/company/car-management');
+  await a.page.getByRole('button', { name: '차량 등록', exact: true }).click();
+  const registration = a.page.getByRole('dialog');
+  await registration.getByRole('radio').first().check();
+  await registration.getByLabel('차량번호 *').fill('123가 9876');
+  await registration.getByLabel('색상 *').fill('회색');
+  await registration.getByRole('button', { name: '차량 등록', exact: true }).click();
+  await expect(registration).toBeHidden();
+  await expect(a.page.getByRole('link', { name: '123가9876', exact: true })).toBeVisible();
+  assert.ok(responses.some(r => r.company === 'A' && r.method === 'POST' && r.path === '/api/vehicles' && r.status === 201));
+  await a.page.getByRole('button', { name: '123가9876 수정', exact: true }).click();
+  const editing = a.page.getByRole('dialog');
+  await editing.getByLabel('색상 *').fill('검정');
+  await editing.getByRole('button', { name: '변경 저장', exact: true }).click();
+  await expect(editing).toBeHidden();
+  await expect(a.page.getByRole('row').filter({ hasText: '123가9876' })).toContainText('검정');
+  assert.ok(responses.some(r => r.company === 'A' && r.method === 'PATCH' && r.path.startsWith('/api/vehicles/') && r.status === 204));
+  await capture(a.page, '06-vehicle-registration-edit.png');
+  await a.page.getByRole('button', { name: '123가9876 삭제', exact: true }).click();
+  await a.page.getByRole('dialog').getByRole('button', { name: '삭제', exact: true }).click();
+  await expect(a.page.getByRole('dialog')).toBeHidden();
+  await expect(a.page.getByText('차량번호와 일치하는 차량이 없습니다.')).toBeVisible();
+  assert.ok(responses.some(r => r.company === 'A' && r.method === 'DELETE' && r.path.startsWith('/api/vehicles/') && r.status === 204));
   assert.equal(responses.filter(r => r.method === 'POST' && r.path === '/api/auth/login' && r.status === 200).length, 2);
   assert.deepEqual(pageErrors, []);
   assert.deepEqual(externalRequests, []);
   assert.deepEqual(responses.filter(response => response.status >= 500), []);
   await writeFile(path.join(output, 'result.json'), JSON.stringify({
-    change: 'CHANGE-045', verifiedAt: new Date().toISOString(), passed: true,
+    change: 'Stitch V3 frontend integration', verifiedAt: new Date().toISOString(), passed: true,
     actualApplication: 'src/main.jsx -> App.jsx', actualBackend: 'Boot + MySQL + RabbitMQ + Redis Testcontainers',
     apiResponses: responses, pageErrors, externalRequests,
     checks: ['Two real company logins', 'Company-scoped vehicle list and vehicle detail', 'Trip detail 2 hours and 500 meters',
-      'Statistics 120 minutes, 2 GPS observations and initial fleet snapshot', 'Foreign vehicle/trip UI errors with actual 404 responses'],
-    screenshots: ['01-company-dashboard.png', '02-company-vehicles.png', '03-trip-detail.png', '04-company-statistics.png', '05-foreign-trip-denied.png'],
+      'Statistics 120 minutes, 2 GPS observations and initial fleet snapshot', 'Foreign vehicle/trip UI errors with actual 404 responses', 'Vehicle registration 201, existing-model PATCH 204 and delete 204 through actual API'],
+    screenshots: ['01-company-dashboard.png', '02-company-vehicles.png', '03-trip-detail.png', '04-company-statistics.png', '05-foreign-trip-denied.png', '06-vehicle-registration-edit.png'],
     limitations: ['Map provider components/helpers and reverse geocoding are stubbed; map rendering is not verified.',
+      'The isolated loopback browser origin is translated by the test proxy to the existing development CORS origin; production CORS is not verified.',
       'The external Google Fonts stylesheet is removed by the test server; local fallback fonts are used.',
       'Synthetic accounts, vehicles and locations only; no deployment or production data.', 'Independent human explanation and manual replay are not verified.'],
   }, null, 2) + '\n');

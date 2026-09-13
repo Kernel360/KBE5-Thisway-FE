@@ -1,392 +1,63 @@
 import React from 'react';
+import { Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import styled from 'styled-components';
+import Button from '../../components/Button';
 
-const CompanyUserRegisterModal = ({ 
-  isOpen, 
-  onClose, 
-  user, 
-  onChange, 
-  onSubmit, 
-  mode = 'register', // 'register' or 'edit'
-  error,
-  setError
-}) => {
-  if (!isOpen) return null;
-
-  const isEditMode = mode === 'edit';
-  const title = isEditMode ? '사용자 수정' : '사용자 등록';
-  const submitText = isEditMode ? '수정' : '등록';
-
-  const handleSubmit = (e) => {
+export default function CompanyUserRegisterModal({isOpen,onClose,user,onChange,onSubmit,mode='register',error,setError,pending=false}) {
+  const registering = mode === 'register';
+  const title = registering ? '사용자 등록' : '사용자 수정';
+  const field = (name,label,props={}) => <label htmlFor={`member-${name}`}>
+    {label}<input id={`member-${name}`} name={name} value={user[name]||''} onChange={onChange} {...props}/>
+  </label>;
+  const submit = e => {
     e.preventDefault();
-
-    if (!user.name || !user.email || !user.phone) {
-      setError("필수 항목을 모두 입력해주세요.");
-      return;
+    if(pending) return;
+    if(!user.name?.trim()) {setError('이름을 입력해주세요.');return;}
+    if(registering && !/^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,20}$/.test(user.password)) {
+      setError('비밀번호는 영문·숫자·특수문자(!@#$%^&*)를 포함한 8~20자로 입력해주세요.');return;
     }
-
-    if (mode === 'register') {
-      if (!user.password) {
-        setError("비밀번호를 입력해주세요.");
-        return;
-      }
-      if (user.password !== user.confirmPassword) {
-        setError("비밀번호가 일치하지 않습니다.");
-        return;
-      }
-    }
-
-    const submitData = {
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      memo: user.memo || ""
-    };
-
-    onSubmit(submitData, mode);
+    if(registering && user.password!==user.confirmPassword) {setError('비밀번호가 일치하지 않습니다.');return;}
+    onSubmit();
   };
-
-  return (
-    <Modal>
-      <ModalOverlay onClick={onClose} />
-      <ModalContent>
-        <ModalHeader>
-          <ModalTitle>{title}</ModalTitle>
-          <CloseButton onClick={onClose}>×</CloseButton>
-        </ModalHeader>
-
-        <ModalBody>
-          <form onSubmit={handleSubmit}>
-            {error && <ErrorMessage>{error}</ErrorMessage>}
-            
-            <FormGrid>
-              <FormColumn>
-                <FormGroup>
-                  <Label>이름 *</Label>
-                  <Input
-                    name="name"
-                    value={user.name || ""}
-                    onChange={onChange}
-                    placeholder="이름 입력"
-                    required
-                  />
-                </FormGroup>
-              </FormColumn>
-              <FormColumn>
-                <FormGroup>
-                  <Label>연락처 *</Label>
-                  <Input
-                    name="phone"
-                    value={user.phone || ""}
-                    onChange={onChange}
-                    placeholder="01012345678"
-                    required
-                  />
-                </FormGroup>
-              </FormColumn>
-            </FormGrid>
-
-            <FormGroup>
-              <Label>이메일 *</Label>
-              <Input
-                type="email"
-                name="email"
-                value={user.email || ""}
-                onChange={onChange}
-                placeholder="이메일 입력"
-                required
-              />
-            </FormGroup>
-
-            {mode === 'register' && (
-              <>
-                <FormGrid>
-                  <FormColumn>
-                    <FormGroup>
-                      <Label>비밀번호 *</Label>
-                      <Input
-                        type="password"
-                        name="password"
-                        value={user.password || ""}
-                        onChange={onChange}
-                        placeholder="비밀번호 입력"
-                        required
-                      />
-                    </FormGroup>
-                  </FormColumn>
-                  <FormColumn>
-                    <FormGroup>
-                      <Label>비밀번호 확인 *</Label>
-                      <Input
-                        type="password"
-                        name="confirmPassword"
-                        value={user.confirmPassword || ""}
-                        onChange={onChange}
-                        placeholder="비밀번호 확인"
-                        required
-                      />
-                    </FormGroup>
-                  </FormColumn>
-                </FormGrid>
-
-                <FormGroup>
-                  <Label>권한 *</Label>
-                  <RadioGroup>
-                    <RadioLabel>
-                      <RadioInput
-                        type="radio"
-                        name="role"
-                        value="COMPANY_CHEF"
-                        checked={user.role === "COMPANY_CHEF"}
-                        onChange={onChange}
-                      />
-                      관리자
-                    </RadioLabel>
-                    {/* <RadioLabel>
-                      <RadioInput
-                        type="radio"
-                        name="role"
-                        value="COMPANY_ADMIN"
-                        checked={user.role === "COMPANY_ADMIN"}
-                        onChange={onChange}
-                      />
-                      관리자
-                    </RadioLabel> */}
-                    <RadioLabel>
-                      <RadioInput
-                        type="radio"
-                        name="role"
-                        value="MEMBER"
-                        checked={user.role === "MEMBER"}
-                        onChange={onChange}
-                      />
-                      일반 사용자
-                    </RadioLabel>
-                  </RadioGroup>
-                </FormGroup>
-
-              </>
-            )}
-
-            <FormGroup>
-              <Label>메모</Label>
-              <TextArea
-                  name="memo"
-                  value={user.memo || ""}
-                  onChange={onChange}
-                  placeholder="추가 정보 입력"
-                  rows={3}
-              />
-            </FormGroup>
-
-            <ModalFooter>
-              <CancelButton type="button" onClick={onClose}>취소</CancelButton>
-              <SubmitButton type="submit">
-                {mode === "register" ? "등록" : "수정"}
-              </SubmitButton>
-            </ModalFooter>
-          </form>
-        </ModalBody>
-      </ModalContent>
-    </Modal>
-  );
-};
-
-const Modal = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
+  return <Dialog open={isOpen} onClose={onClose} disableEscapeKeyDown={pending} aria-labelledby="member-form-title" fullWidth maxWidth="sm"
+    PaperProps={{sx:{margin:2,width:'calc(100% - 32px)',maxHeight:'calc(100% - 32px)'}}}>
+    <DialogTitle id="member-form-title">{title}</DialogTitle>
+    <DialogContent dividers>
+      <Form id="member-form" onSubmit={submit}>
+        {error && <p role="alert">{error}</p>}
+        <fieldset disabled={pending}>
+          <div className="fields">
+            {field('name','이름 *',{required:true,maxLength:255,autoComplete:'off',autoFocus:true})}
+            {field('phone','연락처 *',{required:true,pattern:'010[0-9]{8}',maxLength:11,inputMode:'tel',title:'010으로 시작하는 숫자 11자리'})}
+          </div>
+          {field('email','이메일 *',{required:true,type:'email',maxLength:255,autoComplete:'off'})}
+          {registering && <>
+            <div className="fields">
+              {field('password','비밀번호 *',{required:true,type:'password',minLength:8,maxLength:20,autoComplete:'new-password','aria-describedby':'member-password-help'})}
+              {field('confirmPassword','비밀번호 확인 *',{required:true,type:'password',maxLength:20,autoComplete:'new-password'})}
+            </div>
+            <p id="member-password-help">영문·숫자·특수문자(!@#$%^&*) 포함 8~20자</p>
+            <label htmlFor="member-role">권한 *<select id="member-role" name="role" value={user.role} onChange={onChange}>
+              <option value="MEMBER">일반 사용자</option><option value="COMPANY_ADMIN">관리자</option><option value="COMPANY_CHEF">회사 책임자</option>
+            </select></label>
+          </>}
+          <label htmlFor="member-memo">메모<textarea id="member-memo" name="memo" value={user.memo||''} onChange={onChange} maxLength={255} rows={3}/></label>
+        </fieldset>
+      </Form>
+    </DialogContent>
+    <DialogActions><Button type="button" onClick={onClose} disabled={pending}>취소</Button>
+      <Button type="submit" form="member-form" disabled={pending}>{pending ? '저장 중…' : registering ? '등록' : '수정'}</Button>
+    </DialogActions>
+  </Dialog>;
+}
+const Form = styled.form`
+  fieldset {border:0;padding:0;margin:0;min-width:0;}
+  label {display:block;margin:12px 0;font-size:14px;}
+  input,select,textarea {display:block;box-sizing:border-box;width:100%;margin-top:6px;padding:10px;border:1px solid #D5DFE6;border-radius:10px;min-height:44px;font:inherit;}
+  input:focus-visible,select:focus-visible,textarea:focus-visible {outline:2px solid #087F8C;outline-offset:2px;}
+  textarea {resize:vertical;}
+  .fields {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+  p {font-size:13px;}
+  [role=alert] {color:#a21520;}
+  @media(max-width:600px){.fields{grid-template-columns:1fr;gap:0;}}
 `;
-
-const ModalOverlay = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-`;
-
-const ModalContent = styled.div`
-  position: relative;
-  width: 600px;
-  background-color: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  z-index: 1001;
-`;
-
-const ModalHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid ${({ theme }) => theme.palette.grey[200]};
-`;
-
-const ModalTitle = styled.h2`
-  font-size: 20px;
-  font-weight: 700;
-  color: ${({ theme }) => theme.palette.text.primary};
-`;
-
-const CloseButton = styled.button`
-  background: none;
-  border: none;
-  font-size: 24px;
-  color: ${({ theme }) => theme.palette.text.secondary};
-  cursor: pointer;
-  padding: 4px;
-  line-height: 1;
-
-  &:hover {
-    color: ${({ theme }) => theme.palette.text.primary};
-  }
-`;
-
-const ModalBody = styled.div`
-  padding: 24px;
-`;
-
-const ModalFooter = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 16px 24px;
-  border-top: 1px solid ${({ theme }) => theme.palette.grey[200]};
-`;
-
-const FormGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 16px;
-`;
-
-const FormColumn = styled.div``;
-
-const FormGroup = styled.div`
-  margin-bottom: 16px;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-`;
-
-const Label = styled.label`
-  display: block;
-  margin-bottom: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  color: ${({ theme }) => theme.palette.text.primary};
-`;
-
-const Input = styled.input`
-  width: 100%;
-  height: 40px;
-  padding: 0 12px;
-  border: 1px solid ${({ theme }) => theme.palette.grey[300]};
-  border-radius: 4px;
-  background-color: ${({ theme }) => theme.palette.grey[50]};
-  font-size: 14px;
-
-  &:focus {
-    outline: none;
-    border-color: ${({ theme }) => theme.palette.primary.main};
-  }
-`;
-
-const TextArea = styled.textarea`
-  width: 100%;
-  padding: 12px;
-  border: 1px solid ${({ theme }) => theme.palette.grey[300]};
-  border-radius: 4px;
-  background-color: ${({ theme }) => theme.palette.grey[50]};
-  font-size: 14px;
-  resize: vertical;
-
-  &:focus {
-    outline: none;
-    border-color: ${({ theme }) => theme.palette.primary.main};
-  }
-`;
-
-const RadioGroup = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-`;
-
-const RadioLabel = styled.label`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  font-size: 14px;
-  color: ${({ theme }) => theme.palette.text.primary};
-`;
-
-const RadioInput = styled.input`
-  cursor: pointer;
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  
-  &:checked {
-    accent-color: ${({ theme }) => theme.palette.primary.main};
-  }
-`;
-
-const CancelButton = styled.button`
-  height: 44px;
-  padding: 0 24px;
-  border: 1px solid ${({ theme }) => theme.palette.grey[300]};
-  border-radius: 4px;
-  background-color: white;
-  color: ${({ theme }) => theme.palette.text.secondary};
-  font-size: 14px;
-  cursor: pointer;
-
-  &:hover {
-    background-color: ${({ theme }) => theme.palette.grey[50]};
-  }
-`;
-
-const SubmitButton = styled.button`
-  height: 44px;
-  padding: 0 24px;
-  border: none;
-  border-radius: 4px;
-  background-color: ${({ theme }) => theme.palette.primary.main};
-  color: white;
-  font-size: 14px;
-  cursor: pointer;
-
-  &:hover {
-    background-color: ${({ theme }) => theme.palette.primary.dark};
-  }
-`;
-
-const ErrorMessage = styled.div`
-  color: ${({ theme }) => theme.palette.error.contrastText};
-  background-color: ${({ theme }) => theme.palette.error.main};
-  padding: 12px;
-  border-radius: 4px;
-  margin-bottom: 16px;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  
-  &::before {
-    content: "⚠️";
-    margin-right: 8px;
-  }
-`;
-
-export default CompanyUserRegisterModal; 

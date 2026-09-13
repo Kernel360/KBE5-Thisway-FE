@@ -5,6 +5,7 @@ const SearchInput = ({ placeholder = "검색...", value, onChange, width = "240p
   return (
     <StyledInput
       type="text"
+      aria-label={placeholder}
       placeholder={placeholder}
       value={value}
       onChange={onChange}
@@ -18,16 +19,19 @@ const StyledInput = styled.input.attrs(() => ({
   className: 'search-input'
 }))`
   width: ${({ width }) => width};
-  height: 40px;
+  height: 44px;
+  max-width: 100%;
+  min-width: 0;
   padding: 0 16px;
   border: 1px solid ${({ theme }) => theme.palette.grey[300]};
-  border-radius: 4px;
+  border-radius: 10px;
   background-color: ${({ theme }) => theme.palette.background.paper};
   font-size: 14px;
   color: ${({ theme }) => theme.palette.text.primary};
 
   &:focus {
-    outline: none;
+    outline: 2px solid #087F8C;
+    outline-offset: 2px;
     border-color: ${({ theme }) => theme.palette.primary.main};
   }
 

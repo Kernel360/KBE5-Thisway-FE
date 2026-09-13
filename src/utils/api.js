@@ -1,4 +1,5 @@
 import axios from "axios";
+import useUserStore from "../store/userStore";
 
 // JWT 토큰 저장 함수
 export function saveTokenFromResponse(response) {
@@ -54,13 +55,16 @@ authApi.interceptors.request.use(
 authApi.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (
-      error.response &&
-      (error.response.status === 401 || error.response.status === 403)
-    ) {
-      localStorage.removeItem("token");
-      // 필요하다면 아래 주석을 해제해서 로그인 페이지로 이동
-      // window.location.href = '/login';
+    if (error.response?.status === 401) {
+      const currentToken = localStorage.getItem("token");
+      const requestHeaders = error.config?.headers;
+      const authorization = requestHeaders?.get?.("Authorization")
+        ?? requestHeaders?.Authorization;
+      // An earlier request must not invalidate a replacement login session.
+      if (currentToken && authorization === `Bearer ${currentToken}`) {
+        localStorage.removeItem("token");
+        useUserStore.getState().resetUser();
+      }
     }
     return Promise.reject(error);
   },

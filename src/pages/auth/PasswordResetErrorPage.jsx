@@ -34,17 +34,21 @@ const Container = styled.div`
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  width: 100vw;
+  width: 100%;
+  padding: 40px 20px;
+  @media (max-width: 600px) { padding: 24px 16px; }
   background-color: ${({ theme }) => theme.palette.background.default};
 `;
 
 const ContentWrapper = styled.div`
   width: 100%;
   max-width: 500px;
-  padding: 40px;
+  padding: 36px;
+  @media (max-width: 600px) { padding: 28px 22px; }
   background-color: ${({ theme }) => theme.palette.background.paper};
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 18px;
+  border: 1px solid #E3E9EE;
+  box-shadow: 0 12px 40px rgba(21, 36, 45, 0.05);
   text-align: center;
 `;
 
@@ -55,7 +59,8 @@ const IconWrapper = styled.img`
 `;
 
 const Title = styled.h1`
-  font-size: 24px;
+  font-size: 28px;
+  letter-spacing: -0.6px;
   font-weight: 700;
   color: ${({ theme }) => theme.palette.text.primary};
   margin-bottom: 15px;
@@ -63,7 +68,7 @@ const Title = styled.h1`
 
 const Description = styled.p`
   font-size: 16px;
-  color: ${({ theme }) => theme.palette.grey[500]};
+  color: ${({ theme }) => theme.palette.text.secondary};
   margin-bottom: 40px;
 `;
 

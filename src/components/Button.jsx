@@ -23,9 +23,9 @@ const Button = ({
       onClick={onClick}
       {...props}
     >
-      {startIcon && <IconWrapper>{startIcon}</IconWrapper>}
+      {startIcon && <IconWrapper aria-hidden="true">{startIcon}</IconWrapper>}
       {children}
-      {endIcon && <IconWrapper>{endIcon}</IconWrapper>}
+      {endIcon && <IconWrapper aria-hidden="true">{endIcon}</IconWrapper>}
     </StyledButton>
   );
 };
@@ -37,7 +37,7 @@ const getVariantStyles = ({ variant, color, theme }) => {
     error: theme.palette.error
   };
 
-  const baseColor = colors[color];
+  const baseColor = colors[color] || colors.primary;
 
   switch (variant) {
     case 'contained':
@@ -54,7 +54,7 @@ const getVariantStyles = ({ variant, color, theme }) => {
         color: ${baseColor.main};
         border: 1px solid ${baseColor.main};
         &:hover {
-          background-color: ${baseColor.lighter};
+          background-color: ${baseColor.light || theme.palette.action.hover};
         }
       `;
     case 'text':
@@ -62,7 +62,7 @@ const getVariantStyles = ({ variant, color, theme }) => {
         background-color: transparent;
         color: ${baseColor.contrastText};
         &:hover {
-          background-color: ${baseColor.lighter};
+          background-color: ${baseColor.light || theme.palette.action.hover};
         }
       `;
     default:
@@ -74,7 +74,7 @@ const getSizeStyles = ({ size }) => {
   switch (size) {
     case 'small':
       return css`
-        height: 32px;
+        min-height: 40px;
         padding: 0 12px;
         font-size: 13px;
       `;
@@ -86,7 +86,7 @@ const getSizeStyles = ({ size }) => {
       `;
     default: // medium
       return css`
-        height: 40px;
+        min-height: 44px;
         padding: 0 16px;
         font-size: 14px;
       `;
@@ -99,23 +99,15 @@ const StyledButton = styled.button`
   justify-content: center;
   padding: 8px 16px;
   border: none;
-  border-radius: 4px;
-  background-color: ${({ variant, theme }) =>
-    variant === 'outlined' ? 'transparent' : theme.palette.primary.main};
-  color: ${({ variant, theme }) =>
-    variant === 'outlined' ? theme.palette.primary.main : theme.palette.primary.contrastText};
+  border-radius: 10px;
   font-size: 14.5px;
-  font-weight: 800;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
-  border: 1px solid ${({ variant, theme }) =>
-    variant === 'outlined' ? theme.palette.primary.main : 'transparent'};
-
-  &:hover {
-    background-color: ${({ variant, theme }) =>
-      variant === 'outlined' ? theme.palette.action.hover : theme.palette.primary.dark};
-  }
-
+  gap: 6px;
+  transition: background-color 0.15s, border-color 0.15s;
+  ${getVariantStyles}
+  ${getSizeStyles}
+  &:focus-visible { outline: 2px solid #087F8C; outline-offset: 3px; }
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -134,4 +126,4 @@ const IconWrapper = styled.span`
   font-size: 1.2em;
 `;
 
-export default Button; 
+export default Button;

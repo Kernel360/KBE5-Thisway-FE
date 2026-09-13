@@ -1,3 +1,4 @@
+import RequireCompanyChef from "./components/RequireCompanyChef";
 import React, { lazy, Suspense } from "react";
 import { Routes, Route, useLocation, useNavigate, Link, matchPath } from "react-router-dom";
 import { CssBaseline, GlobalStyles } from "@mui/material";
@@ -123,9 +124,9 @@ const routeList = [
   {
     path: ROUTES.company.userManagement,
     element: (
-      <MainLayout>
+      <RequireCompanyChef><MainLayout>
         <CompanyUserManagementPage />
-      </MainLayout>
+      </MainLayout></RequireCompanyChef>
     ),
   },
   {

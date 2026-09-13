@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useId } from 'react';
 import styled from 'styled-components';
+import Dialog from '@mui/material/Dialog';
 import { authApi } from '../../utils/api';
 import SearchInput from '../../components/SearchInput';
-import Button from '../../components/Button';
 
 const CompanySearchModal = ({ isOpen, onClose, onSelect }) => {
+  const titleId = useId();
   const [companies, setCompanies] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,10 +20,10 @@ const CompanySearchModal = ({ isOpen, onClose, onSelect }) => {
   const fetchCompanies = async () => {
     try {
       setLoading(true);
+      setError('');
       const response = await authApi.get('/admin/companies');
       setCompanies(response.data.companies);
     } catch (error) {
-      console.error('Error fetching companies:', error);
       setError('업체 목록을 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);
@@ -37,16 +38,18 @@ const CompanySearchModal = ({ isOpen, onClose, onSelect }) => {
   if (!isOpen) return null;
 
   return (
-    <ModalOverlay onClick={onClose}>
-      <ModalContent onClick={e => e.stopPropagation()}>
+    <Dialog open={isOpen} onClose={onClose} fullWidth maxWidth="sm" aria-labelledby={titleId}
+      PaperProps={{ sx: { m: 2, width: 'calc(100% - 32px)', maxHeight: 'calc(100dvh - 32px)' } }}>
+      <ModalContent>
         <ModalHeader>
-          <ModalTitle>업체 선택</ModalTitle>
-          <CloseButton onClick={onClose}>&times;</CloseButton>
+          <ModalTitle id={titleId}>업체 선택</ModalTitle>
+          <CloseButton type="button" aria-label="닫기" onClick={onClose}>&times;</CloseButton>
         </ModalHeader>
 
         <SearchContainer>
           <SearchInput
-            placeholder="업체명 또는 사업자등록번호로 검색..."
+            width="100%"
+            placeholder="불러온 업체명 또는 사업자등록번호 검색"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -54,14 +57,15 @@ const CompanySearchModal = ({ isOpen, onClose, onSelect }) => {
 
         <CompanyList>
           {loading ? (
-            <LoadingText>로딩 중...</LoadingText>
+            <LoadingText role="status">로딩 중...</LoadingText>
           ) : error ? (
-            <ErrorText>{error}</ErrorText>
+            <ErrorText role="alert">{error}</ErrorText>
           ) : filteredCompanies.length === 0 ? (
             <EmptyText>검색 결과가 없습니다.</EmptyText>
           ) : (
             filteredCompanies.map(company => (
               <CompanyItem
+                type="button"
                 key={company.id}
                 onClick={() => onSelect(company)}
               >
@@ -76,38 +80,17 @@ const CompanySearchModal = ({ isOpen, onClose, onSelect }) => {
           )}
         </CompanyList>
       </ModalContent>
-    </ModalOverlay>
+    </Dialog>
   );
 };
 
-const ModalOverlay = styled.div.attrs(() => ({
-  className: 'dialog-overlay'
-}))`
-  z-index: 1002;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: rgba(0, 0, 0, 0.5);
-`;
-
-const ModalContent = styled.div.attrs(() => ({
-  className: 'dialog-content'
-}))`
-  width: 90%;
-  max-width: 600px;
-  height: 80vh;
+const ModalContent = styled.div`
   display: flex;
   flex-direction: column;
-  z-index: 1003;
+  min-width: 0;
   background: ${({ theme }) => theme.palette.background.paper};
-  border-radius: 8px;
   padding: 24px;
-  position: relative;
+  @media (max-width: 420px) { padding: 20px 16px; }
 `;
 
 const ModalHeader = styled.div`
@@ -117,9 +100,7 @@ const ModalHeader = styled.div`
   margin-bottom: 16px;
 `;
 
-const ModalTitle = styled.h2.attrs(() => ({
-  className: 'dialog-title'
-}))`
+const ModalTitle = styled.h2`
   margin: 0;
 `;
 
@@ -127,6 +108,10 @@ const CloseButton = styled.button`
   background: none;
   border: none;
   font-size: 24px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 10px;
+  flex-shrink: 0;
   cursor: pointer;
   color: ${({ theme }) => theme.palette.text.secondary};
   
@@ -144,10 +129,15 @@ const CompanyList = styled.div`
   max-height: calc(80vh - 140px);
 `;
 
-const CompanyItem = styled.div`
+const CompanyItem = styled.button`
+  width: 100%;
+  background: white;
+  text-align: left;
+  font: inherit;
+  color: inherit;
   padding: 12px;
   border: 1px solid ${({ theme }) => theme.palette.divider};
-  border-radius: 4px;
+  border-radius: 10px;
   margin-bottom: 8px;
   cursor: pointer;
   transition: background-color 0.2s;
@@ -157,21 +147,25 @@ const CompanyItem = styled.div`
   }
 `;
 
-const CompanyName = styled.div`
+const CompanyName = styled.span`
+  display: block;
   font-weight: 600;
   font-size: 16px;
   margin-bottom: 4px;
 `;
 
-const CompanyInfo = styled.div`
+const CompanyInfo = styled.span`
   display: flex;
-  gap: 16px;
+  gap: 4px 16px;
+  flex-wrap: wrap;
   font-size: 14px;
   color: ${({ theme }) => theme.palette.text.secondary};
   margin-bottom: 4px;
 `;
 
-const CompanyAddress = styled.div`
+const CompanyAddress = styled.span`
+  display: block;
+  overflow-wrap: anywhere;
   font-size: 14px;
   color: ${({ theme }) => theme.palette.text.secondary};
 `;
@@ -185,7 +179,7 @@ const LoadingText = styled.div`
 const ErrorText = styled.div`
   text-align: center;
   padding: 20px;
-  color: ${({ theme }) => theme.palette.error.main};
+  color: ${({ theme }) => theme.palette.error.contrastText};
 `;
 
 const EmptyText = styled.div`

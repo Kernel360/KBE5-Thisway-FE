@@ -12,6 +12,12 @@ const StyledGlobalStyle = createGlobalStyle`
     color: ${({ theme }) => theme.palette.text.primary};
     background-color: ${({ theme }) => theme.palette.background.default};
   }
+  a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
+    outline: 3px solid #2563eb;
+    outline-offset: 3px;
+  }
+  button, input, select, textarea { font: inherit; }
+  body { font-variant-numeric: tabular-nums; }
   .app {
     display: flex;
     height: 100vh;
@@ -26,42 +32,53 @@ const StyledGlobalStyle = createGlobalStyle`
   .page-container {
     min-height: 100vh;
     background-color: ${({ theme }) => theme.palette.background.default};
-    padding: 4px 24px;
+    padding: 24px;
+    width: 100%;
+    max-width: none;
+    @media (max-width: 767px) { min-height: auto; padding: 22px 16px; }
   }
   
   .page-header-wrapper {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-top: 16px;
-    margin-bottom: 10px;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 0;
+    margin-bottom: 24px;
   }
   
   .page-header {
-    font-size: 20px;
-    font-weight: 700;
+    font-size: 24px;
+    line-height: 36px;
+    letter-spacing: -0.02em;
+    font-weight: 600;
     color: ${({ theme }) => theme.palette.text.secondary};
-    margin-bottom: 10px;
+    margin-bottom: 8px;
+    @media (max-width: 767px) { font-size: 22px; line-height: 30px; }
   }
   
   .page-header-actions {
     display: flex;
-    gap: 16px;
+    gap: 10px;
+    flex-wrap: wrap;
     align-items: center;
   }
   
   .page-description {
     color: ${({ theme }) => theme.palette.text.primary};
-    font-size: 16px;
+    font-size: 14px;
+    line-height: 1.7;
   }
   
   
   /* Table Styles */
   .table-container {
     background-color: ${({ theme }) => theme.palette.background.paper};
+    border: 1px solid #e3e9ee;
     border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(21,36,45,.025);
+    overflow-x: auto;
     margin-bottom: 24px;
   }
   
@@ -72,7 +89,7 @@ const StyledGlobalStyle = createGlobalStyle`
   
   .table-head {
     background-color: ${({ theme }) => theme.palette.grey[100]};
-    border-bottom: 1.5px solid ${({ theme }) => theme.palette.grey[300]};
+    border-bottom: 1px solid ${({ theme }) => theme.palette.grey[200]};
   }
   
   .table-row {
@@ -82,7 +99,7 @@ const StyledGlobalStyle = createGlobalStyle`
   }
   
   .table-header-cell {
-    padding: 13px;
+    padding: 16px;
     text-align: left;
     font-weight: 600;
     color: ${({ theme }) => theme.palette.text.primary};
@@ -90,13 +107,13 @@ const StyledGlobalStyle = createGlobalStyle`
   }
   
   .table-cell {
-    padding: 13px;
+    padding: 16px;
     font-size: 14px;
     color: ${({ theme }) => theme.palette.text.primary};
   }
 
   .empty-cell {
-    padding: 25px;
+    padding: 40px 20px;
     text-align: center;
     color: ${({ theme }) => theme.palette.text.primary};
   }
@@ -189,8 +206,9 @@ const StyledGlobalStyle = createGlobalStyle`
   
  .stats-card {
     background-color: ${({ theme }) => theme.palette.background.paper};
+    border: 1px solid #e3e9ee;
     border-radius: 8px;
-    padding: 20px;
+    padding: 24px;
   }
   
   .stat-title {
