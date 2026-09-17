@@ -1,203 +1,93 @@
-import React, { useState, useEffect } from "react";
-import styled, { css } from "styled-components";
-import SearchInput from "../../components/SearchInput";
+import React, { useState, useEffect, useRef } from "react";
+import styled from "styled-components";
 import Button from "../../components/Button";
 import Pagination from "../../components/Pagination";
 import { formatDate, formatTime, formatDuration } from "../../utils/dateUtils";
 import { authApi } from "../../utils/api";
 import { useNavigate } from "react-router-dom";
-import { ROUTES } from "../../routes";
+import { formatTripDistance } from "../../utils/tripDistance.mjs";
 
 const PAGE_SIZE = 10;
 
 const TripHistoryPage = () => {
   const [trips, setTrips] = useState([]);
   const [carSearchInput, setCarSearchInput] = useState("");
-  const [dateFromInput, setDateFromInput] = useState("");
-  const [dateToInput, setDateToInput] = useState("");
   const [carSearch, setCarSearch] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
-  const [pageSize, setPageSize] = useState(PAGE_SIZE);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [attempt, setAttempt] = useState(0);
+  const requestVersion = useRef(0);
   const navigate = useNavigate();
 
-  // API에서 페이지네이션 처리
-  const fetchTrips = async (page = 1, car = carSearch, from = dateFrom, to = dateTo) => {
-      setLoading(true);
-      setError("");
-      try {
-      // 쿼리 파라미터 구성 (필요시 추가)
-      const params = {
-        page: page - 1, // API는 0-base, 프론트는 1-base
-        size: PAGE_SIZE,
-      };
-      if (car) params.carNumber = car;
-      if (from) params.dateFrom = from;
-      if (to) params.dateTo = to;
-      const res = await authApi.get("/trip-log", { params });
-      setTrips(res.data.tripLogs);
-      setTotalPages(res.data.totalPages || 1);
-      setTotalElements(res.data.totalElements || 0);
-      setCurrentPage((res.data.currentPage || 0) + 1); // 0-base -> 1-base
-      setPageSize(res.data.size || PAGE_SIZE);
-      } catch (err) {
-        setError("운행 기록을 불러오지 못했습니다.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
   useEffect(() => {
-    fetchTrips(1);
-    // eslint-disable-next-line
-  }, []);
+    const controller = new AbortController();
+    const version = ++requestVersion.current;
+    setLoading(true);
+    setError("");
+    authApi.get("/trip-log", {
+      params: { page: currentPage - 1, size: PAGE_SIZE }, signal: controller.signal,
+    }).then(({ data }) => {
+      if (version !== requestVersion.current || controller.signal.aborted) return;
+      setTrips(data.tripLogs || []);
+      setTotalPages(data.totalPages || 1);
+      setTotalElements(data.totalElements || 0);
+    }).catch(() => {
+      if (!controller.signal.aborted && version === requestVersion.current) setError("운행 기록을 불러오지 못했습니다.");
+    }).finally(() => {
+      if (!controller.signal.aborted && version === requestVersion.current) setLoading(false);
+    });
+    return () => controller.abort();
+  }, [currentPage, attempt]);
 
-  // 검색 버튼 클릭 시만 필터 적용
-  const handleSearch = (e) => {
-    e.preventDefault();
-    setCarSearch(carSearchInput);
-    setDateFrom(dateFromInput);
-    setDateTo(dateToInput);
-    fetchTrips(1, carSearchInput, dateFromInput, dateToInput);
-  };
-
-  // 페이지네이션 변경 시 API 호출
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-    fetchTrips(page);
-  };
-
-  // 상세보기 버튼 클릭
-  const handleDetail = (trip) => {
-    navigate(`/company/trip-detail?id=${trip.Id}`);
-  };
+  // The endpoint supports pagination only. Filtering is explicitly limited to the fetched page.
+  const visibleTrips = trips.filter(trip => String(trip.carNumber || "").includes(carSearch));
 
   return (
-    <div className="page-container">
+    <Container className="page-container">
       <div className="page-header-wrapper">
-        <div className="page-header">
-          <h1 className="page-header">운행 기록</h1>
-        </div>
-        <div className="page-header-actions">
-          <form style={{ display: "flex", gap: 12 }} onSubmit={handleSearch}>
-            <DateInput
-              type="date"
-              value={dateFromInput}
-              onChange={(e) => setDateFromInput(e.target.value)}
-              max={dateToInput || undefined}
-            />
-            <span style={{ alignSelf: "center", color: "#b0b0b0" }}>~</span>
-            <DateInput
-              type="date"
-              value={dateToInput}
-              onChange={(e) => setDateToInput(e.target.value)}
-              min={dateFromInput || undefined}
-            />
-            <WideSearchInput
-              placeholder="차량 번호"
-              value={carSearchInput}
-              onChange={(e) => setCarSearchInput(e.target.value)}
-              width="220px"
-            />
-            <Button type="submit" size="medium" style={{ minWidth: 80 }}>
-              검색
-            </Button>
-          </form>
-        </div>
+        <div><h1 className="page-header">운행 기록</h1><Description>완료된 운행의 시간과 이동 거리를 확인합니다.</Description></div>
       </div>
-      <div className="table-container">
-        <table className="table">
-          <thead className="table-head">
-            <tr>
-              <th className="table-header-cell">번호</th>
-              <th className="table-header-cell">차량번호</th>
-              <th className="table-header-cell">시작 시간</th>
-              <th className="table-header-cell">종료 시간</th>
-              <th className="table-header-cell">운행 시간</th>
-              <th className="table-header-cell">이동 거리</th>
-              <th className="table-header-cell">상세</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td className="empty-cell" colSpan={7}>로딩 중...</td>
-              </tr>
-            ) : error ? (
-              <tr>
-                <td className="empty-cell" colSpan={7}>{error}</td>
-              </tr>
-            ) : trips.length === 0 ? (
-              <tr>
-                <td className="empty-cell" colSpan={7}>운행 기록이 없습니다.</td>
-              </tr>
-            ) : (
-              trips.map((trip, idx) => (
-                <tr className="table-row" key={trip.Id}>
-                  <td className="table-cell">{(currentPage - 1) * pageSize + idx + 1}</td>
-                  <td className="table-cell">{trip.carNumber}</td>
+      <Surface>
+        <Filters onSubmit={event => { event.preventDefault(); setCarSearch(carSearchInput.trim()); }}>
+          <label>현재 페이지에서 차량번호 찾기<Input value={carSearchInput} onChange={event => setCarSearchInput(event.target.value)} placeholder="예: 12가3456" /></label>
+          <Button type="submit" disabled={loading}>찾기</Button>
+          <Button type="button" variant="outlined" onClick={() => { setCarSearchInput(""); setCarSearch(""); }}>초기화</Button>
+          <Count>전체 {totalElements.toLocaleString()}건 · 현재 페이지 {visibleTrips.length}건 표시</Count>
+        </Filters>
+        <Description style={{ padding: "0 24px" }}>차량번호 조건은 현재 페이지에만 적용됩니다. 다른 기록은 페이지를 이동해 확인하세요.</Description>
+        <TableScroll>
+          <table className="table">
+            <thead className="table-head"><tr>{["차량번호", "시작 시간", "종료 시간", "운행 시간", "이동 거리", "상세"].map(label => <th key={label} className="table-header-cell">{label}</th>)}</tr></thead>
+            <tbody>
+              {loading ? <tr><td colSpan={6} className="empty-cell" role="status">운행 기록을 불러오는 중입니다.</td></tr>
+                : error ? <tr><td colSpan={6} className="empty-cell"><span role="alert">{error}</span> <Button onClick={() => setAttempt(value => value + 1)}>다시 시도</Button></td></tr>
+                : visibleTrips.length === 0 ? <tr><td colSpan={6} className="empty-cell">{carSearch ? "현재 페이지에 일치하는 차량번호가 없습니다." : "운행 기록이 없습니다."}</td></tr>
+                : visibleTrips.map(trip => <tr className="table-row" key={trip.Id}>
+                  <td className="table-cell"><strong>{trip.carNumber}</strong></td>
                   <td className="table-cell">{formatDate(trip.startTime)} {formatTime(trip.startTime)}</td>
                   <td className="table-cell">{formatDate(trip.endTime)} {formatTime(trip.endTime)}</td>
                   <td className="table-cell">{formatDuration(trip.startTime, trip.endTime)}</td>
-                  <td className="table-cell">{(trip.tripMeter / 1000).toFixed(1)} km</td>
-                  <td className="table-cell">
-                    <SecondaryButton size="small" color="secondary" onClick={() => handleDetail(trip)}>
-                      상세보기
-                    </SecondaryButton>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={handlePageChange}
-      />
-    </div>
+                  <td className="table-cell">{formatTripDistance(trip.tripMeter)}</td>
+                  <td className="table-cell"><DetailButton onClick={() => navigate(`/company/trip-detail?id=${trip.Id}`)} aria-label={`${trip.carNumber} ${formatTime(trip.startTime)} 운행 상세보기`}>상세보기 →</DetailButton></td>
+                </tr>)}
+            </tbody>
+          </table>
+        </TableScroll>
+        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+      </Surface>
+    </Container>
   );
 };
 
-const WideSearchInput = styled(SearchInput)`
-  width: 220px !important;
-  min-width: 220px;
-`;
-
-const DateInput = styled.input`
-  width: 170px;
-  height: 40px;
-  padding: 0 16px;
-  border: 1px solid ${({ theme }) => theme.palette.grey[300]};
-  border-radius: 4px;
-  background-color: ${({ theme }) => theme.palette.background.paper};
-  font-size: 15px;
-  color: ${({ theme }) => theme.palette.text.primary};
-  &:focus {
-    outline: none;
-    border-color: ${({ theme }) => theme.palette.primary.main};
-  }
-`;
-
-// Button color="secondary"가 확실히 연한 하늘색 배경이 되도록 스타일 보강
-const SecondaryButton = styled(Button)`
-  ${({ color, theme }) =>
-    color === "secondary" &&
-    css`
-      background-color: ${theme.palette.secondary.main} !important;
-      color: ${theme.palette.secondary.contrastText} !important;
-      border: 1px solid ${theme.palette.primary.main} !important;
-      &:hover {
-        background-color: ${theme.palette.primary.main} !important;
-        color: #fff !important;
-      }
-    `}
-`;
-
+const Container = styled.div`min-width: 0;`;
+const Description = styled.p`font-size: 14px; color: #64748B; line-height: 1.6; margin: 8px 0 20px;`;
+const Surface = styled.section`background: #fff; border: 1px solid #E3E9EE; border-radius: 14px; overflow: hidden;`;
+const Filters = styled.form`display: flex; align-items: end; gap: 12px; flex-wrap: wrap; padding: 24px 24px 8px; label { font-size: 13px; color: #475569; } @media(max-width: 600px) { padding: 18px; label { width: 100%; } }`;
+const Input = styled.input`display: block; width: 260px; max-width: 100%; box-sizing: border-box; margin-top: 8px; height: 44px; padding: 0 14px; border: 1px solid #CBD5E1; border-radius: 10px; font: inherit; color: #15242D; &:focus-visible { outline: 3px solid #087F8C; outline-offset: 2px; } @media(max-width: 600px) { width: 100%; }`;
+const Count = styled.span`margin: auto 0 12px auto; font-size: 13px; color: #64748B; font-variant-numeric: tabular-nums;`;
+const TableScroll = styled.div`overflow-x: auto; table { min-width: 800px; width: 100%; } td { height: 56px; font-size: 14px; }`;
+const DetailButton = styled.button`padding: 10px 12px; border: 1px solid #D8E9EB; border-radius: 10px; background: #F0FAFA; color: #066773; cursor: pointer; font-weight: 600; white-space: nowrap; &:focus-visible { outline: 3px solid #087F8C; outline-offset: 2px; }`;
 export default TripHistoryPage;

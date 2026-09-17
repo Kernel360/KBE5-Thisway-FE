@@ -1,288 +1,161 @@
-import React, { useState, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
+
+const scenarioFiles = Array.from({ length: 20 }, (_, i) => `emulator_scenario_${i + 1}.csv`);
+const protocolClock = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Seoul',
+  year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
+const formatTime = (date) => {
+  const parts = Object.fromEntries(protocolClock.formatToParts(date).map(({ type, value }) => [type, value]));
+  return ['year', 'month', 'day', 'hour', 'minute', 'second'].map(type => parts[type]).join('');
+};
+const point = (row) => ({ lat: String(Math.round(Number(row[2]) * 1e6)),
+  lon: String(Math.round(Number(row[1]) * 1e6)), ang: String(Math.trunc(Number(row[5]))),
+  spd: String(Math.trunc(Number(row[3]))), sum: String(Math.trunc(Number(row[4]))) });
 
 function EmulatorPage() {
   const [mdn, setMdn] = useState("");
-  // gps_scenario 폴더의 파일명 규칙에 따라 배열을 동적으로 생성
-  const gpsScenarioFiles = Array.from(
-    { length: 20 },
-    (_, i) => `emulator_scenario_${i + 1}.csv`,
-  );
-  const [selectedFile, setSelectedFile] = useState(gpsScenarioFiles[0]);
-  // 주기 선택을 위한 값들
-  const intervalOptions = [1, 5, 10, 20, 30, 60];
-  const [interval, setInterval] = useState(intervalOptions[0]);
-  const intervalRef = useRef(null);
-  const startTimeRef = useRef(null); // power 로그 onTime 저장용
-  const timeoutRef = useRef(null); // 첫 gps 로그 setTimeout용
-  const idxRef = useRef(0); // gps 데이터 인덱스
-  const rowsRef = useRef([]); // 시나리오 데이터
-  const intervalValueRef = useRef(interval); // 주기값
-  const [isRunning, setIsRunning] = useState(false); // 전송 중 여부
-  const lastGpsDataRef = useRef(null); // 마지막 gps 데이터
+  const [deviceId, setDeviceId] = useState("");
+  const [deviceKey, setDeviceKey] = useState("");
+  const [selectedFile, setSelectedFile] = useState(scenarioFiles[0]);
+  const [interval, setInterval] = useState(1);
+  const [isRunning, setIsRunning] = useState(false);
+  const [isStopping, setIsStopping] = useState(false);
+  const [error, setError] = useState("");
+  const sessionRef = useRef(null);
+  const stopRef = useRef(null);
+  const mounted = useRef(true);
 
-  // CSV 파싱 함수 (헤더 무시, 데이터만 추출)
-  function parseCSV(text) {
-    const lines = text.trim().split("\n");
-    const data = lines.slice(1).map((line) => line.split(","));
-    return data;
-  }
-
-  // 주기적으로 요청 보내는 함수
-  const handleStart = async () => {
-    setIsRunning(true);
-    // 시나리오 파일 fetch
-    const filePath = `/data/gps_scenario/${selectedFile}`;
-    let csvText;
-    try {
-      const res = await fetch(filePath);
-      if (!res.ok) throw new Error("파일을 불러올 수 없습니다.");
-      csvText = await res.text();
-    } catch (e) {
-      alert("시나리오 파일을 불러오지 못했습니다.");
-      return;
-    }
-    const rows = parseCSV(csvText);
-    if (rows.length === 0) {
-      alert("시나리오 파일에 데이터가 없습니다.");
-      return;
-    }
-    rowsRef.current = rows;
-    intervalValueRef.current = interval;
-
-    // 시작 시각 저장 및 power 로그 전송
-    const now = new Date();
-    const pad = (n) => n.toString().padStart(2, "0");
-    // power 로그 onTime: 초까지 포함
-    const startTimeWithSec =
-      now.getFullYear().toString() +
-      pad(now.getMonth() + 1) +
-      pad(now.getDate()) +
-      pad(now.getHours()) +
-      pad(now.getMinutes()) +
-      pad(now.getSeconds());
-    // gps 로그 oTime: 분까지만
-    const startTime =
-      now.getFullYear().toString() +
-      pad(now.getMonth() + 1) +
-      pad(now.getDate()) +
-      pad(now.getHours()) +
-      pad(now.getMinutes());
-    startTimeRef.current = startTime;
-    // power 로그 onTime(초까지)도 저장
-    startTimeRef.currentWithSec = startTimeWithSec;
-
-    // power 로그 전송
-    const powerPayload = {
-      mdn: mdn,
-      tid: "A001",
-      mid: "6",
-      pv: "1",
-      did: "LTE 1.2",
-      onTime: startTimeWithSec,
-      offTime: null,
-      gcd: "A",
-      lat: Math.round(Number(rows[0][2]) * 1000000), // 첫 데이터의 위도
-      lon: Math.round(Number(rows[0][1]) * 1000000), // 첫 데이터의 경도
-      ang: parseInt(rows[0][5], 10), // 첫 데이터의 방향 int형
-      spd: parseInt(rows[0][3], 10), // 첫 데이터의 속도 int형
-      sum: parseInt(rows[0][4], 10), // 첫 데이터의 누적주행거리 int형
+  const clearSession = (session) => {
+    clearTimeout(session?.timer);
+    session?.controller.abort();
+    if (session) session.key = "";
+    if (sessionRef.current === session) sessionRef.current = null;
+  };
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      clearSession(sessionRef.current);
+      stopRef.current?.abort();
     };
-    try {
-      const res = await fetch("/api/logs/power", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(powerPayload),
-      });
-      if (!res.ok) throw new Error("power 로그 전송에 실패했습니다.");
-    } catch (e) {
-      alert("power 로그 전송에 실패했습`니다.");
-      return;
-    }
+  }, []);
 
-    // 주기마다 실행되는 함수 (setTimeout 재귀)
-    const sendBatch = async () => {
-      const rows = rowsRef.current;
-      const intervalVal = intervalValueRef.current;
-      if (idxRef.current >= rows.length) {
-        // 모든 데이터 전송 후 자동으로 stop 처리
-        await handleStop();
-        alert("모든 데이터를 전송했습니다!");
-        return;
-      }
-      const batch = rows.slice(idxRef.current, idxRef.current + intervalVal);
-      if (batch.length > 0) {
-        // oTime 계산: power 로그 보낸 시각(초) + batch 첫 row의 sec
-        const base = startTimeRef.currentWithSec;
-        const baseDate = new Date(
-          Number(base.slice(0, 4)),
-          Number(base.slice(4, 6)) - 1,
-          Number(base.slice(6, 8)),
-          Number(base.slice(8, 10)),
-          Number(base.slice(10, 12)),
-          Number(base.slice(12, 14)),
-        );
-        const baseSec = parseInt(batch[0][0], 10) || 0;
-        const oDate = new Date(baseDate.getTime() + baseSec * 1000);
-        const oTime =
-          oDate.getFullYear().toString() +
-          pad(oDate.getMonth() + 1) +
-          pad(oDate.getDate()) +
-          pad(oDate.getHours()) +
-          pad(oDate.getMinutes()) +
-          pad(oDate.getSeconds());
-        const cList = batch.map((cols) => {
-          // 각 데이터 포인트의 정확한 수집 시각을 계산
-          const relativeSecs = parseInt(cols[0], 10) - baseSec;
-          const pointInTime = new Date(oDate.getTime() + relativeSecs * 1000);
-
-          return {
-            sec: pad(pointInTime.getSeconds()), // 수집 시각의 '초'로 변경
-            min: pad(pointInTime.getMinutes()), // 수집 시각의 '분'을 min 필드에 추가
-            gcd: "A",
-            lat: Math.round(Number(cols[2]) * 1000000),
-            lon: Math.round(Number(cols[1]) * 1000000),
-            ang: parseInt(cols[5], 10),
-            spd: parseInt(cols[3], 10),
-            sum: parseInt(cols[4], 10),
-            bat: Math.floor(Math.random() * 10000).toString(),
-          };
-        });
-        // 마지막 gps 데이터 저장
-        lastGpsDataRef.current = cList[cList.length - 1];
-        const payload = {
-          mdn: mdn,
-          tid: "A001",
-          mid: "6",
-          pv: "1",
-          did: "LTE 1.2",
-          oTime: oTime,
-          cCnt: cList.length.toString(),
-          cList: cList,
-        };
-        try {
-          await fetch("/api/logs/gps", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-        } catch (e) {
-          // 실패해도 건너뜀
-        }
-      }
-      idxRef.current += intervalVal;
-      // 다음 주기 예약 (재귀)
-      if (idxRef.current < rows.length) {
-        timeoutRef.current = setTimeout(sendBatch, intervalVal * 1000);
-      }
-    };
-
-    // power 로그 전송 후 interval만큼 기다렸다가 첫 gps 로그 전송, 이후 재귀적으로 반복
-    idxRef.current = 0;
-    rowsRef.current = rows;
-    intervalValueRef.current = interval;
-    timeoutRef.current = setTimeout(sendBatch, interval * 1000);
+  const send = async (session, kind, body, signal = session.controller.signal) => {
+    const response = await fetch(`/api/logs/${kind}`, {
+      method: "POST", credentials: "omit", redirect: "error", signal,
+      headers: { "Content-Type": "application/json", "X-Device-Id": session.id, "X-Device-Key": session.key,
+        "X-Request-Id": crypto.randomUUID(), "X-Request-Timestamp": String(Math.floor(Date.now() / 1000)) },
+      body: JSON.stringify(body),
+    });
+    if (response.status === 401) throw new Error("장치 인증에 실패했습니다. 키와 현재 장치 연결을 확인하세요.");
+    if (!response.ok) throw new Error(`전송에 실패했습니다 (HTTP ${response.status}).`);
   };
 
-  // Stop 버튼 클릭 시 전송 중단 및 power 로그(stop) 전송
   const handleStop = async () => {
-    setIsRunning(false);
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    // stop power 로그 전송
-    const now = new Date();
-    const pad = (n) => n.toString().padStart(2, "0");
-    const offTime =
-      now.getFullYear().toString() +
-      pad(now.getMonth() + 1) +
-      pad(now.getDate()) +
-      pad(now.getHours()) +
-      pad(now.getMinutes()) +
-      pad(now.getSeconds());
-    const last = lastGpsDataRef.current;
-    if (!last) return;
-    const stopPayload = {
-      mdn: mdn,
-      tid: "A001",
-      mid: "6",
-      pv: "1",
-      did: "LTE 1.2",
-      onTime: startTimeRef.currentWithSec,
-      offTime: offTime,
-      gcd: "A",
-      lat: Math.round(Number(last.lat)),
-      lon: Math.round(Number(last.lon)),
-      ang: last.ang,
-      spd: last.spd,
-      sum: last.sum,
-    };
+    const session = sessionRef.current;
+    if (!session) return;
+    clearTimeout(session.timer);
+    session.controller.abort();
+    sessionRef.current = null;
+    setIsStopping(true);
+    const controller = new AbortController();
+    stopRef.current = controller;
     try {
-      await fetch("/api/logs/power", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(stopPayload),
-      });
-    } catch (e) {
-      // 실패해도 무시
+      if (session.started) await send(session, "power", { ...session.common, ...session.last,
+        onTime: session.onTime, offTime: formatTime(new Date()), gcd: "A" }, controller.signal);
+    } catch (failure) {
+      if (mounted.current) setError(failure.name === "AbortError" ? "전송이 취소되었습니다." : failure.message);
+    } finally {
+      session.key = "";
+      if (mounted.current) { setIsRunning(false); setIsStopping(false); setDeviceKey(""); }
     }
   };
 
-  return (
-    <PageWrapper>
-      <Card>
-        <GuideText>
-          ※ MDN 입력 범위는 <b>0000000001 ~ 0000001000</b> 입니다.
-        </GuideText>
-        <FormRow>
-          <Label htmlFor="mdn-input">MDN 입력</Label>
-          <StyledInput
-            id="mdn-input"
-            type="text"
-            value={mdn}
-            onChange={(e) => setMdn(e.target.value)}
-            placeholder="MDN을 입력하세요"
-          />
-        </FormRow>
-        <FormRow>
-          <Label htmlFor="scenario-select">시나리오 파일 선택</Label>
-          <StyledSelect
-            id="scenario-select"
-            value={selectedFile}
-            onChange={(e) => setSelectedFile(e.target.value)}
-          >
-            {gpsScenarioFiles.map((file) => (
-              <option key={file} value={file}>
-                {file}
-              </option>
-            ))}
-          </StyledSelect>
-        </FormRow>
-        <FormRow>
-          <Label htmlFor="interval-select">주기(초) 선택</Label>
-          <StyledSelect
-            id="interval-select"
-            value={interval}
-            onChange={(e) => setInterval(Number(e.target.value))}
-          >
-            {intervalOptions.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </StyledSelect>
-        </FormRow>
-        <ButtonRow>
-          <StyledButton
-            onClick={isRunning ? handleStop : handleStart}
-            $running={isRunning}
-          >
-            {isRunning ? "Stop" : "시작"}
-          </StyledButton>
-        </ButtonRow>
-      </Card>
-    </PageWrapper>
-  );
+  const handleStart = async () => {
+    if (sessionRef.current) return;
+    setError("");
+    if (!mdn || !/^[1-9][0-9]{0,18}$/.test(deviceId) || !/^twdev_[A-Za-z0-9_-]{43}$/.test(deviceKey)) {
+      setError("등록된 MDN, 장치 ID와 발급받은 장치 키를 입력하세요.");
+      return;
+    }
+    if (location.protocol !== "https:" && !["localhost", "127.0.0.1", "[::1]"].includes(location.hostname)) {
+      setError("장치 키를 전송하려면 HTTPS로 접속하세요.");
+      return;
+    }
+    const session = { id: deviceId, key: deviceKey, controller: new AbortController(), started: false,
+      common: { mdn, tid: "A001", mid: "6", pv: "1", did: "1" }, index: 0 };
+    sessionRef.current = session;
+    setDeviceKey("");
+    setIsRunning(true);
+    const fail = (failure) => {
+      if (sessionRef.current !== session) return;
+      clearSession(session);
+      if (mounted.current) {
+        setIsRunning(false);
+        setError(`${failure.message} 전송을 중단했습니다. 서버의 운행 상태를 확인하세요.`);
+      }
+    };
+    try {
+      const response = await fetch(`/data/gps_scenario/${selectedFile}`, { signal: session.controller.signal });
+      if (!response.ok) throw new Error("시나리오 파일을 불러오지 못했습니다.");
+      const rows = (await response.text()).trim().split("\n").slice(1).filter(line => line.trim()).map(line => line.split(","));
+      if (!rows.length || rows.some(row => row.length < 6 || row.slice(0, 6).some(value => !value.trim() || !Number.isFinite(Number(value))))) {
+        throw new Error("시나리오 데이터 형식을 확인하세요.");
+      }
+      if (sessionRef.current !== session) return;
+      session.base = new Date(); session.onTime = formatTime(session.base); session.last = point(rows[0]);
+      await send(session, "power", { ...session.common, ...session.last, onTime: session.onTime, offTime: "", gcd: "A" });
+      session.started = true;
+      if (sessionRef.current !== session) return;
+      const sendBatch = async () => {
+        if (sessionRef.current !== session) return;
+        try {
+          const batch = rows.slice(session.index, session.index + interval);
+          const packets = [];
+          for (const row of batch) {
+            const date = new Date(session.base.getTime() + Number(row[0]) * 1000);
+            const time = formatTime(date);
+            // Entries only carry minute/second; each packet must share the base year/month/day/hour.
+            if (!packets.length || packets.at(-1).oTime.slice(0, 10) !== time.slice(0, 10)) {
+              packets.push({ ...session.common, oTime: time, cList: [] });
+            }
+            packets.at(-1).cList.push({ ...point(row), min: time.slice(10, 12), sec: time.slice(12, 14), gcd: "A", bat: "12" });
+          }
+          for (const packet of packets) {
+            await send(session, "gps", { ...packet, cCnt: String(packet.cList.length) });
+            if (sessionRef.current !== session) return;
+            session.last = packet.cList.at(-1);
+            session.index += packet.cList.length;
+          }
+          if (session.index >= rows.length) await handleStop();
+          else session.timer = setTimeout(sendBatch, interval * 1000);
+        } catch (failure) { fail(failure); }
+      };
+      session.timer = setTimeout(sendBatch, interval * 1000);
+    } catch (failure) { fail(failure); }
+  };
+
+  return <PageWrapper><Card>
+    <GuideText>등록된 장치의 MDN과 키로 시뮬레이션합니다. 키는 저장하지 않으며 전송 종료 시 지웁니다.</GuideText>
+    {error && <p role="alert">{error}</p>}
+    <FormRow><Label htmlFor="mdn-input">MDN 입력</Label><StyledInput id="mdn-input" value={mdn}
+      disabled={isRunning} onChange={e => setMdn(e.target.value)} /></FormRow>
+    <FormRow><Label htmlFor="device-id">장치 ID</Label><StyledInput id="device-id" inputMode="numeric" value={deviceId}
+      disabled={isRunning} onChange={e => setDeviceId(e.target.value)} /></FormRow>
+    <FormRow><Label htmlFor="device-key">장치 키</Label><StyledInput id="device-key" type="password" autoComplete="off" value={deviceKey}
+      disabled={isRunning} onChange={e => setDeviceKey(e.target.value)} /></FormRow>
+    <FormRow><Label htmlFor="scenario-select">시나리오 파일 선택</Label><StyledSelect id="scenario-select" value={selectedFile}
+      disabled={isRunning} onChange={e => setSelectedFile(e.target.value)}>
+      {scenarioFiles.map(file => <option key={file} value={file}>{file}</option>)}
+    </StyledSelect></FormRow>
+    <FormRow><Label htmlFor="interval-select">주기(초) 선택</Label><StyledSelect id="interval-select" value={interval}
+      disabled={isRunning} onChange={e => setInterval(Number(e.target.value))}>
+      {[1, 5, 10, 20, 30, 60].map(value => <option key={value} value={value}>{value}</option>)}
+    </StyledSelect></FormRow>
+    <ButtonRow><StyledButton onClick={isRunning ? handleStop : handleStart} disabled={isStopping} $running={isRunning}>
+      {isStopping ? "중지 중" : isRunning ? "Stop" : "시작"}
+    </StyledButton></ButtonRow>
+  </Card></PageWrapper>;
 }
 
 const PageWrapper = styled.div`

@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useId } from 'react';
 import styled from 'styled-components';
+import Dialog from '@mui/material/Dialog';
 import Button from '../../components/Button';
 import CompanySearchModal from './CompanySearchModal';
 
@@ -12,6 +13,8 @@ const AdminUserRegisterModal = ({
   error,
   setError
 }) => {
+  const formId = useId();
+  const fieldId = (name) => `${formId}-user-form-${name}`;
   const [formData, setFormData] = useState({
     id: '',
     name: '',
@@ -51,6 +54,7 @@ const AdminUserRegisterModal = ({
         memo: ''
       });
     }
+    setCompanySearchOpen(false);
     setError("");
   }, [initialData, isOpen, setError]);
 
@@ -103,7 +107,7 @@ const AdminUserRegisterModal = ({
       };
       await onSubmit(submitData, type);
     } catch (error) {
-      console.error('Form submission error:', error);
+      setError("저장하지 못했습니다. 입력 내용을 확인하고 다시 시도해주세요.");
     }
   };
 
@@ -119,20 +123,22 @@ const AdminUserRegisterModal = ({
   if (!isOpen) return null;
 
   return (
-    <ModalOverlay onClick={onClose}>
-      <ModalContent onClick={(e) => e.stopPropagation()}>
+    <Dialog open={isOpen} onClose={onClose} fullWidth maxWidth="sm" aria-labelledby={fieldId('title')}
+      PaperProps={{ sx: { m: 2, width: 'calc(100% - 32px)', maxHeight: 'calc(100dvh - 32px)' } }}>
+      <ModalContent>
         <ModalHeader>
-          <h2>{type === 'create' ? '신규 사용자 등록' : '사용자 정보 수정'}</h2>
-          <CloseButton onClick={onClose}>&times;</CloseButton>
+          <h2 id={fieldId('title')}>{type === 'create' ? '신규 사용자 등록' : '사용자 정보 수정'}</h2>
+          <CloseButton type="button" aria-label="닫기" onClick={onClose}>&times;</CloseButton>
         </ModalHeader>
 
-        <form onSubmit={handleSubmit}>
-          {error && <ErrorMessage>{error}</ErrorMessage>}
+        <form onSubmit={handleSubmit} aria-describedby={error ? fieldId('error') : undefined}>
+          {error && <ErrorMessage role="alert" id={fieldId('error')}>{error}</ErrorMessage>}
 
           <FormGroup>
-            <Label>이름</Label>
+            <Label htmlFor={fieldId('name')}>이름</Label>
             <Input
               type="text"
+              id={fieldId('name')}
               name="name"
               value={formData.name}
               onChange={handleChange}
@@ -142,9 +148,10 @@ const AdminUserRegisterModal = ({
           </FormGroup>
 
           <FormGroup>
-            <Label>이메일</Label>
+            <Label htmlFor={fieldId('email')}>이메일</Label>
             <Input
               type="email"
+              id={fieldId('email')}
               name="email"
               value={formData.email}
               onChange={handleChange}
@@ -154,9 +161,10 @@ const AdminUserRegisterModal = ({
           </FormGroup>
 
           <FormGroup>
-            <Label>연락처</Label>
+            <Label htmlFor={fieldId('phone')}>연락처</Label>
             <Input
               type="text"
+              id={fieldId('phone')}
               name="phone"
               value={formData.phone}
               onChange={handleChange}
@@ -168,9 +176,10 @@ const AdminUserRegisterModal = ({
           {type === 'create' && (
             <>
               <FormGroup>
-                <Label>소속 업체</Label>
+                <Label htmlFor={fieldId('companyName')}>소속 업체</Label>
                 <CompanySelectContainer>
                   <CompanyInput
+                    id={fieldId('companyName')}
                     type="text"
                     value={formData.companyName}
                     placeholder="업체를 선택하세요"
@@ -186,8 +195,9 @@ const AdminUserRegisterModal = ({
               </FormGroup>
 
               <FormGroup>
-                <Label>권한</Label>
+                <Label htmlFor={fieldId('role')}>권한</Label>
                 <Select
+                  id={fieldId('role')}
                   name="role"
                   value={formData.role}
                   onChange={handleChange}
@@ -198,9 +208,10 @@ const AdminUserRegisterModal = ({
               </FormGroup>
 
               <FormGroup>
-                <Label>비밀번호 *</Label>
+                <Label htmlFor={fieldId('password')}>비밀번호 *</Label>
                 <Input
                   type="password"
+                  id={fieldId('password')}
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
@@ -210,9 +221,10 @@ const AdminUserRegisterModal = ({
               </FormGroup>
 
               <FormGroup>
-                <Label>비밀번호 확인 *</Label>
+                <Label htmlFor={fieldId('confirmPassword')}>비밀번호 확인 *</Label>
                 <Input
                   type="password"
+                  id={fieldId('confirmPassword')}
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleChange}
@@ -224,8 +236,9 @@ const AdminUserRegisterModal = ({
           )}
 
           <FormGroup>
-            <Label>메모</Label>
+            <Label htmlFor={fieldId('memo')}>메모</Label>
             <TextArea
+              id={fieldId('memo')}
               name="memo"
               value={formData.memo}
               onChange={handleChange}
@@ -250,32 +263,15 @@ const AdminUserRegisterModal = ({
           onSelect={handleCompanySelect}
         />
       </ModalContent>
-    </ModalOverlay>
+    </Dialog>
   );
 };
-
-const ModalOverlay = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-`;
 
 const ModalContent = styled.div`
   background-color: white;
   padding: 24px;
-  border-radius: 8px;
-  width: 100%;
-  max-width: 500px;
-  max-height: 90vh;
-  overflow-y: auto;
-  position: relative;
+  min-width: 0;
+  @media (max-width: 420px) { padding: 20px 16px; }
 `;
 
 const ModalHeader = styled.div`
@@ -296,6 +292,10 @@ const CloseButton = styled.button`
   border: none;
   font-size: 24px;
   cursor: pointer;
+  min-width: 44px;
+  min-height: 44px;
+  flex-shrink: 0;
+  border-radius: 10px;
   padding: 0;
   color: ${({ theme }) => theme.palette.text.secondary};
 
@@ -317,41 +317,47 @@ const Label = styled.label`
 
 const Input = styled.input`
   width: 100%;
-  padding: 8px 12px;
+  padding: 11px 12px;
+  min-width: 0;
   border: 1px solid ${({ theme }) => theme.palette.grey[300]};
-  border-radius: 4px;
+  border-radius: 10px;
   font-size: 14px;
 
   &:focus {
-    outline: none;
+    outline: 2px solid #087F8C;
+    outline-offset: 2px;
     border-color: ${({ theme }) => theme.palette.primary.main};
   }
 `;
 
 const Select = styled.select`
   width: 100%;
-  padding: 8px 12px;
+  padding: 11px 12px;
+  min-width: 0;
   border: 1px solid ${({ theme }) => theme.palette.grey[300]};
-  border-radius: 4px;
+  border-radius: 10px;
   font-size: 14px;
   background-color: white;
 
   &:focus {
-    outline: none;
+    outline: 2px solid #087F8C;
+    outline-offset: 2px;
     border-color: ${({ theme }) => theme.palette.primary.main};
   }
 `;
 
 const TextArea = styled.textarea`
   width: 100%;
-  padding: 8px 12px;
+  padding: 11px 12px;
+  min-width: 0;
   border: 1px solid ${({ theme }) => theme.palette.grey[300]};
-  border-radius: 4px;
+  border-radius: 10px;
   font-size: 14px;
   resize: vertical;
 
   &:focus {
-    outline: none;
+    outline: 2px solid #087F8C;
+    outline-offset: 2px;
     border-color: ${({ theme }) => theme.palette.primary.main};
   }
 `;
@@ -369,13 +375,14 @@ const ErrorMessage = styled.div`
   font-size: 14px;
   margin-bottom: 16px;
   padding: 12px;
-  border-radius: 4px;
+  border-radius: 10px;
   text-align: center;
 `;
 
 const CompanySelectContainer = styled.div`
   display: flex;
   gap: 8px;
+  @media (max-width: 420px) { flex-direction: column; }
 `;
 
 const CompanyInput = styled(Input)`

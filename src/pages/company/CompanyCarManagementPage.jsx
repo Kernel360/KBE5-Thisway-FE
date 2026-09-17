@@ -1,424 +1,91 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import styled from "styled-components";
-import { authApi } from "../../utils/api";
-import Button from "../../components/Button";
-import SearchInput from "../../components/SearchInput";
-import Pagination from "../../components/Pagination";
-import CompanyCarRegistrationModal from "./CompanyCarRegistrationModal";
-import { ROUTES } from "../../routes";
+import React, { useEffect, useRef, useState } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
+import { Alert, Box, Button, Chip, Divider, InputAdornment, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, LinearProgress, Link, Pagination, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import SearchIcon from '@mui/icons-material/Search';
+import { authApi } from '../../utils/api';
+import { ROUTES } from '../../routes';
+import CompanyCarRegistrationModal from './CompanyCarRegistrationModal';
+import { normalizeCarNumber, validVehiclePage, vehicleFailureMessage } from '../../utils/vehicleForm.mjs';
 
-const CompanyCarManagementPage = () => {
-  const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState("register"); // "register" | "edit"
-  const [selectedVehicle, setSelectedVehicle] = useState(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [vehicleToDelete, setVehicleToDelete] = useState(null);
+export default function CompanyCarManagementPage() {
+  const [input, setInput] = useState('');
+  const [query, setQuery] = useState({ page: 1, carNumber: '', revision: 0 });
   const [vehicles, setVehicles] = useState([]);
-  const [totalElements, setTotalElements] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [error, setError] = useState("");
-  const itemsPerPage = 10;
-  const [searchInput, setSearchInput] = useState("");
-
-  const fetchVehicles = async (page = 1, carNumber = "") => {
-    try {
-      let url = `/vehicles?page=${page - 1}&size=${itemsPerPage}`;
-      if (carNumber) {
-        url += `&carNumber=${encodeURIComponent(carNumber)}`;
-      }
-      const response = await authApi.get(url);
-      if (response.data) {
-        setVehicles(response.data.vehicles);
-        setTotalElements(response.data.totalElements);
-        setTotalPages(response.data.totalPages);
-      }
-    } catch (error) {
-      console.error("Error fetching vehicles:", error);
-      setError("차량 목록을 불러오는데 실패했습니다.");
-    }
-  };
-
+  const [total, setTotal] = useState(0);
+  const [pages, setPages] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [form, setForm] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+  const [deletePending, setDeletePending] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+  const requestVersion = useRef(0);
+  const pendingRef = useRef(false);
+  const refresh = () => setQuery(v => ({ ...v, revision: v.revision + 1 }));
   useEffect(() => {
-    fetchVehicles(currentPage, searchTerm);
-  }, [currentPage, searchTerm]);
-
-  useEffect(() => {
-    setSearchInput(searchTerm);
-  }, [searchTerm]);
-
-  const handleInputChange = (event) => {
-    setSearchInput(event.target.value);
+    const controller = new AbortController();
+    const version = ++requestVersion.current;
+    setLoading(true); setError('');
+    authApi.get('/vehicles', { params: { page: query.page - 1, size: 10, ...(query.carNumber ? { carNumber: query.carNumber } : {}) }, signal: controller.signal })
+      .then(({ data }) => {
+        if (controller.signal.aborted || version !== requestVersion.current) return;
+        const validPage = validVehiclePage(query.page, data.totalPages ?? 0);
+        if (validPage !== query.page) { setQuery(v => ({ ...v, page: validPage })); return; }
+        setVehicles(data.vehicles ?? []); setTotal(data.totalElements ?? 0); setPages(Math.max(1, data.totalPages ?? 1));
+      }).catch(() => { if (!controller.signal.aborted && version === requestVersion.current) setError('차량 목록을 불러오지 못했습니다. 다시 시도해주세요.'); })
+      .finally(() => { if (!controller.signal.aborted && version === requestVersion.current) setLoading(false); });
+    return () => { controller.abort(); requestVersion.current += 1; };
+  }, [query]);
+  const search = e => { e.preventDefault(); setQuery(v => ({ page: 1, carNumber: normalizeCarNumber(input), revision: v.revision + 1 })); };
+  const reset = () => { setInput(''); setQuery(v => ({ page: 1, carNumber: '', revision: v.revision + 1 })); };
+  const save = async payload => {
+    if (form.mode === 'edit') await authApi.patch(`/vehicles/${form.vehicle.id}`, payload);
+    else await authApi.post('/vehicles', payload);
+    setNotice(`${payload.carNumber} 차량이 ${form.mode === 'edit' ? '수정' : '등록'}되었습니다.`);
+    setForm(null);
+    setInput(payload.carNumber);
+    setQuery(v => ({ page: 1, carNumber: payload.carNumber, revision: v.revision + 1 }));
   };
-
-  const handleSearch = () => {
-    setSearchTerm(searchInput);
-    setCurrentPage(1);
+  const closeDelete = () => { if (!pendingRef.current) { setDeleting(null); setDeleteError(''); } };
+  const remove = async () => {
+    if (pendingRef.current || !deleting) return;
+    pendingRef.current = true; setDeletePending(true); setDeleteError('');
+    try { await authApi.delete(`/vehicles/${deleting.id}`); setNotice(`${deleting.carNumber} 차량이 삭제되었습니다.`); setDeleting(null); refresh(); }
+    catch (failure) { setDeleteError(vehicleFailureMessage(failure, '삭제')); }
+    finally { pendingRef.current = false; setDeletePending(false); }
   };
-
-  const handleSearchInputKeyDown = (event) => {
-    if (event.key === "Enter") {
-      handleSearch();
-    }
-  };
-
-  const handleAddVehicle = () => {
-    setModalMode("register");
-    setSelectedVehicle(null);
-    setIsModalOpen(true);
-    setError("");
-  };
-
-  const handleModalClose = () => {
-    setIsModalOpen(false);
-    setSelectedVehicle(null);
-    setError("");
-  };
-
-  const handleVehicleSubmit = async (vehicleData) => {
-    try {
-      const submitData = {
-        vehicleModelId: vehicleData.vehicleModelId,
-        carNumber: vehicleData.carNumber,
-        color: vehicleData.color
-      };
-
-      if (modalMode === "edit" && selectedVehicle) {
-        await authApi.patch(`/vehicles/${selectedVehicle.id}`, submitData);
-      } else {
-        await authApi.post("/vehicles", submitData);
-      }
-      
-      fetchVehicles(currentPage, searchTerm);
-      handleModalClose();
-    } catch (error) {
-      console.error("Error submitting vehicle:", error);
-      setError(error.response?.data?.message || `차량 ${modalMode === "edit" ? "수정" : "등록"}에 실패했습니다.`);
-    }
-  };
-
-  const handleRowClick = (e, vehicleId) => {
-    // 관리 버튼 클릭 시 상세 페이지로 이동하지 않도록
-    if (e.target.closest('.action-button')) {
-      return;
-    }
-    navigate(ROUTES.company.carDetail.replace(':id', vehicleId));
-  };
-
-  const handleEdit = (e, vehicle) => {
-    e.stopPropagation(); // 행 클릭 이벤트가 발생하지 않도록 방지
-    setSelectedVehicle({
-      ...vehicle,
-      year: vehicle.modelYear,
-      modelName: vehicle.model,
-      vehicleNumber: vehicle.carNumber
-    });
-    setModalMode("edit");
-    setIsModalOpen(true);
-  };
-
-  const handleDeleteClick = (e, vehicleId) => {
-    e.stopPropagation(); // 행 클릭 이벤트가 발생하지 않도록 방지
-    setVehicleToDelete(vehicleId);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (vehicleToDelete) {
-      try {
-        await authApi.delete(`/vehicles/${vehicleToDelete}`);
-        fetchVehicles(currentPage, searchTerm);
-        setDeleteDialogOpen(false);
-        setVehicleToDelete(null);
-      } catch (error) {
-        console.error("Error deleting vehicle:", error);
-        setError(error.response?.data?.message || "차량 삭제에 실패했습니다.");
-      }
-    }
-  };
-
-  const handleDeleteCancel = () => {
-    setDeleteDialogOpen(false);
-    setVehicleToDelete(null);
-  };
-
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-  };
-
-  return (
-    <Container>
-      <Header>
-        <HeaderLeft>
-          <PageTitle>차량 관리</PageTitle>
-        </HeaderLeft>
-        <HeaderRight>
-          <SearchInput
-            placeholder="차량 검색..."
-            value={searchInput}
-            onChange={handleInputChange}
-            onKeyDown={handleSearchInputKeyDown}
-          />
-          <Button onClick={handleSearch}>
-            검색
-          </Button>
-          <Button onClick={handleAddVehicle} startIcon="+">
-            차량 등록
-          </Button>
-        </HeaderRight>
-      </Header>
-
-      {error && <ErrorMessage>{error}</ErrorMessage>}
-
-      <TableContainer>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableHeaderCell>번호</TableHeaderCell>
-              <TableHeaderCell>차량번호</TableHeaderCell>
-              <TableHeaderCell>제조사</TableHeaderCell>
-              <TableHeaderCell>모델</TableHeaderCell>
-              <TableHeaderCell>연식</TableHeaderCell>
-              <TableHeaderCell>색상</TableHeaderCell>
-              <TableHeaderCell>상태</TableHeaderCell>
-              <TableHeaderCell>관리</TableHeaderCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {vehicles.length === 0 ? (
-              <TableRow>
-                <EmptyCell colSpan={7}>
-                  등록된 차량이 없습니다. 차량을 등록해보세요.
-                </EmptyCell>
-              </TableRow>
-            ) : (
-              vehicles.map((vehicle, index) => (
-                <TableRow 
-                  key={vehicle.id}
-                  onClick={(e) => handleRowClick(e, vehicle.id)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <TableCell>{totalElements - ((currentPage - 1) * itemsPerPage + index)}</TableCell>
-                  <TableCell>{vehicle.carNumber}</TableCell>
-                  <TableCell>{vehicle.manufacturer}</TableCell>
-                  <TableCell>{vehicle.model}</TableCell>
-                  <TableCell>{vehicle.modelYear}년</TableCell>
-                  <TableCell>{vehicle.color}</TableCell>
-                  <TableCell>
-                    <StatusBadge status={vehicle.powerOn ? "운행중" : "미운행"}>
-                      {vehicle.powerOn ? "운행중" : "미운행"}
-                    </StatusBadge>
-                  </TableCell>
-                  <TableCell>
-                    <ButtonGroup>
-                      {/* <ActionButton 
-                        edit 
-                        className="action-button"
-                        onClick={(e) => handleEdit(e, vehicle)}
-                      >
-                        ✏️
-                      </ActionButton> */}
-                      <ActionButton 
-                        delete 
-                        className="action-button"
-                        onClick={(e) => handleDeleteClick(e, vehicle.id)}
-                      >
-                        🗑️
-                      </ActionButton>
-                    </ButtonGroup>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      {vehicles.length > 0 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={handlePageChange}
-        />
-      )}
-
-      <CompanyCarRegistrationModal
-        isOpen={isModalOpen}
-        onClose={handleModalClose}
-        onSubmit={handleVehicleSubmit}
-        error={error}
-        setError={setError}
-        mode={modalMode}
-        initialData={selectedVehicle}
-      />
-
-      {deleteDialogOpen && (
-        <Dialog>
-          <DialogOverlay onClick={handleDeleteCancel} />
-          <DialogContent>
-            <DialogTitle>차량 삭제 확인</DialogTitle>
-            <DialogText>정말로 이 차량을 삭제하시겠습니까?</DialogText>
-            <DialogSubText>삭제된 차량 정보는 복구할 수 없습니다.</DialogSubText>
-            <DialogActions>
-              <CancelButton onClick={handleDeleteCancel}>취소</CancelButton>
-              <DeleteButton onClick={handleDeleteConfirm}>삭제</DeleteButton>
-            </DialogActions>
-          </DialogContent>
-        </Dialog>
-      )}
-    </Container>
-  );
-};
-
-const Container = styled.div.attrs(() => ({
-  className: 'page-container'
-}))``;
-
-const Header = styled.div.attrs(() => ({
-  className: 'page-header-wrapper'
-}))``;
-
-const HeaderLeft = styled.div.attrs(() => ({
-  className: 'page-header'
-}))``;
-
-const HeaderRight = styled.div.attrs(() => ({
-  className: 'page-header-actions'
-}))`
-  display: flex;
-  gap: 16px;
-`;
-
-const PageTitle = styled.h1.attrs(() => ({
-  className: 'page-header'
-}))``;
-
-const TableContainer = styled.div.attrs(() => ({
-  className: 'table-container'
-}))``;
-
-const Table = styled.table.attrs(() => ({
-  className: 'table'
-}))``;
-
-const TableHead = styled.thead.attrs(() => ({
-  className: 'table-head'
-}))``;
-
-const TableBody = styled.tbody``;
-
-const TableRow = styled.tr.attrs(() => ({
-  className: 'table-row'
-}))`
-  &:hover {
-      background-color: ${({ theme }) => theme.palette.action.hover};
-  }
-`;
-
-const TableHeaderCell = styled.th.attrs(() => ({
-  className: 'table-header-cell'
-}))`
-  width: ${({ width }) => width || 'auto'};
-`;
-
-const TableCell = styled.td.attrs(() => ({
-  className: 'table-cell'
-}))``;
-
-const EmptyCell = styled.td.attrs(() => ({
-  className: 'empty-cell'
-}))``;
-
-const StatusBadge = styled.span.attrs(() => ({
-  className: 'badge'
-}))`
-  background-color: ${({ status, theme }) => 
-    status === "운행중" ? theme.palette.success.main : theme.palette.grey[200]};
-  color: ${({ status, theme }) => 
-    status === "운행중" ? theme.palette.success.contrastText : theme.palette.text.disabled};
-`;
-
-const ButtonGroup = styled.div`
-  display: flex;
-  gap: 8px;
-`;
-
-const ActionButton = styled.button.attrs(() => ({
-  className: 'action-button'
-}))`
-  background-color: ${({ theme }) => theme.palette.grey[100]};
-  color: ${({ edit, theme }) => 
-    edit ? theme.palette.text.secondary : theme.palette.error.main};
-
-  &:hover {
-    background-color: ${({ edit, theme }) => 
-      edit ? theme.palette.grey[200] : theme.palette.error.main};
-  }
-`;
-
-const Dialog = styled.div.attrs(() => ({
-  className: 'dialog'
-}))``;
-
-const DialogOverlay = styled.div.attrs(() => ({
-  className: 'dialog-overlay'
-}))``;
-
-const DialogContent = styled.div.attrs(() => ({
-  className: 'dialog-content'
-}))``;
-
-const DialogTitle = styled.h2.attrs(() => ({
-  className: 'dialog-title'
-}))``;
-
-const DialogText = styled.p.attrs(() => ({
-  className: 'dialog-text'
-}))``;
-
-const DialogSubText = styled.p.attrs(() => ({
-  className: 'dialog-sub-text'
-}))``;
-
-const DialogActions = styled.div.attrs(() => ({
-  className: 'dialog-actions'
-}))``;
-
-const CancelButton = styled(Button)`
-  background: transparent;
-  color: ${({ theme }) => theme.palette.text.primary};
-  
-  &:hover {
-    background: ${({ theme }) => theme.palette.action.hover};
-  }
-`;
-
-const DeleteButton = styled(Button)`
-  background: ${({ theme }) => theme.palette.error.main};
-  color: ${({ theme }) => theme.palette.error.contrastText};
-  
-  &:hover {
-    background: ${({ theme }) => theme.palette.error.dark};
-  }
-`;
-
-const ErrorMessage = styled.div`
-  color: ${({ theme }) => theme.palette.error.contrastText};
-  background-color: ${({ theme }) => theme.palette.error.main};
-  padding: 12px;
-  border-radius: 4px;
-  margin-bottom: 16px;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  
-  &::before {
-    content: "⚠️";
-    margin-right: 8px;
-  }
-`;
-
-export default CompanyCarManagementPage;
+  return <>
+    <Box component="nav" aria-label="현재 위치" sx={{ height: 56, px: { xs: 2, sm: 4 }, display: 'flex', alignItems: 'center', gap: 1.5, bgcolor: '#fff', borderBottom: '1px solid #E3E9EE', fontSize: 12 }}>
+      <Link component={RouterLink} to={ROUTES.company.dashboard} color="inherit" underline="hover">홈</Link><span aria-hidden="true">/</span><span aria-current="page">차량 관리</span>
+    </Box>
+    <Box className="page-container" sx={{ minWidth: 0 }}>
+    <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={2} sx={{ mb: 3 }}>
+      <Box><Typography variant="h1" sx={{ fontWeight: 600, fontSize: { xs: 22, sm: 24 }, lineHeight: '36px', mb: .5 }}>차량 관리</Typography><Typography sx={{ fontSize: 14, color: '#64748B' }}>등록 차량의 정보와 시동 상태를 확인합니다.</Typography></Box>
+      <Button variant="contained" startIcon={<AddIcon sx={{ fontSize: 18 }} />} sx={{ height: 40, px: 2.5, borderRadius: '6px', bgcolor: '#2563EB', fontWeight: 500 }} onClick={() => setForm({ mode: 'register' })}>차량 등록</Button>
+    </Stack>
+    {notice && <Alert severity="success" onClose={() => setNotice('')} sx={{ mb: 2 }}>{notice}</Alert>}
+    <Paper variant="outlined" sx={{ borderRadius: '8px', borderColor: '#E3E9EE', boxShadow: 'none', overflow: 'hidden' }}>
+      <Box component="form" onSubmit={search} sx={{ p: 2.5, borderBottom: '1px solid #E3E9EE', display: 'flex', gap: 1.25, flexWrap: 'wrap', alignItems: 'center' }}>
+        <TextField inputProps={{ 'aria-label': '차량번호 검색' }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 18, color: '#51606B' }} /></InputAdornment> }} placeholder="차량번호 검색" size="small" value={input} onChange={e => setInput(e.target.value)} sx={{ width: { xs: '100%', sm: 340 }, '& .MuiOutlinedInput-root': { height: 40, borderRadius: '6px', fontSize: 14 }, '& fieldset': { borderColor: '#E3E9EE' } }} />
+        <Button type="submit" variant="contained" sx={{ height: 40, px: 2.5, bgcolor: '#15242D', borderRadius: '6px', '&:hover': { bgcolor: '#2B3135' } }}>검색</Button><Button type="button" variant="outlined" sx={{ height: 40, borderColor: '#E3E9EE', color: '#475569', borderRadius: '6px' }} onClick={reset}>초기화</Button>
+        <Typography variant="body2" color="text.secondary" sx={{ ml: { xs: 0, sm: 'auto' } }}>{loading ? '불러오는 중' : error ? '조회 실패' : `${query.carNumber ? '검색 결과' : '전체'} ${total.toLocaleString()}대`}</Typography>
+      </Box>
+      {loading ? <Box sx={{ p: 3 }} role="status"><LinearProgress /><Typography sx={{ mt: 2 }}>차량 목록을 불러오는 중입니다.</Typography></Box> : error ? <Alert severity="error" sx={{ m: 2 }} action={<Button onClick={refresh}>다시 불러오기</Button>}>{notice ? '저장은 완료됐지만 목록을 갱신하지 못했습니다. 다시 불러와 확인해주세요.' : error}</Alert> : vehicles.length === 0 ? <Stack alignItems="center" spacing={2} sx={{ py: 7, px: 2 }}><Typography fontWeight={600}>{query.carNumber ? '차량번호와 일치하는 차량이 없습니다.' : '등록된 차량이 없습니다.'}</Typography><Button variant="outlined" onClick={query.carNumber ? reset : () => setForm({ mode: 'register' })}>{query.carNumber ? '검색 조건 초기화' : '첫 차량 등록'}</Button></Stack> : <TableContainer tabIndex={0} aria-label="차량 목록 표. 좁은 화면에서는 좌우로 스크롤하세요.">
+        <Table sx={{ minWidth: 880, '& th, & td': { borderColor: '#E3E9EE', px: 2 }, '& th:first-of-type, & td:first-of-type': { pl: 3 }, '& th:last-of-type, & td:last-of-type': { pr: 3 } }}><TableHead><TableRow>{['차량번호', '모델 · 연식', '색상', '누적주행거리', '시동 상태', '관리'].map(label => <TableCell key={label} sx={{ bgcolor: '#F8FAFC', color: '#475569', whiteSpace: 'nowrap', height: 48, py: 0, fontSize: 13, fontWeight: 600, textAlign: label === '관리' ? 'right' : 'left' }}>{label}</TableCell>)}</TableRow></TableHead><TableBody>{vehicles.map(vehicle => <TableRow hover key={vehicle.id} sx={{ height: 48, '& td': { py: 0, whiteSpace: 'nowrap', fontSize: 14, color: '#334155' } }}>
+          <TableCell><Link component={RouterLink} to={ROUTES.company.carDetail.replace(':id', vehicle.id)} underline="hover" sx={{ fontWeight: 700, color: 'text.primary' }}>{vehicle.carNumber}</Link></TableCell>
+          <TableCell>{vehicle.manufacturer} {vehicle.model} ({vehicle.modelYear}년형)</TableCell>
+          <TableCell>{vehicle.color}</TableCell><TableCell sx={{ fontVariantNumeric: 'tabular-nums' }}>{Number.isFinite(vehicle.mileage) ? `${(vehicle.mileage / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 })} km` : '미확인'}</TableCell>
+          <TableCell><Chip size="small" label={vehicle.powerOn ? '켜짐' : '꺼짐'} sx={{ height: 22, fontSize: 12, border: '1px solid', borderColor: vehicle.powerOn ? '#CDEBDC' : '#E2E8F0', bgcolor: vehicle.powerOn ? '#ECFDF5' : '#F1F5F9', color: vehicle.powerOn ? '#047857' : '#475569', fontWeight: 500, '& .MuiChip-label': { px: 1.25, display: 'flex', alignItems: 'center', gap: .7, '&:before': { content: '""', width: 6, height: 6, borderRadius: '50%', bgcolor: vehicle.powerOn ? '#10B981' : '#94A3B8' } } }} /></TableCell>
+          <TableCell><Stack direction="row" justifyContent="flex-end" alignItems="center" spacing={1.25} divider={<Divider orientation="vertical" flexItem sx={{ height: 12, alignSelf: 'center' }} />} sx={{ '& .MuiButton-root': { p: 0, minWidth: 0, fontSize: 13, height: 32, fontWeight: 500 } }}><Button component={RouterLink} to={ROUTES.company.carDetail.replace(':id', vehicle.id)} aria-label={`${vehicle.carNumber} 상세보기`} sx={{ color: '#2563EB' }}>상세보기</Button><Button sx={{ color: '#475569' }} size="small" aria-label={`${vehicle.carNumber} 수정`} onClick={() => setForm({ mode: 'edit', vehicle })}>수정</Button><Button size="small" sx={{ color: '#64748B', '&:hover': { color: 'error.main' } }} aria-label={`${vehicle.carNumber} 삭제`} onClick={() => { setDeleting(vehicle); setDeleteError(''); }}>삭제</Button></Stack></TableCell>
+        </TableRow>)}</TableBody></Table>
+      </TableContainer>}
+      {!loading && !error && <Stack alignItems="center" sx={{ py: 2.5, borderTop: '1px solid', borderColor: 'divider' }}><Pagination aria-label="차량 목록 페이지" count={pages} page={query.page} onChange={(_, page) => setQuery(v => ({ ...v, page }))} size="small" shape="rounded" sx={{ '& .Mui-selected': { bgcolor: '#2563EB !important', color: 'white' }, '& .MuiPaginationItem-root': { borderRadius: '8px', width: 32, height: 32 } }} /></Stack>}
+    </Paper>
+    <CompanyCarRegistrationModal isOpen={!!form} mode={form?.mode} initialData={form?.vehicle} onClose={() => setForm(null)} onSubmit={save} />
+    <Dialog open={!!deleting} onClose={closeDelete} aria-labelledby="delete-vehicle-title" aria-describedby="delete-vehicle-description" fullWidth maxWidth="xs">
+      <DialogTitle id="delete-vehicle-title">차량 삭제</DialogTitle><DialogContent><DialogContentText id="delete-vehicle-description">{deleting?.carNumber} 차량을 관리 목록에서 삭제하시겠습니까? 이 화면에서는 삭제한 차량을 복구할 수 없습니다.</DialogContentText>{deleteError && <Alert severity="error" sx={{ mt: 2 }}>{deleteError}</Alert>}</DialogContent><DialogActions><Button autoFocus onClick={closeDelete} disabled={deletePending}>취소</Button><Button color="error" variant="contained" onClick={remove} disabled={deletePending}>{deletePending ? '삭제 중…' : '삭제'}</Button></DialogActions>
+    </Dialog>
+  </Box></>;
+}

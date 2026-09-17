@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 export default defineConfig({
   plugins: [react()],
   resolve: { alias: [
+    { find: '@/components/DashboardKakaoMap', replacement: fileURLToPath(new URL('./DashboardMapFixture.jsx', import.meta.url)) },
     { find: '@/components/KakaoMap', replacement: fileURLToPath(new URL('./MapFixture.jsx', import.meta.url)) },
     { find: '@', replacement: fileURLToPath(new URL('../../src', import.meta.url)) },
   ] },

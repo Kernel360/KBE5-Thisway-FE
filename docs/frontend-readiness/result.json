@@ -1,0 +1,42 @@
+[
+  {
+    "name": "login-desktop",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "pageErrors": [],
+    "documentWidth": 1440,
+    "scope": "Production UI, synthetic identity; backend API calls blocked. Not an authenticated backend end-to-end test."
+  },
+  {
+    "name": "login-mobile",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "pageErrors": [],
+    "documentWidth": 390,
+    "scope": "Production UI, synthetic identity; backend API calls blocked. Not an authenticated backend end-to-end test."
+  },
+  {
+    "name": "admin-placeholder",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "pageErrors": [],
+    "documentWidth": 1440,
+    "scope": "Production UI, synthetic identity; backend API calls blocked. Not an authenticated backend end-to-end test."
+  },
+  {
+    "name": "member-mobile",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "pageErrors": [],
+    "documentWidth": 390,
+    "scope": "Production UI, synthetic identity; backend API calls blocked. Not an authenticated backend end-to-end test."
+  }
+]
