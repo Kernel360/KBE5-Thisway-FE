@@ -1,12 +1,11 @@
 const palette = {
   primary: {
-    dark: "#1D4ED8",
-    main: "#2563EB", // 업무 UI 포인트; 원본 로고의 파란색은 보존
+    main: "#3B82F6", // 메인 포인트 색상 (파란색)
     contrastText: "#FFFFFF", // 대비 색상 (하얀색)
   },
   secondary: {
-    main: "#EFF6FF", // 활성 메뉴 배경
-    contrastText: "#2563EB", // 업무 UI 포인트; 원본 로고의 파란색은 보존
+    main: "#EFF6FF", // 클릭 시 배경 색상 (연한 하늘색)
+    contrastText: "#3B82F6", // 메인 포인트 색상 (파란색)
   },
   background: {
     default: "#F5F7FA",
@@ -14,8 +13,8 @@ const palette = {
 
   },
   text: {
-    primary: "#15242D", // 기본 텍스트 색상
-    secondary: "#15242D", // 블랙 텍스트 색상 (페이지 main명 등)
+    primary: "#334155", // 기본 텍스트 색상
+    secondary: "#000000", // 블랙 텍스트 색상 (페이지 main명 등)
     disabled: "#64748B", // 선택되지 않은 텍스트 색상 (회색)
   },
   textColor: {
@@ -39,7 +38,7 @@ const palette = {
   },
   grey: {
     100: "#F8FAFC", // 기본 연한 회색 색상 (버튼, 상태 등의 배경 색상)
-    200: "#E3E9EE", // 구분선 색상
+    200: "#E2E8F0", // 구분선 색상
     300: "#CBD5E1", // 외곽선 (구분선보다 조금 더 진한 색상)
     400: "#64748B", // 연한 회색 텍스트 색상 (선택되지 않은 텍스트 색상과 동일)
   },

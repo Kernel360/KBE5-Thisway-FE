@@ -19,12 +19,11 @@ export function parseJwt(token) {
   }
 }
 
-export function getUserRole(token = getToken()) {
-  if (isTokenExpired(token)) return null;
+export function getUserRole() {
+  const token = getToken();
   const payload = parseJwt(token);
-  if (!Array.isArray(payload?.roles)) return null;
-  return ["ADMIN", "COMPANY_CHEF", "COMPANY_ADMIN", "MEMBER"]
-    .find(role => payload.roles.includes(role)) ?? null;
+  if (!payload) return null;
+  return payload.roles[0];
 }
 
 export function getCompanyId() {
@@ -44,7 +43,7 @@ export function getCompanyName() {
 export function isTokenExpired(token) {
   if (!token) return true;
   const payload = parseJwt(token);
-  if (!payload || !Number.isFinite(payload.exp) || payload.exp <= 0) return true;
+  if (!payload || !payload.exp) return true;
   // exp는 초 단위, JS의 Date.now()는 ms 단위
   return Date.now() >= payload.exp * 1000;
 }

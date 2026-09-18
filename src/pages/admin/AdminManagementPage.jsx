@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
-import { Dialog as AccessibleDialog, DialogTitle as AccessibleTitle, DialogContent as AccessibleContent, DialogActions as AccessibleActions } from "@mui/material";
 import { authApi } from "../../utils/api";
 import SearchInput from "../../components/SearchInput";
 import Button from "../../components/Button";
@@ -18,7 +17,7 @@ const getRoleDisplayName = (role) => {
       return '관리자';
     case 'COMPANY_CHEF':
     case 'COMPANY_ADMIN':
-      return role === 'COMPANY_CHEF' ? '회사 책임자' : '회사 관리자';
+      return '업체 관리자';
     case 'MEMBER':
       return '일반 사용자';
     default:
@@ -51,7 +50,7 @@ const AdminUserManagementPage = () => {
         setTotalPages(response.data.pageInfo.totalPages);
       }
     } catch (error) {
-      setError("사용자 목록을 불러오지 못했습니다. 다시 시도해주세요.");
+      console.error("Error fetching users:", error);
     }
   };
 
@@ -64,7 +63,7 @@ const AdminUserManagementPage = () => {
         setTotalPages(response.data.pageInfo.totalPages);
       }
     } catch (error) {
-      setError("업체 목록을 불러오지 못했습니다. 다시 시도해주세요.");
+      console.error("Error fetching companies:", error);
     }
   };
 
@@ -106,7 +105,7 @@ const AdminUserManagementPage = () => {
         setDeleteDialogOpen(false);
         setItemToDelete(null);
       } catch (error) {
-
+        console.error(`Error deleting ${managementType}:`, error);
         setError(error.response?.data?.message || `${managementType === "user" ? "사용자" : "업체"} 삭제에 실패했습니다.`);
       }
     }
@@ -168,7 +167,7 @@ const AdminUserManagementPage = () => {
       }
       handleCloseModal();
     } catch (error) {
-
+      console.error("Error submitting data:", error);
       setError(error.response?.data?.message || `${managementType === "user" ? "사용자" : "업체"} 정보 저장 중 오류가 발생했습니다.`);
     }
   };
@@ -191,11 +190,10 @@ const AdminUserManagementPage = () => {
       <Header>
         <HeaderLeft>
           <PageTitle>사용자/업체 관리</PageTitle>
-          <PageDescription>업체와 계정을 관리합니다. 검색은 현재 페이지에 적용됩니다.</PageDescription>
         </HeaderLeft>
         <HeaderRight>
           <SearchInput
-            placeholder={`현재 페이지에서 ${managementType === "user" ? "사용자" : "업체"} 찾기`}
+            placeholder={`${managementType === "user" ? "사용자" : "업체"} 검색...`}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -208,20 +206,19 @@ const AdminUserManagementPage = () => {
       <TabContainer>
         <TabButton 
           active={managementType === "user"}
-                        onClick={() => { setManagementType("user"); setCurrentPage(1); setSearchTerm(""); }}
+                        onClick={() => setManagementType("user")}
                     >
                         사용자
         </TabButton>
         <TabButton 
           active={managementType === "company"}
-                        onClick={() => { setManagementType("company"); setCurrentPage(1); setSearchTerm(""); }}
+                        onClick={() => setManagementType("company")}
                     >
                         업체
         </TabButton>
       </TabContainer>
 
-      {error && !modalOpen && !deleteDialogOpen && <ErrorMessage role="alert">{error}</ErrorMessage>}
-      <TableContainer tabIndex={0} role="region" aria-label="플랫폼 관리 목록">
+      <TableContainer>
             <Table>
               <TableHead>
                 <TableRow>
@@ -251,7 +248,7 @@ const AdminUserManagementPage = () => {
               <TableBody>
             {filteredData.length === 0 ? (
               <TableRow>
-                <EmptyCell colSpan={7}>
+                <EmptyCell colSpan={managementType === "user" ? 7 : 6}>
                   {managementType === "user" 
                     ? "등록된 사용자가 없습니다." 
                     : "등록된 업체가 없습니다."}
@@ -284,8 +281,8 @@ const AdminUserManagementPage = () => {
                     )}
                     <TableCell>
                     <ButtonGroup>
-                      <ActionButton aria-label={`${item.name} 수정`} onClick={() => handleOpenModal("edit", item)}>수정</ActionButton>
-                      <ActionButton aria-label={`${item.name} 삭제`} onClick={() => handleDelete(item.id)}>삭제</ActionButton>
+                      <ActionButton edit onClick={() => handleOpenModal("edit", item)}>✏️</ActionButton>
+                      <ActionButton delete onClick={() => handleDelete(item.id)}>🗑️</ActionButton>
                     </ButtonGroup>
                     </TableCell>
                   </TableRow>
@@ -295,7 +292,7 @@ const AdminUserManagementPage = () => {
             </Table>
           </TableContainer>
 
-      {totalPages > 0 && (
+      {filteredData.length > 0 && (
             <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
@@ -325,15 +322,22 @@ const AdminUserManagementPage = () => {
         />
       )}
 
-      <AccessibleDialog open={deleteDialogOpen} onClose={handleDeleteCancel} fullWidth maxWidth="xs" aria-labelledby="platform-delete-title">
-        <AccessibleTitle id="platform-delete-title">{managementType === "user" ? "사용자" : "업체"} 삭제 확인</AccessibleTitle>
-        <AccessibleContent>
-          <p>선택한 {managementType === "user" ? "사용자" : "업체"}를 삭제하시겠습니까?</p>
-          <p>삭제 후에는 되돌릴 수 없습니다.</p>
-          {error && <ErrorMessage role="alert">{error}</ErrorMessage>}
-        </AccessibleContent>
-        <AccessibleActions><Button variant="outlined" onClick={handleDeleteCancel}>취소</Button><Button color="error" onClick={handleDeleteConfirm}>삭제</Button></AccessibleActions>
-      </AccessibleDialog>
+      {deleteDialogOpen && (
+        <>
+          <Dialog>
+            <DialogOverlay onClick={handleDeleteCancel} />
+            <DialogContent>
+              <DialogTitle>{managementType === "user" ? "사용자" : "업체"} 삭제 확인</DialogTitle>
+              <DialogText>정말로 이 {managementType === "user" ? "사용자" : "업체"}를 삭제하시겠습니까?</DialogText>
+              <DialogSubText>삭제된 {managementType === "user" ? "사용자" : "업체"} 정보는 복구할 수 없습니다.</DialogSubText>
+              <DialogActions>
+                <CancelButton onClick={handleDeleteCancel}>취소</CancelButton>
+                <DeleteButton onClick={handleDeleteConfirm}>삭제</DeleteButton>
+              </DialogActions>
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
     </Container>
   );
 };
@@ -344,7 +348,7 @@ const Container = styled.div.attrs(() => ({
 
 const Header = styled.div.attrs(() => ({
   className: 'page-header-wrapper'
-}))`gap: 20px; @media(max-width: 900px){flex-direction: column; align-items: stretch;}`;
+}))``;
 
 const HeaderLeft = styled.div.attrs(() => ({
   className: 'page-header'
@@ -354,15 +358,12 @@ const HeaderRight = styled.div.attrs(() => ({
   className: 'page-header-actions'
 }))`
   display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 16px;
 `;
 
 const PageTitle = styled.h1.attrs(() => ({
   className: 'page-header'
 }))``;
-
-const PageDescription = styled.p`font-size: 14px; font-weight: 400; color: #617383; line-height: 1.6;`;
 
 const TabContainer = styled.div`
   display: flex;
@@ -385,11 +386,11 @@ const TabButton = styled.button`
 
 const TableContainer = styled.div.attrs(() => ({
   className: 'table-container'
-}))`max-width:100%;overflow-x:auto;`;
+}))``;
 
 const Table = styled.table.attrs(() => ({
   className: 'table'
-}))`min-width:850px;`;
+}))``;
 
 const TableHead = styled.thead.attrs(() => ({
   className: 'table-head'
@@ -438,14 +439,21 @@ const ButtonGroup = styled.div`
   gap: 8px;
 `;
 
-const ActionButton = styled.button`
- min-width:44px; min-height:44px; padding:8px 10px; border:1px solid #E3E9EE;
- border-radius:8px; background:white; color:#405666; font:inherit; font-size:13px; cursor:pointer;
- &:hover {background:#F3F8F8; color:#087F8C;}
+const ActionButton = styled.button.attrs(() => ({
+  className: 'action-button'
+}))`
+  background-color: ${({ theme }) => theme.palette.grey[100]};
+  color: ${({ edit, theme }) => 
+    edit ? theme.palette.text.secondary : theme.palette.error.main};
+
+  &:hover {
+    background-color: ${({ edit, theme }) => 
+      edit ? theme.palette.grey[200] : theme.palette.error.main};
+  }
 `;
 
 const ErrorMessage = styled.div`
-  color: ${({ theme }) => theme.palette.error.contrastText};
+  color: ${({ theme }) => theme.palette.error.main};
   background-color: ${({ theme }) => theme.palette.error.light};
   padding: 12px;
   border-radius: 4px;

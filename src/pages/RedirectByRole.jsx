@@ -15,7 +15,7 @@ const RedirectByRole = () => {
     const role = getUserRole(token);
 
     if (role === "ADMIN") {
-      navigate("/admin/manage", { replace: true });
+      navigate("/admin/dashboard", { replace: true });
     } else if (role === "COMPANY_ADMIN" || role === "COMPANY_CHEF") {
       navigate("/company/dashboard", { replace: true });
     } else if (role === "MEMBER") {

@@ -1,5 +1,4 @@
 import axios from "axios";
-import useUserStore from "../store/userStore";
 
 // JWT 토큰 저장 함수
 export function saveTokenFromResponse(response) {
@@ -24,6 +23,29 @@ export function saveTokenFromResponse(response) {
     return null;
   }
 }
+
+// 디버깅용 헬퍼 함수들 - 브라우저 콘솔에서 사용 가능
+window.checkToken = () => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    console.log('현재 토큰:', token);
+    try {
+      // JWT 토큰 디코딩 (간단한 검증)
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      console.log('토큰 내용:', payload);
+      console.log('만료 시간:', new Date(payload.exp * 1000));
+    } catch (e) {
+      console.log('토큰 디코딩 실패 - 유효하지 않은 JWT 형식일 수 있음');
+    }
+  } else {
+    console.log('토큰이 없습니다.');
+  }
+};
+
+window.clearToken = () => {
+  localStorage.removeItem("token");
+  console.log('토큰이 삭제되었습니다.');
+};
 
 // 로그인용: 토큰 필요 없음 - 프록시를 통해 상대 경로로 호출
 export const loginApi = axios.create({
@@ -55,16 +77,13 @@ authApi.interceptors.request.use(
 authApi.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      const currentToken = localStorage.getItem("token");
-      const requestHeaders = error.config?.headers;
-      const authorization = requestHeaders?.get?.("Authorization")
-        ?? requestHeaders?.Authorization;
-      // An earlier request must not invalidate a replacement login session.
-      if (currentToken && authorization === `Bearer ${currentToken}`) {
-        localStorage.removeItem("token");
-        useUserStore.getState().resetUser();
-      }
+    if (
+      error.response &&
+      (error.response.status === 401 || error.response.status === 403)
+    ) {
+      localStorage.removeItem("token");
+      // 필요하다면 아래 주석을 해제해서 로그인 페이지로 이동
+      // window.location.href = '/login';
     }
     return Promise.reject(error);
   },

@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
-import { openAuthenticatedEventStream } from "../../utils/authenticatedEventStream.mjs";
 import { useParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { authApi } from "@/utils/api";
 import { formatDate, formatTime } from "@/utils/dateUtils";
 import { ROUTES } from "@/routes";
 import { getAddressFromCoords } from "@/utils/mapUtils";
-import { formatTripDistance, liveTripDistance } from "../../utils/tripDistance.mjs";
 
 import KakaoMap from "@/components/KakaoMap";
 import currentMinimalImg from "@/assets/Current Minimal.png";
@@ -39,8 +37,6 @@ const CompanyCarDetailPage = () => {
   const [searchDate, setSearchDate] = useState("");
   const [currentGpsLog, setCurrentGpsLog] = useState([]);
   const [currentAddress, setCurrentAddress] = useState("");
-  const [streamStatus, setStreamStatus] = useState("connecting");
-  const [streamAttempt, setStreamAttempt] = useState(0);
   const lastOccurredTimeRef = useRef(null);
   const pollingIntervalRef = useRef(null); // polling interval 관리용
 
@@ -76,9 +72,9 @@ const CompanyCarDetailPage = () => {
     fetchVehicleData();
   }, [id]);
 
-  // Power state comes from the server, including OFF -> ON transitions (up to 60 seconds).
+  // 차량 데이터 폴링 (운행중일 때만 60초 간격)
   useEffect(() => {
-    if (!id) return;
+    if (!id || !vehicleData?.currentDrivingInfo) return;
     const intervalId = setInterval(() => {
       authApi.get(`/trip-log/${id}`).then(res => {
         setVehicleData(prev => {
@@ -90,7 +86,7 @@ const CompanyCarDetailPage = () => {
       });
     }, 60000); // 60초
     return () => clearInterval(intervalId);
-  }, [id]);
+  }, [id, !!vehicleData?.currentDrivingInfo]);
 
   // id가 바뀔 때만 GPS 로그 초기화
   useEffect(() => {
@@ -109,16 +105,13 @@ const CompanyCarDetailPage = () => {
   // SSE로 실시간 운행 정보 및 GPS 로그 수신 (id 세팅 후에만)
   useEffect(() => {
     if (!id) return;
-    let active = true;
-    setStreamStatus("connecting");
     const token = localStorage.getItem("token");
-    const sseUrl = `/api/trip-log/current/stream/${id}`;
+    const sseUrl = `/api/trip-log/current/stream/${id}?token=${token}`;
     console.log("SSE 연결 시도:", sseUrl);
-    const eventSource = openAuthenticatedEventStream(sseUrl, token);
+    const eventSource = new EventSource(sseUrl);
 
     eventSource.onopen = () => {
-      setCurrentGpsLog([]);
-      setStreamStatus("connected");
+      console.log("SSE 연결 성공");
     };
 
     eventSource.addEventListener('vehicle_detail_gps_stream', async (event) => {
@@ -150,22 +143,30 @@ const CompanyCarDetailPage = () => {
           });
         }
         
-        // GPS is an odometer observation, not evidence of a new Power ON/session.
+        // 현재 운행 정보 업데이트 및 미운행 → 운행중 상태 전환
         setVehicleData(prev => {
-          if (!prev?.currentDrivingInfo || !prev.vehicleResponse?.powerOn) return prev;
+          if (!prev) return prev;
+          const wasDriving = !!prev.currentDrivingInfo;
           const lastCoord = data.coordinatesInfo[data.coordinatesInfo.length - 1];
           const newDrivingInfo = {
             ...prev.currentDrivingInfo,
             speed: data.speed,
             angle: data.angle,
-            tripMeter: liveTripDistance(prev.currentDrivingInfo.startOdometer, data.totalTripMeter),
+            tripMeter: data.totalTripMeter,
             latitude: lastCoord?.lat,
             longitude: lastCoord?.lng,
-            startTime: prev.currentDrivingInfo.startTime,
+            startTime: prev.currentDrivingInfo?.startTime || new Date().toISOString(),
           };
+          // 미운행 → 운행중 전환 시 vehicleResponse.powerOn도 true로 강제 세팅
+          let newVehicleResponse = prev.vehicleResponse;
+          if (!wasDriving && prev.vehicleResponse && prev.vehicleResponse.powerOn === false) {
+            newVehicleResponse = { ...prev.vehicleResponse, powerOn: true };
+            console.log('vehicleResponse.powerOn을 true로 변경');
+          }
           return {
             ...prev,
             currentDrivingInfo: newDrivingInfo,
+            vehicleResponse: newVehicleResponse,
           };
         });
         
@@ -174,7 +175,7 @@ const CompanyCarDetailPage = () => {
           const { lat, lng } = data.coordinatesInfo[data.coordinatesInfo.length - 1];
           try {
             const address = await getAddressFromCoords(lat, lng);
-            if (active) setCurrentAddress(address);
+            setCurrentAddress(address);
           } catch (error) {
             console.error("SSE 주소 조회 실패:", error);
           }
@@ -203,17 +204,14 @@ const CompanyCarDetailPage = () => {
     });
 
     eventSource.onerror = (err) => {
-      setStreamStatus(err.status === 401 ? "unauthorized"
-        : [403, 404].includes(err.status) ? "forbidden" : "disconnected");
+      console.error("SSE 연결 오류", err);
       eventSource.close();
     };
-    eventSource.onend = () => setStreamStatus("disconnected");
 
     return () => {
-      active = false;
       eventSource.close();
     };
-  }, [id, streamAttempt]);
+  }, [id]);
 
   // GPS 로그 상태 변화 추적 (디버깅용)
   useEffect(() => {
@@ -263,11 +261,9 @@ const CompanyCarDetailPage = () => {
       <Header>
         <HeaderLeft>
           <PageTitle>
-            차량 상세 <CarNumber>{vehicle.carNumber}</CarNumber>
+            차량 상세 정보 <CarNumber>{vehicle.carNumber}</CarNumber>
           </PageTitle>
-          <PageDescription>차량 정보와 실시간 위치, 최근 완료 운행을 확인합니다.</PageDescription>
         </HeaderLeft>
-        <BackButton onClick={() => navigate("/company/car-management")}>차량 관리로 돌아가기</BackButton>
       </Header>
       <ContentWrapper>
         <LeftColumn>
@@ -327,7 +323,7 @@ const CompanyCarDetailPage = () => {
                 <InfoItem>
                   <Label>이동 거리</Label>
                   <Value>
-                    {formatTripDistance(currentDrivingInfo.tripMeter)}
+                    {(currentDrivingInfo.tripMeter / 1000).toFixed(1)}km
                   </Value>
                 </InfoItem>
                 <InfoItem>
@@ -351,14 +347,12 @@ const CompanyCarDetailPage = () => {
             <SectionTitle>최근 운행 이력</SectionTitle>
             <SearchContainer>
               <SearchInput
-                aria-label="최근 운행 날짜 필터"
                 type="date"
                 value={searchDate}
                 onChange={(e) => setSearchDate(e.target.value)}
                 placeholder="날짜 검색"
               />
             </SearchContainer>
-            <PageDescription>조회된 최근 기록 안에서 날짜를 찾습니다.</PageDescription>
             <HistoryList>
               {displayTrips.length === 0 ? (
                 <EmptyText>운행 기록이 없습니다.</EmptyText>
@@ -375,12 +369,10 @@ const CompanyCarDetailPage = () => {
                         {formatTime(trip.startTime)} ~{" "}
                         {formatTime(trip.endTime)}
                       </div>
-                      <div title={!trip.address ? "운행 좌표는 기록되어 있지만 주소 변환 결과가 아직 등록되지 않았습니다." : undefined}>
-                        {trip.address || "주소 미확인"}
-                      </div>
+                      <div>{trip.address || "주소를 찾을 수 없습니다"}</div>
                     </HistoryDetails>
                     <HistoryDistance>
-                      {formatTripDistance(trip.tripMeter)}
+                      {(trip.tripMeter / 1000).toFixed(1)}km
                     </HistoryDistance>
                   </HistoryItem>
                 ))
@@ -392,18 +384,6 @@ const CompanyCarDetailPage = () => {
         <RightColumn>
           <Section style={{ height: "100%" }}>
             <SectionTitle>실시간 위치 및 이동 경로</SectionTitle>
-            <div role="status" aria-live="polite">
-              {streamStatus === "connecting" && "실시간 위치 연결 중…"}
-              {streamStatus === "connected" && "실시간 위치 연결됨"}
-              {streamStatus === "unauthorized" && "인증이 만료되었습니다. 다시 로그인해 주세요."}
-              {streamStatus === "forbidden" && "이 차량의 실시간 위치를 조회할 수 없습니다."}
-              {streamStatus === "disconnected" && <>
-                실시간 위치 연결이 끊겼습니다. 표시된 정보는 최신이 아닐 수 있습니다.
-                <button type="button" onClick={() => setStreamAttempt(value => value + 1)}>
-                  다시 연결
-                </button>
-              </>}
-            </div>
             <MapContainer>
               {isDriving ? (
                 <KakaoMap
@@ -464,21 +444,20 @@ const HeaderLeft = styled.div.attrs(() => ({
 
 const ContentWrapper = styled.div`
   display: grid;
-  grid-template-columns: minmax(300px, 2fr) minmax(0, 3fr);
+  grid-template-columns: 460px 1fr;
   gap: 16px;
-  align-items: start;
-  @media (max-width: 1050px) { grid-template-columns: 1fr; }
+  height: calc(100vh - 100px);
 `;
 
 const LeftColumn = styled.div`
   display: flex;
   flex-direction: column;
   gap: 16px;
-  min-width: 0;
+  overflow-y: auto;
 `;
 
 const RightColumn = styled.div`
-  min-width: 0;
+  height: 100%;
 `;
 
 const PageTitle = styled.h1.attrs(() => ({
@@ -492,10 +471,9 @@ const CarNumber = styled.span`
 
 const Section = styled.section`
   background: white;
-  border-radius: 14px;
-  padding: 24px;
-  border: 1px solid #E3E9EE;
-  box-shadow: 0 2px 6px rgba(21, 36, 45, 0.025);
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 `;
 
 const SectionTitle = styled.h2`
@@ -519,7 +497,7 @@ const InfoItem = styled.div`
 
 const Label = styled.span`
   font-size: 13px;
-  color: #64748B;
+  color: ${({ theme }) => theme.palette.text.disabled};
   width: 100px;
   flex-shrink: 0;
 `;
@@ -545,10 +523,8 @@ const StatusBadge = styled.span`
 
 const MapContainer = styled.div`
   width: 100%;
-  height: 640px;
-  margin-top: 16px;
-  @media (max-width: 600px) { height: 400px; }
-  border-radius: 14px;
+  height: calc(100% - 40px);
+  border-radius: 8px;
   overflow: hidden;
 `;
 
@@ -561,15 +537,10 @@ const SearchInput = styled.input`
   padding: 8px;
   border: 1px solid ${({ theme }) => theme.palette.grey[300]};
   border-radius: 4px;
-  font-size: 14px;
-  min-height: 44px;
-  box-sizing: border-box;
+  font-size: 13px;
 
-  &:focus-visible {
-    outline: 3px solid #087F8C;
-    outline-offset: 2px;
-  }
   &:focus {
+    outline: none;
     border-color: ${({ theme }) => theme.palette.primary.main};
   }
 `;
@@ -579,9 +550,7 @@ const HistoryList = styled.div`
   flex-direction: column;
 `;
 
-const HistoryItem = styled.button`
-  width: 100%; border: 0; background: transparent; text-align: left; font: inherit; gap: 8px;
-  &:focus-visible { outline: 3px solid #087F8C; outline-offset: 2px; }
+const HistoryItem = styled.div`
   display: flex;
   align-items: center;
   padding: 12px 0;
@@ -597,26 +566,22 @@ const HistoryItem = styled.button`
 `;
 
 const HistoryDate = styled.div`
-  width: 90px;
-  flex-shrink: 0;
-  font-size: 13px;
+  width: 100px;
+  font-size: 14px;
   font-weight: bold;
 `;
 
 const HistoryDetails = styled.div`
   flex: 1;
-  min-width: 0;
-  overflow-wrap: anywhere;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  color: #64748B;
+  color: ${({ theme }) => theme.palette.text.disabled};
   font-size: 13px;
 `;
 
 const HistoryDistance = styled.div`
-  width: 64px;
-  flex-shrink: 0;
+  width: 80px;
   text-align: right;
   color: ${({ theme }) => theme.palette.text.primary};
   font-size: 14px;
@@ -626,7 +591,7 @@ const LoadingMessage = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 320px;
+  height: 100vh;
   font-size: 16px;
   color: ${({ theme }) => theme.palette.text.secondary};
 `;
@@ -635,7 +600,7 @@ const ErrorMessage = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 320px;
+  height: 100vh;
   font-size: 16px;
   color: ${({ theme }) => theme.palette.error.main};
 `;
@@ -650,11 +615,8 @@ const EmptyText = styled.div`
 const LocationDetail = styled.span`
   display: block;
   font-size: 12px;
-  color: #64748B;
+  color: ${({ theme }) => theme.palette.text.disabled};
   margin-top: 2px;
 `;
 
 export default CompanyCarDetailPage;
-
-const PageDescription = styled.p`font-size: 13px; color: #64748B; line-height: 1.6; margin: 8px 0 16px;`;
-const BackButton = styled.button`padding: 12px 16px; border: 1px solid #D8E9EB; background: white; color: #066773; border-radius: 10px; cursor: pointer; &:focus-visible { outline: 3px solid #087F8C; outline-offset: 2px; }`;

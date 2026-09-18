@@ -1,39 +1,211 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Box, Button, Chip, FormControlLabel, InputAdornment, LinearProgress, Pagination, Radio, RadioGroup, Stack, TextField, Typography } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
+import React, { useState, useEffect } from 'react';
+import styled from 'styled-components';
+import SearchInput from '../../components/SearchInput';
+import Pagination from '../../components/Pagination';
 import { authApi } from '../../utils/api';
 
-// Inline picker: registration and editing share one focus scope, without nested dialogs.
-export default function CarModelSearchModal({ onSelect, selectedModel, disabled = false }) {
+const CarModelSearchModal = ({ isOpen, onClose, onSelect }) => {
+  const [searchTerm, setSearchTerm] = useState('');
   const [models, setModels] = useState([]);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [query, setQuery] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [retry, setRetry] = useState(0);
-  const requestVersion = useRef(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const itemsPerPage = 10;
+
+  const fetchModels = async (page = 1) => {
+    try {
+      setLoading(true);
+      const response = await authApi.get(`/vehicle-models?page=${page - 1}&size=${itemsPerPage}`);
+      if (response.data) {
+        setModels(response.data.vehicleModels);
+        setTotalPages(response.data.pageInfo.totalPages);
+      }
+    } catch (error) {
+      console.error('Error fetching vehicle models:', error);
+      setError('차량 모델 목록을 불러오는데 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const controller = new AbortController();
-    const version = ++requestVersion.current;
-    setLoading(true); setError('');
-    authApi.get('/vehicle-models', { params: { page: page - 1, size: 3 }, signal: controller.signal })
-      .then(({ data }) => { if (version !== requestVersion.current || controller.signal.aborted) return;
-        setModels(data.vehicleModels ?? []); setTotalPages(Math.max(1, data.pageInfo?.totalPages ?? 1));
-      }).catch(() => { if (!controller.signal.aborted && version === requestVersion.current) setError('차량 모델을 불러오지 못했습니다.'); })
-      .finally(() => { if (!controller.signal.aborted && version === requestVersion.current) setLoading(false); });
-    return () => { controller.abort(); requestVersion.current += 1; };
-  }, [page, retry]);
-  const filtered = models.filter(model => `${model.manufacturer} ${model.model} ${model.modelYear}`.toLowerCase().includes(query.trim().toLowerCase()));
-  return <Box>
-    <TextField fullWidth size="small" inputProps={{ 'aria-label': '현재 페이지에서 모델 찾기' }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 18, color: '#51606B' }} /></InputAdornment> }} placeholder="현재 페이지에서 모델 찾기" sx={{ '& .MuiOutlinedInput-root': { height: 42, fontSize: 14, borderRadius: '6px' }, '& fieldset': { borderColor: '#E3E9EE' } }} value={query} disabled={disabled} onChange={e => setQuery(e.target.value)} />
-    {selectedModel && !models.some(model => model.id === selectedModel.id) && <Typography variant="body2" sx={{ my: 1.5, color: 'primary.main', fontWeight: 600 }}>선택: {selectedModel.manufacturer} {selectedModel.model} · {selectedModel.modelYear}년</Typography>}
-    {loading ? <LinearProgress aria-label="차량 모델 불러오는 중" sx={{ my: 2 }} /> : error ? <Alert severity="error" action={<Button disabled={disabled} onClick={() => setRetry(v => v + 1)}>재시도</Button>}>{error}</Alert> : <>
-      <RadioGroup sx={{ mt: 1.5, gap: 1.25 }} aria-label="차량 모델" value={selectedModel?.id ?? ''} onChange={e => onSelect(models.find(model => String(model.id) === e.target.value))}>
-        {filtered.map(model => <FormControlLabel key={model.id} value={model.id} disabled={disabled} control={<Radio />} label={<Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}><Box><Typography sx={{ fontSize: 15, fontWeight: selectedModel?.id === model.id ? 600 : 500, color: '#334155' }}>{model.manufacturer} {model.model}</Typography><Typography sx={{ fontSize: 13, color: '#51606B', mt: .25 }}>{model.modelYear}년형</Typography></Box>{selectedModel?.id === model.id && <Chip size="small" label="선택됨" sx={{ height: 24, fontSize: 12, bgcolor: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE' }} />}</Stack>} sx={{ mx: 0, my: 0, p: 1.4, height: 64, boxSizing: 'border-box', border: selectedModel?.id === model.id ? '2px solid #2563EB' : '1px solid #E3E9EE', borderRadius: '6px', bgcolor: selectedModel?.id === model.id ? '#EFF6FF' : '#FFFFFF', '& .MuiFormControlLabel-label': { flex: 1, minWidth: 0 }, '& .MuiRadio-root': { mr: .75, p: .5, color: '#BDC9CA', '&.Mui-checked': { color: '#2563EB' } } }} />)}
-      </RadioGroup>
-      {!filtered.length && <Typography role="status" sx={{ py: 2 }} color="text.secondary">현재 페이지에 일치하는 모델이 없습니다.</Typography>}
-    </>}
-    <Stack alignItems="center" sx={{ mt: 2 }}><Pagination shape="rounded" sx={{ width: '100%', '& ul': { flexWrap: 'nowrap' }, '& li:first-of-type': { mr: 'auto' }, '& li:last-of-type': { ml: 'auto' }, '& .Mui-selected': { bgcolor: '#2B3135 !important', color: 'white' }, '& .MuiPaginationItem-root': { borderRadius: '4px' } }} aria-label="차량 모델 페이지" count={totalPages} page={page} disabled={disabled || loading} onChange={(_, value) => setPage(value)} size="small" /></Stack>
-  </Box>;
-}
+    if (isOpen) {
+      fetchModels(currentPage);
+    }
+  }, [isOpen, currentPage]);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  const filteredModels = models.filter(model =>
+    model.manufacturer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    model.model.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (!isOpen) return null;
+
+  return (
+    <ModalOverlay onClick={onClose}>
+      <ModalContent onClick={(e) => e.stopPropagation()}>
+        <ModalHeader>
+          <ModalTitle>차량 모델 검색</ModalTitle>
+          <CloseButton onClick={onClose}>&times;</CloseButton>
+        </ModalHeader>
+
+        <SearchContainer>
+          <SearchInput
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="제조사 또는 모델명으로 검색"
+          />
+        </SearchContainer>
+
+        <ModelList>
+          {loading ? (
+            <LoadingText>로딩 중...</LoadingText>
+          ) : error ? (
+            <ErrorText>{error}</ErrorText>
+          ) : filteredModels.length === 0 ? (
+            <EmptyText>검색 결과가 없습니다.</EmptyText>
+          ) : (
+            filteredModels.map((model) => (
+              <ModelItem key={model.id} onClick={() => onSelect({
+                id: model.id,
+                manufacturer: model.manufacturer,
+                modelName: model.model,
+                year: model.modelYear
+              })}>
+                <ModelName>{model.manufacturer} {model.model}</ModelName>
+                <ModelYear>{model.modelYear}년형</ModelYear>
+              </ModelItem>
+            ))
+          )}
+        </ModelList>
+
+        {!loading && !error && filteredModels.length > 0 && (
+          <PaginationContainer>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
+          </PaginationContainer>
+        )}
+      </ModalContent>
+    </ModalOverlay>
+  );
+};
+
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+`;
+
+const ModalContent = styled.div`
+  width: 90%;
+  max-width: 500px;
+  height: 80vh;
+  display: flex;
+  flex-direction: column;
+  z-index: 1001;
+  background: ${({ theme }) => theme.palette.background.paper};
+  border-radius: 8px;
+  padding: 24px;
+  position: relative;
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+`;
+
+const ModalTitle = styled.h2.attrs(() => ({
+  className: 'dialog-title'
+}))`
+  margin: 0;
+  font-weight: 600;
+`;
+
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: ${({ theme }) => theme.palette.text.secondary};
+  
+  &:hover {
+    color: ${({ theme }) => theme.palette.text.primary};
+  }
+`;
+
+const SearchContainer = styled.div`
+  margin-bottom: 16px;
+`;
+
+const ModelList = styled.div`
+  overflow-y: auto;
+  flex: 1;
+  margin-bottom: 16px;
+`;
+
+const ModelItem = styled.div`
+  padding: 12px;
+  border: 1px solid ${({ theme }) => theme.palette.divider};
+  border-radius: 4px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: ${({ theme }) => theme.palette.action.hover};
+  }
+`;
+
+const ModelName = styled.div`
+  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: 4px;
+`;
+
+const ModelYear = styled.div`
+  font-size: 14px;
+  color: ${({ theme }) => theme.palette.text.secondary};
+`;
+
+const LoadingText = styled.div`
+  text-align: center;
+  padding: 20px;
+  color: ${({ theme }) => theme.palette.text.secondary};
+`;
+
+const ErrorText = styled.div`
+  text-align: center;
+  padding: 20px;
+  color: ${({ theme }) => theme.palette.error.main};
+`;
+
+const EmptyText = styled.div`
+  text-align: center;
+  padding: 20px;
+  color: ${({ theme }) => theme.palette.text.secondary};
+`;
+
+const PaginationContainer = styled.div`
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid ${({ theme }) => theme.palette.divider};
+`;
+
+export default CarModelSearchModal; 

@@ -31,7 +31,6 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
           <PageButton
             key={page}
             active={currentPage === page}
-            aria-current={currentPage === page ? "page" : undefined}
             onClick={() => onPageChange(page)}
           >
             {page}
@@ -63,15 +62,11 @@ const PaginationWrapper = styled.div`
   display: flex;
   align-items: center;
   gap: 4px;
-  max-width: 100%;
-  overflow-x: auto;
-  padding: 4px;
 `;
 
 const PaginationArrow = styled.button`
-  width: 40px;
-  flex-shrink: 0;
-  height: 40px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -88,9 +83,8 @@ const PaginationArrow = styled.button`
 `;
 
 const PageButton = styled.button`
-  width: 40px;
-  flex-shrink: 0;
-  height: 40px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -99,7 +93,7 @@ const PageButton = styled.button`
     active ? theme.palette.primary.main : 'transparent'};
   color: ${({ active, theme }) => 
     active ? theme.palette.common.white : theme.palette.text.primary};
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;

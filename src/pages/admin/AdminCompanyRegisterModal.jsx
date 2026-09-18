@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useId } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import Dialog from '@mui/material/Dialog';
 import Button from '../../components/Button';
 import { useDaumPostcodePopup } from 'react-daum-postcode';
 
@@ -13,8 +12,6 @@ const AdminCompanyRegisterModal = ({
   error,
   setError
 }) => {
-  const formId = useId();
-  const fieldId = (name) => `${formId}-company-form-${name}`;
   const [formData, setFormData] = useState({
     name: '',
     crn: '',
@@ -74,7 +71,7 @@ const AdminCompanyRegisterModal = ({
 
       await onSubmit(submitData, type);
     } catch (error) {
-      setError("저장하지 못했습니다. 입력 내용을 확인하고 다시 시도해주세요.");
+      console.error('Form submission error:', error);
     }
   };
 
@@ -93,22 +90,20 @@ const AdminCompanyRegisterModal = ({
   if (!isOpen) return null;
 
   return (
-    <Dialog open={isOpen} onClose={onClose} fullWidth maxWidth="sm" aria-labelledby={fieldId('title')}
-      PaperProps={{ sx: { m: 2, width: 'calc(100% - 32px)', maxHeight: 'calc(100dvh - 32px)' } }}>
-      <ModalContent>
+    <ModalOverlay onClick={onClose}>
+      <ModalContent onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
-          <h2 id={fieldId('title')}>{type === 'create' ? '신규 업체 등록' : '업체 정보 수정'}</h2>
-          <CloseButton type="button" aria-label="닫기" onClick={onClose}>&times;</CloseButton>
+          <h2>{type === 'create' ? '신규 업체 등록' : '업체 정보 수정'}</h2>
+          <CloseButton onClick={onClose}>&times;</CloseButton>
         </ModalHeader>
 
-        <form onSubmit={handleSubmit} aria-describedby={error ? fieldId('error') : undefined}>
-          {error && <ErrorMessage role="alert" id={fieldId('error')}>{error}</ErrorMessage>}
+        <form onSubmit={handleSubmit}>
+          {error && <ErrorMessage>{error}</ErrorMessage>}
 
           <FormGroup>
-            <Label htmlFor={fieldId('name')}>업체명</Label>
+            <Label>업체명</Label>
             <Input
               type="text"
-              id={fieldId('name')}
               name="name"
               value={formData.name}
               onChange={handleChange}
@@ -118,10 +113,9 @@ const AdminCompanyRegisterModal = ({
           </FormGroup>
 
           <FormGroup>
-            <Label htmlFor={fieldId('crn')}>사업자등록번호</Label>
+            <Label>사업자등록번호</Label>
             <Input
               type="text"
-              id={fieldId('crn')}
               name="crn"
               value={formData.crn}
               onChange={handleChange}
@@ -131,10 +125,9 @@ const AdminCompanyRegisterModal = ({
           </FormGroup>
 
           <FormGroup>
-            <Label htmlFor={fieldId('contact')}>연락처</Label>
+            <Label>연락처</Label>
             <Input
               type="text"
-              id={fieldId('contact')}
               name="contact"
               value={formData.contact}
               onChange={handleChange}
@@ -144,11 +137,10 @@ const AdminCompanyRegisterModal = ({
           </FormGroup>
 
           <FormGroup>
-            <Label htmlFor={fieldId('addrRoad')}>주소</Label>
+            <Label>주소</Label>
             <AddressContainer>
               <AddressInput
                 type="text"
-                id={fieldId('addrRoad')}
                 name="addrRoad"
                 value={formData.addrRoad}
                 readOnly
@@ -158,9 +150,7 @@ const AdminCompanyRegisterModal = ({
                 주소 검색
               </Button>
             </AddressContainer>
-            <Label htmlFor={fieldId('addrDetail')}>상세 주소</Label>
             <Input
-              id={fieldId('addrDetail')}
               type="text"
               name="addrDetail"
               value={formData.addrDetail}
@@ -172,10 +162,9 @@ const AdminCompanyRegisterModal = ({
           {type === 'create' && (
             <>
               <FormGroup>
-                <Label htmlFor={fieldId('gpsCycle')}>GPS 갱신 주기 (초)</Label>
+                <Label>GPS 갱신 주기 (초)</Label>
                 <Input
                   type="number"
-                  id={fieldId('gpsCycle')}
                   name="gpsCycle"
                   value={formData.gpsCycle}
                   onChange={handleChange}
@@ -187,9 +176,8 @@ const AdminCompanyRegisterModal = ({
           )}
 
           <FormGroup>
-            <Label htmlFor={fieldId('memo')}>메모</Label>
+            <Label>메모</Label>
             <TextArea
-              id={fieldId('memo')}
               name="memo"
               value={formData.memo}
               onChange={handleChange}
@@ -208,15 +196,32 @@ const AdminCompanyRegisterModal = ({
           </ButtonGroup>
         </form>
       </ModalContent>
-    </Dialog>
+    </ModalOverlay>
   );
 };
+
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+`;
 
 const ModalContent = styled.div`
   background-color: white;
   padding: 24px;
-  min-width: 0;
-  @media (max-width: 420px) { padding: 20px 16px; }
+  border-radius: 8px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
 `;
 
 const ModalHeader = styled.div`
@@ -237,10 +242,6 @@ const CloseButton = styled.button`
   border: none;
   font-size: 24px;
   cursor: pointer;
-  min-width: 44px;
-  min-height: 44px;
-  flex-shrink: 0;
-  border-radius: 10px;
   padding: 0;
   color: ${({ theme }) => theme.palette.text.secondary};
 
@@ -262,15 +263,13 @@ const Label = styled.label`
 
 const Input = styled.input`
   width: 100%;
-  padding: 11px 12px;
-  min-width: 0;
+  padding: 8px 12px;
   border: 1px solid ${({ theme }) => theme.palette.grey[300]};
-  border-radius: 10px;
+  border-radius: 4px;
   font-size: 14px;
 
   &:focus {
-    outline: 2px solid #087F8C;
-    outline-offset: 2px;
+    outline: none;
     border-color: ${({ theme }) => theme.palette.primary.main};
   }
 `;
@@ -279,9 +278,6 @@ const AddressContainer = styled.div`
   display: flex;
   gap: 8px;
   margin-bottom: 8px;
-  align-items: stretch;
-  button { flex-shrink: 0; white-space: nowrap; }
-  @media (max-width: 420px) { flex-direction: column; }
 `;
 
 const AddressInput = styled(Input)`
@@ -291,16 +287,14 @@ const AddressInput = styled(Input)`
 
 const TextArea = styled.textarea`
   width: 100%;
-  padding: 11px 12px;
-  min-width: 0;
+  padding: 8px 12px;
   border: 1px solid ${({ theme }) => theme.palette.grey[300]};
-  border-radius: 10px;
+  border-radius: 4px;
   font-size: 14px;
   resize: vertical;
 
   &:focus {
-    outline: 2px solid #087F8C;
-    outline-offset: 2px;
+    outline: none;
     border-color: ${({ theme }) => theme.palette.primary.main};
   }
 `;
@@ -318,7 +312,7 @@ const ErrorMessage = styled.div`
   font-size: 14px;
   margin-bottom: 16px;
   padding: 12px;
-  border-radius: 10px;
+  border-radius: 4px;
   text-align: center;
 `;
 
